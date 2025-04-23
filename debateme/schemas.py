@@ -1,13 +1,13 @@
-from ninja import Schema, ModelSchema
+from ninja import ModelSchema
 
-from debate.schemas import DebateSchema
+from debate.schemas2 import DebatePreviewSchema
 from debateme.models import InviteUse, Invite
-from users.schemas import UserSchema
+from users.schemas import UserSchema, UserPreviewSchema
 
 
 class InviteSchema(ModelSchema):
-    debate: DebateSchema
-    creator: UserSchema
+    debate: DebatePreviewSchema
+    creator: UserPreviewSchema
 
     class Config:
         model = Invite
@@ -19,4 +19,3 @@ class InviteUseSchema(ModelSchema):
     class Config:
         model = InviteUse
         model_fields = '__all__'
-        model_depth = 0

@@ -14,11 +14,16 @@ class DisallowedActionError(Exception):
     """Custom exception for disallowed actions."""
     pass
 
-class NotFoundError(Exception):
-    """Custom exception for not found errors."""
-    pass
-
 class InviteService:
+    @classmethod
+    def get_invites_queryset(cls) -> QuerySet[Invite]:
+        """
+        Retrieve all invites and select related debates and user.
+
+        You can use the resulting queryset to filter, order, or annotate as needed.
+        """
+        return Invite.objects.select_related('debate', 'creator')
+
     @classmethod
     def get_invite_by_code(cls, invite_code: str) -> Optional[Invite]:
         """
@@ -26,17 +31,12 @@ class InviteService:
 
         Throws an exception if the invite is not found.
         """
-        try:
-            return Invite.objects.select_related('debate', 'creator').get(code=invite_code)
-        except Invite.DoesNotExist:
-            return None
+        return get_object_or_404(cls.get_invites_queryset(), code=invite_code)
 
     @classmethod
     def get_user_invites(cls, user) -> QuerySet[Invite]:
-        """Retrieve all invites created by a user."""
-        return Invite.objects.filter(
-            creator=user
-        ).select_related('debate').order_by('-created_at')
+        """Retrieve all invites created by a user in order."""
+        return cls.get_invites_queryset().filter(creator=user).order_by('-created_at')
 
     @classmethod
     @transaction.atomic
@@ -60,20 +60,18 @@ class InviteService:
         """
         # Get the invite
         invite = cls.get_invite_by_code(invite_code)
-        if not invite:
-            raise NotFoundError("Invite not found")
 
         # Prevent invite creator from accepting their own invite
         if invite.creator == user:
             raise DisallowedActionError("Cannot accept your own invite")
 
         # Check if invite has already been used by this user
-        existing_invite_use = InviteUse.objects.filter(
+        has_already_used_invite = InviteUse.objects.filter(
             invite=invite,
             user=user
-        ).first()
+        ).exists()
 
-        if existing_invite_use:
+        if has_already_used_invite:
             raise DisallowedActionError("Invite already accepted")
 
         # Create discussion
@@ -107,9 +105,9 @@ class InviteService:
         Returns:
             bool: Whether the invite was successfully deleted
         """
-        try:
-            invite = Invite.objects.get(code=invite_code, creator=user)
-            invite.delete()
-            return True
-        except Invite.DoesNotExist:
-            return False
+        deleted_count, deleted_info = Invite.objects.filter(
+            code=invite_code,
+            creator=user
+        ).delete()
+
+        return deleted_count > 0

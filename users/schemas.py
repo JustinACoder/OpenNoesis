@@ -7,3 +7,8 @@ class UserSchema(ModelSchema):
     class Config:
         model = UserModel
         model_exclude = ['password']
+
+class UserPreviewSchema(ModelSchema):
+    class Config:
+        model = UserModel
+        model_fields = ['id', 'username']

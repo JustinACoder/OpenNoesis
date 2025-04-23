@@ -112,7 +112,7 @@ class Message(models.Model):
 
 class DiscussionRequest(models.Model):
     requester = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    stance_wanted = models.BooleanField()
+    stance_wanted = models.IntegerField(choices=[(1, 'FOR'), (-1, 'AGAINST')])
     debate = models.ForeignKey(Debate, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -1,11 +1,12 @@
-from typing import List, Literal
+from typing import List, Literal, Optional
 
+from django.shortcuts import get_object_or_404
 from ninja import Router
 from ninja.pagination import paginate, PageNumberPagination
 from ninja.security import django_auth
 
+from discussion.schemas import MessageSchema, DiscussionSchema, ReadCheckpointSchema
 from discussion.services import DiscussionService
-from discussion.schemas import *
 
 # Initialize Ninja API
 router = Router(auth=django_auth)
@@ -29,8 +30,6 @@ def get_most_recent_discussion(request):
     if not discussion:
         return router.api.create_response(request, {"detail": "No active discussions found"}, status=404)
 
-    # Add is_archived_for_current_user
-    discussion.is_archived_for_current_user = discussion.is_archived_for(request.user)
     return discussion
 
 
@@ -39,7 +38,7 @@ def get_discussion(request, discussion_id: int):
     """
     Get a specific discussion.
     """
-    return DiscussionService.get_discussion_detail(discussion_id, request.user)
+    return get_object_or_404(DiscussionService.get_discussions_for_user(request.user), pk=discussion_id)
 
 
 @router.get("/{discussion_id}/messages", response=List[MessageSchema])
@@ -51,12 +50,13 @@ def get_discussion_messages(request, discussion_id: int):
     return DiscussionService.get_discussion_messages(discussion_id, request.user)
 
 
-@router.patch("/{discussion_id}/archive", response=DiscussionSchema)
+@router.patch("/{discussion_id}/archive", response={204: None})
 def set_archive_status(request, discussion_id: int, status: bool):
     """
     Archive or unarchive a discussion.
     """
-    return DiscussionService.set_discussion_archive_status(discussion_id, request.user, status)
+    DiscussionService.set_discussion_archive_status(discussion_id, request.user, status)
+    return 204, None
 
 
 @router.get("/{discussion_id}/readcheckpoints", response=List[ReadCheckpointSchema])

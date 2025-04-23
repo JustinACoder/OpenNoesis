@@ -1,9 +1,10 @@
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericRelation
+from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.search import SearchVector, SearchVectorField, SearchQuery, SearchRank
-from django.core.paginator import Paginator
 from django.db import models
-from django.db.models import Count, Case, When, Window, Max, Q, OuterRef, Subquery
+from django.db.models import Count, Case, When, Window, Max, Q, OuterRef, Subquery, Sum
 from django.template.defaultfilters import slugify
 from django.db.models import F, Func, Value, StdDev
 from django.db.models.functions import Coalesce, Log, Greatest, Now, Abs, Cast
@@ -11,76 +12,12 @@ from django.contrib.postgres.indexes import GinIndex
 from voting.models import Vote
 from datetime import timedelta
 
-
-class DebateQuerySet(models.QuerySet):
-    def with_stance(self, user):
-        if user.is_anonymous:
-            return self.annotate(user_stance=Value(None, output_field=models.BooleanField()))
-        else:
-            return self.annotate(
-                user_stance=Subquery(
-                    Stance.objects.filter(debate=OuterRef('pk'), user=user).values('stance')[:1]
-                )
-            )
+User = get_user_model()
 
 
 class DebateManager(models.Manager):
     def get_queryset(self):
         return DebateQuerySet(self.model, using=self._db)
-
-    def get_popular(self):
-        return self.annotate(num_votes=Count('vote')).order_by('-num_votes')
-
-    def get_recent(self):
-        return self.order_by('-date')
-
-    def get_trending(self):
-        """
-        We will keep it simple for now and order by the ratio of votes between now and the maximum between -48 hours
-        and the debate's creation date. Then, we multiply by the log2 of the number of votes to give more weight to debates
-        with more votes.
-        """
-        # Get the maximum between -48 hours and the debate's creation date
-        past_date = Greatest(F('date'), Now() - timedelta(hours=48))
-
-        # Get the number of votes between the past date and now
-        num_votes_since = Count('vote', filter=Q(vote__time_stamp__gte=past_date))
-
-        # Number of votes in total/
-        num_votes_total = Count('vote')
-
-        # Calculate the percentage of votes in the period (+1 to avoid division by zero)
-        percentage_votes_in_period = num_votes_since / (num_votes_total + 1)
-
-        # Multiply by the log2 of the number of votes (+1 to avoid log(0))
-        score = percentage_votes_in_period * Log(2, num_votes_total + 1)
-
-        return self.annotate(num_votes=num_votes_total).annotate(score=score).order_by('-score')
-
-    def get_controversial(self):
-        """
-        To determine the controversy of a debate, we will calculate the standard deviation of the stances.
-        The lower the standard deviation, the more controversial the debate is since it means that the stances are
-        more evenly distributed.
-        """
-        stddev = StdDev(Cast('stance__stance', models.IntegerField()))
-
-        return self.annotate(stance_stddev=stddev).order_by('stance_stddev')
-
-    def get_random(self):
-        return self.order_by('?')
-
-    def search(self, query: str):
-        search_vector = (
-                SearchVector('title', weight='A') +
-                SearchVector('description', weight='C')
-        )
-        search_query = SearchQuery(query)
-
-        return self.annotate(
-            rank=SearchRank(search_vector, search_query)
-        ).filter(rank__gt=0.1).order_by('-rank')
-
 
 class Debate(models.Model):
     title = models.CharField(max_length=100, unique=True)
@@ -105,7 +42,7 @@ class Debate(models.Model):
         try:
             return self.stance_set.get(user=user).stance
         except Stance.DoesNotExist:
-            return None
+            return 0
 
     def save(self, should_update_search_vector=True, *args, **kwargs):
         is_new = not self.id
@@ -151,37 +88,154 @@ class Debate(models.Model):
         return f"\"{self.title}\" by {self.author}"
 
 
+# Must be after Debate to avoid circular import
+from discussion.models import DiscussionRequest
+
+
+class DebateQuerySet(models.QuerySet):
+    def with_votes(self, user: User):
+        queryset = self.annotate(
+            vote_score=Coalesce(Sum(F('vote__vote')), 0),
+            vote_count=Count('vote')
+        )
+
+        # If the user is authenticated, add the user's vote to the queryset
+        # Otherwise, set the value to null
+        if user.is_authenticated:
+            debate_content_type = ContentType.objects.get_for_model(Debate)
+            queryset = queryset.annotate(
+                user_vote=Subquery(
+                    Vote.objects.filter(
+                        debate=OuterRef('pk'),
+                        user=user,
+                        content_type=debate_content_type
+                    ).values('vote')[:1]
+                )
+            )
+        else:
+            queryset = queryset.annotate(user_vote=0)
+
+        return queryset
+
+    def with_stance(self, user: User):
+        queryset = self.annotate(
+            num_for=Count(Case(When(stance__stance=True, then=1))),
+            num_against=Count(Case(When(stance__stance=False, then=1))),
+        )
+
+        if user.is_anonymous:
+            return queryset.annotate(user_stance=0)
+        else:
+            return queryset.annotate(
+                user_stance=Coalesce(
+                    Subquery(
+                        Stance.objects.filter(debate=OuterRef('pk'), user=user).values('stance')[:1]
+                    ),
+                0)
+            )
+
+    def with_user_requests(self, user: User):
+        if user.is_anonymous:
+            return self.annotate(
+                has_requested_for=Value(False, output_field=models.BooleanField()),
+                has_requested_against=Value(False, output_field=models.BooleanField()),
+            )
+        else:
+            subquery_user_requests = DiscussionRequest.objects.filter(
+                debate=OuterRef('pk'),
+                requester=user
+            )
+
+            return self.annotate(
+                has_requested_for=Subquery(subquery_user_requests.filter(stance_wanted=1).exists()),
+                has_requested_against=Subquery(subquery_user_requests.filter(stance_wanted=-1).exists()),
+            )
+
+    def get_popular(self):
+        return self.annotate(_ord_num_votes=Count('vote')).order_by('-_ord_num_votes')
+
+    def get_recent(self):
+        return self.order_by('-date')
+
+    def get_trending(self):
+        """
+        We will keep it simple for now and order by the ratio of votes between now and the maximum between -48 hours
+        and the debate's creation date. Then, we multiply by the log2 of the number of votes to give more weight to debates
+        with more votes.
+        """
+        # Get the maximum between -48 hours and the debate's creation date
+        past_date = Greatest(F('date'), Now() - timedelta(hours=48))
+
+        # Get the number of votes between the past date and now
+        num_votes_since = Count('vote', filter=Q(vote__time_stamp__gte=past_date))
+
+        # Number of votes in total
+        num_votes_total = Count('vote')
+
+        # Calculate the percentage of votes in the period (+1 to avoid division by zero)
+        percentage_votes_in_period = num_votes_since / (num_votes_total + 1)
+
+        # Multiply by the log2 of the number of votes (+1 to avoid log(0))
+        score = percentage_votes_in_period * Log(2, num_votes_total + 1)
+
+        return self.annotate(_ord_score=score).order_by('-_ord_score')
+
+    def get_controversial(self):
+        """
+        To determine the controversy of a debate, we will calculate the standard deviation of the stances.
+        The lower the standard deviation, the more controversial the debate is since it means that the stances are
+        more evenly distributed.
+        """
+        stddev = StdDev(Cast('stance__stance', models.IntegerField()))
+
+        return self.annotate(_ord_stance_stddev=stddev).order_by('_ord_stance_stddev')
+
+    def get_random(self):
+        return self.order_by('?')
+
+    def search(self, query: str):
+        search_vector = (
+                SearchVector('title', weight='A') +
+                SearchVector('description', weight='C')
+        )
+        search_query = SearchQuery(query)
+
+        return self.annotate(
+            _ord_rank=SearchRank(search_vector, search_query)
+        ).filter(_ord_rank__gt=0.1).order_by('-_ord_rank')
+
+
+class CommentQuerySet(models.QuerySet):
+    def with_votes(self, user: User):
+        queryset = self.annotate(
+            vote_score=Coalesce(Sum(F('vote__vote')), 0),
+            vote_count=Count('vote')
+        )
+
+        # If the user is authenticated, add the user's vote to the queryset
+        # Otherwise, set the value to null
+        if user.is_authenticated:
+            comment_content_type = ContentType.objects.get_for_model(Comment)
+            queryset = queryset.annotate(
+                user_vote=Subquery(
+                    Vote.objects.filter(
+                        content_type=comment_content_type,
+                        object_id=OuterRef('pk'),
+                        user=user
+                    ).values('vote')[:1]
+                )
+            )
+        else:
+            queryset = queryset.annotate(user_vote=0)
+
+        return queryset
+
+    def get_popular(self):
+        return self.annotate(_ord_num_votes=Count('vote')).order_by('-_ord_num_votes')
+
 class CommentManager(models.Manager):
-    def get_debate_comments_page(self, user, debate, page=1, page_size=10):
-        """
-        Get all comments for a debate ordered by date added
-        It also annotates the comments with the user's vote and the number of votes
-
-        :param user: The user instance
-        :param debate: The debate instance
-        :param page: The page number
-        :param page_size: The number of comments per page
-        :return: A queryset of comments
-        """
-        comments = self.filter(debate=debate).order_by('-date_added').select_related('author')
-
-        # Get the page of comments
-        paginator = Paginator(comments, page_size)
-        comments_page = paginator.get_page(page)
-
-        # Get votes for the comments
-        comment_votes = Vote.objects.get_for_user_in_bulk(comments_page, user)
-
-        # Get the number of votes for each comment
-        comment_vote_scores = Vote.objects.get_scores_in_bulk(comments)
-
-        # Annotate the comments with the vote information
-        for comment in comments:
-            key = str(comment.id)
-            comment.user_vote = comment_votes.get(key)
-            comment.vote_score, comment.num_votes = comment_vote_scores.get(key, {'score': 0, 'num_votes': 0}).values()
-
-        return comments_page
+    def get_queryset(self):
+        return CommentQuerySet(self.model, using=self._db)
 
 
 class Comment(models.Model):
@@ -200,7 +254,7 @@ class Comment(models.Model):
 class Stance(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     debate = models.ForeignKey(Debate, on_delete=models.CASCADE)
-    stance = models.BooleanField()  # False for "against", True for "for" # TODO: think of a more complex stance system
+    stance = models.IntegerField(choices=[(1, 'FOR'), (-1, 'AGAINST')])
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

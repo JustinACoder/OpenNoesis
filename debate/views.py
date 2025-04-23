@@ -90,13 +90,13 @@ def debate(request, debate_slug):
     # Get the user's stance on the debate
     # Note we check using the user_id instead of user since it could be AnonymousUser (not authenticated)
     user_stance = Stance.objects.filter(user_id=request.user.id, debate=debate_instance).first()
-    stance_str = None if user_stance is None else 'for' if user_stance.stance else 'against'
+    stance_str = None if user_stance is None else 'for' if user_stance.stance == 1 else 'against'
 
     # Get the user's discussion requests on the debate
     # Note we check using the user_id instead of user since it could be AnonymousUser (not authenticated)
     user_discussion_requests = DiscussionRequest.objects.filter(requester_id=request.user.id, debate=debate_instance)
-    has_requested_for = user_discussion_requests.filter(stance_wanted=True).exists()
-    has_requested_against = user_discussion_requests.filter(stance_wanted=False).exists()
+    has_requested_for = user_discussion_requests.filter(stance_wanted=1).exists()
+    has_requested_against = user_discussion_requests.filter(stance_wanted=-1).exists()
 
     # Get the user's vote on the debate
     debate_vote = Vote.objects.get_for_user(debate_instance, request.user)

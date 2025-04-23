@@ -4,10 +4,11 @@ from ninja import Router
 from ninja.pagination import paginate, PageNumberPagination
 from ninja.security import django_auth
 from ninja.errors import HttpError
+from django.http import Http404
 
 from .models import Invite
 from .schemas import InviteSchema, InviteUseSchema
-from .services import InviteService, DisallowedActionError, NotFoundError
+from .services import InviteService, DisallowedActionError
 
 router = Router(auth=django_auth)
 
@@ -17,10 +18,7 @@ def view_invite(request, invite_code: str):
     """
     View details of a specific invite.
     """
-    try:
-        return InviteService.get_invite_by_code(invite_code)
-    except Invite.DoesNotExist:
-        raise HttpError(404, "Invite not found")
+    return InviteService.get_invite_by_code(invite_code)
 
 
 @router.get("/", response=List[InviteSchema])
@@ -47,18 +45,19 @@ def accept_invite(request, invite_code: str):
     """
     try:
         return InviteService.accept_invite(invite_code, request.user)
-    except NotFoundError as e:
-        raise HttpError(404, str(e))
     except DisallowedActionError as e:
-        raise HttpError(403, "Cannot accept your own invite")
+        message = str(e) or "An error occurred"
+        raise HttpError(403, message)
 
 
-@router.delete("/{invite_code}")
+@router.delete("/{invite_code}", response={204: None})
 def delete_invite(request, invite_code: str):
     """
     Delete an invite created by the authenticated user.
     """
-    success = InviteService.delete_invite(invite_code, request.user)
-    if not success:
-        raise HttpError(404, "Invite not found")
-    return {"success": True}
+    is_deleted = InviteService.delete_invite(invite_code, request.user)
+    if not is_deleted:
+        raise Http404("Invite not found or you do not have permission to delete it.")
+
+    return 204, None
+
