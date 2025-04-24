@@ -93,7 +93,7 @@ class PairingConsumer(CustomBaseConsumer):
         """
         await asyncio.sleep(3.5)
         await self.complete_match(pairing_match)
-        await self.notify_paired_redirect(pairing_match)
+        await self.notify_paired(pairing_match)
 
     @database_sync_to_async
     @transaction.atomic
@@ -148,7 +148,7 @@ class PairingConsumer(CustomBaseConsumer):
         else:
             await self.notify_match_found(pairing_request, best_match)
 
-            # Wait a few seconds before redirecting the users to the discussion
+            # Wait a few seconds before completing the pairing
             # We do not await to avoid blocking the event loop
             asyncio.create_task(self.wait_then_complete_pairing(pairing_match))  # noqa
 
@@ -245,13 +245,26 @@ class PairingConsumer(CustomBaseConsumer):
             }
         )
 
-    async def notify_paired_redirect(self, pairing_match):
+    async def notify_paired(self, pairing_match):
         """
-        Notifies the users that the pairing has been completed and redirects them to the discussion.
+        Notifies the users that the pairing has been completed.
         """
         for pairing_request in [pairing_match.pairing_request_1, pairing_match.pairing_request_2]:
-            await self.redirect(pairing_request.user_id, 'specific_discussion',
-                                discussion_id=pairing_match.related_discussion_id)
+            # Get the user group name
+            user_group_name = get_user_group_name(self.__class__.__name__, pairing_request.user_id)
+
+            # Notify the user that the pairing has been completed
+            await self.channel_layer.group_send(
+                user_group_name,
+                {
+                    'status': 'success',
+                    'type': 'send.json',
+                    'event_type': 'paired',
+                    'data': {
+                        'discussion_id': pairing_match.related_discussion_id,
+                    }
+                }
+            )
 
     @database_sync_to_async
     @transaction.atomic
@@ -275,7 +288,7 @@ class PairingConsumer(CustomBaseConsumer):
         """
         debate_id = data.get('debate_id')
         desired_stance = data.get('desired_stance')
-        if not isinstance(debate_id, int) or desired_stance not in [True, False]:
+        if not isinstance(debate_id, int) or isinstance(desired_stance, int) or desired_stance not in [-1, 1]:
             await self.send_json({'status': 'error', 'message': 'Missing valid debate_id or desired_stance'})
             return
 
@@ -292,24 +305,14 @@ class PairingConsumer(CustomBaseConsumer):
             return
 
         # Notify the user that the pairing request has been created
-        await self.notify_request_pairing(pairing_request, debate)
+        await self.notify_request_pairing(pairing_request)
 
-    async def notify_request_pairing(self, pairing_request, debate=None):
+    async def notify_request_pairing(self, pairing_request):
         """
         Notifies the user that the pairing request has been created.
-        If you provide a debate, it will be used instead of querying the pairing request for the debate.
-        This is useful when we have the debate object already.
         """
         # Get the user group name
         user_group_name = get_user_group_name(self.__class__.__name__, pairing_request.user_id)
-
-        # Get the pairing request ID
-        html = render_to_string(
-            'pairing/pairing_header.html',
-            {
-                'debate': debate or pairing_request.debate
-            }
-        )
 
         # Notify the user that the pairing request has been created
         await self.channel_layer.group_send(
@@ -318,8 +321,5 @@ class PairingConsumer(CustomBaseConsumer):
                 'status': 'success',
                 'type': 'send.json',
                 'event_type': 'request_pairing',
-                'data': {
-                    'html': html
-                }
             }
         )
