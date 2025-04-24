@@ -1,15 +1,11 @@
-from datetime import datetime, timedelta
-from typing import List, Optional, Dict, Any, Tuple, Literal
+from typing import Optional, Literal
 
 from django.contrib.auth import get_user_model
-from django.db import transaction
-from django.db.models import Q, F, BooleanField, When, Case, Value, Window, DateTimeField, Subquery, OuterRef, QuerySet
+from django.db.models import Q, F, BooleanField, When, Case, Value, Subquery, OuterRef, QuerySet
 from django.db.models.functions import Greatest
-from django.db.models.functions.window import Lag
 from django.shortcuts import get_object_or_404
 
-from debate.models import Debate
-from discussion.models import Discussion, Message, ReadCheckpoint, DiscussionRequest
+from discussion.models import Discussion, Message, ReadCheckpoint
 
 User = get_user_model()
 

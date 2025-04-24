@@ -1,12 +1,11 @@
 from ninja import ModelSchema
-from ninja.schema import S
 
 from debate.models import Debate, Comment, Stance
 from users.schemas import UserPreviewSchema
 
-from typing import Optional, List, Type, Any
+from typing import List
 from ninja import Schema
-from enum import IntEnum, Enum
+from enum import IntEnum
 
 
 class VoteDirectionEnum(IntEnum):
@@ -47,13 +46,6 @@ class VotesMixin:
             user_vote=obj.user_vote
         )
 
-
-class DebatePreviewSchema(ModelSchema):
-    class Config:
-        model = Debate
-        model_fields = ['id', 'title', 'slug']
-
-
 class DebateSchema(ModelSchema):
     author: UserPreviewSchema
     votes: VotesSchema
@@ -65,7 +57,7 @@ class DebateSchema(ModelSchema):
         model_exclude = ['search_vector', 'vote']
 
     @classmethod
-    def from_orm(cls, obj, **kw) -> S:
+    def from_orm(cls, obj: Debate, **kw) -> "DebateSchema":
         """
         Override the from_orm method to include custom logic for building vote info.
         """
@@ -73,23 +65,23 @@ class DebateSchema(ModelSchema):
         instance = super().from_orm(obj, **kw)
 
         # Build the vote info using the VotesMixin
-        instance.votes = VotesMixin.build_vote_info(obj)
+        instance.votes = VotesMixin.build_vote_info(obj) # noqa
 
         # Build the stance info
         instance.stances = DebateStanceInfoSchema(
-            num_for=obj.num_for,
-            num_against=obj.num_against,
-            user_stance=StanceDirectionEnum(obj.user_stance)
+            num_for=obj.num_for, # noqa
+            num_against=obj.num_against, # noqa
+            user_stance=StanceDirectionEnum(obj.user_stance) # noqa
         )
 
         # Build the user requests info
         instance.user_requests = UserDebateRequestSchema(
-            has_requested_for=obj.has_requested_for,
-            has_requested_against=obj.has_requested_against
+            has_requested_for=obj.has_requested_for, # noqa
+            has_requested_against=obj.has_requested_against # noqa
         )
 
         # Return the modified instance
-        return instance
+        return instance # noqa
 
 
 class ExploreDebateListSchema(Schema):
@@ -109,7 +101,7 @@ class CommentSchema(ModelSchema):
         model_fields = '__all__'
 
     @classmethod
-    def from_orm(cls, obj, **kw) -> S:
+    def from_orm(cls, obj: Comment, **kw) -> "CommentSchema":
         """
         Override the from_orm method to include custom logic for building vote info.
         """
@@ -117,10 +109,10 @@ class CommentSchema(ModelSchema):
         instance = super().from_orm(obj, **kw)
 
         # Build the vote info using the VotesMixin
-        instance.votes = VotesMixin.build_vote_info(obj)
+        instance.votes = VotesMixin.build_vote_info(obj) # noqa
 
         # Return the modified instance
-        return instance
+        return instance # noqa
 
 
 class StanceSchema(ModelSchema):
