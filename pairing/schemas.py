@@ -5,7 +5,7 @@ from pairing.models import PairingRequest
 
 
 class PairingRequestSchema(ModelSchema):
-    debate = DebatePreviewSchema
+    debate: DebatePreviewSchema
     class Config:
         model = PairingRequest
         model_exclude = ['user']

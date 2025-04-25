@@ -19,6 +19,7 @@ class DebateManager(models.Manager):
     def get_queryset(self):
         return DebateQuerySet(self.model, using=self._db)
 
+
 class Debate(models.Model):
     title = models.CharField(max_length=100, unique=True)
     description = models.TextField()
@@ -88,6 +89,41 @@ class Debate(models.Model):
         return f"\"{self.title}\" by {self.author}"
 
 
+class CommentManager(models.Manager):
+    def get_queryset(self):
+        return CommentQuerySet(self.model, using=self._db)
+
+
+class Comment(models.Model):
+    debate = models.ForeignKey(Debate, on_delete=models.CASCADE)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    text = models.TextField()
+    date_added = models.DateTimeField(auto_now_add=True)
+    last_modified = models.DateTimeField(auto_now=True)
+
+    objects = CommentManager()
+
+    def __str__(self):
+        return f"Comment by {self.author} on \"{self.debate.title}\""
+
+
+class Stance(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    debate = models.ForeignKey(Debate, on_delete=models.CASCADE)
+    stance = models.IntegerField(choices=[(1, 'FOR'), (-1, 'AGAINST')])
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'debate')  # A user can only have one stance on a debate
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['user', 'debate'])
+        ]
+
+    def __str__(self):
+        return f"Stance of {self.user} on \"{self.debate.title}\""
+
+
 # Must be after Debate to avoid circular import
 from discussion.models import DiscussionRequest
 
@@ -131,7 +167,7 @@ class DebateQuerySet(models.QuerySet):
                     Subquery(
                         Stance.objects.filter(debate=OuterRef('pk'), user=user).values('stance')[:1]
                     ),
-                0)
+                    0)
             )
 
     def with_user_requests(self, user: User):
@@ -232,37 +268,3 @@ class CommentQuerySet(models.QuerySet):
 
     def get_popular(self):
         return self.annotate(_ord_num_votes=Count('vote')).order_by('-_ord_num_votes')
-
-class CommentManager(models.Manager):
-    def get_queryset(self):
-        return CommentQuerySet(self.model, using=self._db)
-
-
-class Comment(models.Model):
-    debate = models.ForeignKey(Debate, on_delete=models.CASCADE)
-    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    text = models.TextField()
-    date_added = models.DateTimeField(auto_now_add=True)
-    last_modified = models.DateTimeField(auto_now=True)
-
-    objects = CommentManager()
-
-    def __str__(self):
-        return f"Comment by {self.author} on \"{self.debate.title}\""
-
-
-class Stance(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    debate = models.ForeignKey(Debate, on_delete=models.CASCADE)
-    stance = models.IntegerField(choices=[(1, 'FOR'), (-1, 'AGAINST')])
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ('user', 'debate')  # A user can only have one stance on a debate
-        indexes = [
-            models.Index(fields=['user', '-created_at']),
-            models.Index(fields=['user', 'debate'])
-        ]
-
-    def __str__(self):
-        return f"Stance of {self.user} on \"{self.debate.title}\""

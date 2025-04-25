@@ -10,7 +10,7 @@ class PrivateUserSchema(ModelSchema):
 
     class Config:
         model = UserModel
-        model_fields = ['id', 'username', 'email', 'date_joined', 'bio', 'is_staff']
+        model_fields = ['id', 'username', 'email', 'date_joined', 'is_staff']
 
 
 class ProfileEditSchema(ModelSchema):
@@ -22,7 +22,7 @@ class ProfileEditSchema(ModelSchema):
 class PublicUserSchema(PrivateUserSchema):
     class Config:
         model = UserModel
-        model_fields = ['id', 'username', 'date_joined', 'bio', 'is_staff']
+        model_fields = ['id', 'username', 'date_joined', 'is_staff']
 
 class UserPreviewSchema(ModelSchema):
     class Config:

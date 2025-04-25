@@ -1,11 +1,10 @@
 from ninja import ModelSchema
-
-from debate.models import Debate, Comment, Stance
-from users.schemas import UserPreviewSchema
-
 from typing import List
 from ninja import Schema
 from enum import IntEnum
+
+from debate.models import Debate, Comment, Stance
+from users.schemas import UserPreviewSchema
 
 
 class VoteDirectionEnum(IntEnum):
@@ -46,6 +45,7 @@ class VotesMixin:
             user_vote=obj.user_vote
         )
 
+
 class DebateSchema(ModelSchema):
     author: UserPreviewSchema
     votes: VotesSchema
@@ -56,32 +56,36 @@ class DebateSchema(ModelSchema):
         model = Debate
         model_exclude = ['search_vector', 'vote']
 
-    @classmethod
-    def from_orm(cls, obj: Debate, **kw) -> "DebateSchema":
+    @staticmethod
+    def resolve_votes(obj):
         """
-        Override the from_orm method to include custom logic for building vote info.
+        Custom resolver for the votes field.
+        This method is called when the votes field is accessed.
         """
-        # Call the parent class's from_orm method
-        instance = super().from_orm(obj, **kw)
+        return VotesMixin.build_vote_info(obj)
 
-        # Build the vote info using the VotesMixin
-        instance.votes = VotesMixin.build_vote_info(obj) # noqa
-
-        # Build the stance info
-        instance.stances = DebateStanceInfoSchema(
-            num_for=obj.num_for, # noqa
-            num_against=obj.num_against, # noqa
-            user_stance=StanceDirectionEnum(obj.user_stance) # noqa
+    @staticmethod
+    def resolve_stances(obj):
+        """
+        Custom resolver for the stances field.
+        This method is called when the stances field is accessed.
+        """
+        return DebateStanceInfoSchema(
+            num_for=obj.num_for,
+            num_against=obj.num_against,
+            user_stance=StanceDirectionEnum(obj.user_stance)
         )
 
-        # Build the user requests info
-        instance.user_requests = UserDebateRequestSchema(
-            has_requested_for=obj.has_requested_for, # noqa
-            has_requested_against=obj.has_requested_against # noqa
+    @staticmethod
+    def resolve_user_requests(obj):
+        """
+        Custom resolver for the user_requests field.
+        This method is called when the user_requests field is accessed.
+        """
+        return UserDebateRequestSchema(
+            has_requested_for=obj.has_requested_for,
+            has_requested_against=obj.has_requested_against
         )
-
-        # Return the modified instance
-        return instance # noqa
 
 
 class ExploreDebateListSchema(Schema):
@@ -100,19 +104,13 @@ class CommentSchema(ModelSchema):
         model = Comment
         model_fields = '__all__'
 
-    @classmethod
-    def from_orm(cls, obj: Comment, **kw) -> "CommentSchema":
+    @staticmethod
+    def resolve_votes(obj):
         """
-        Override the from_orm method to include custom logic for building vote info.
+        Custom resolver for the votes field.
+        This method is called when the votes field is accessed.
         """
-        # Call the parent class's from_orm method
-        instance = super().from_orm(obj, **kw)
-
-        # Build the vote info using the VotesMixin
-        instance.votes = VotesMixin.build_vote_info(obj) # noqa
-
-        # Return the modified instance
-        return instance # noqa
+        return VotesMixin.build_vote_info(obj)
 
 
 class StanceSchema(ModelSchema):

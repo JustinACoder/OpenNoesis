@@ -1,6 +1,3 @@
-from channels.db import database_sync_to_async
-from django.db.models import Q
-
 from ProjectOpenDebate.consumers import CustomBaseConsumer, get_user_group_name
 from .models import Notification
 

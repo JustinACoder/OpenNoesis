@@ -2,7 +2,7 @@ from ninja import ModelSchema
 
 from debate.schemas2 import DebatePreviewSchema
 from debateme.models import InviteUse, Invite
-from users.schemas import UserSchema, UserPreviewSchema
+from users.schemas import UserPreviewSchema
 
 
 class InviteSchema(ModelSchema):
@@ -14,7 +14,7 @@ class InviteSchema(ModelSchema):
         model_fields = '__all__'
 
 class InviteUseSchema(ModelSchema):
-    user: UserSchema
+    user: UserPreviewSchema
 
     class Config:
         model = InviteUse

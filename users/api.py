@@ -15,7 +15,6 @@ User = get_user_model()
 router = Router(auth=django_auth)
 
 @router.get("/{int:user_id}", response=PublicUserSchema, auth=None)
-@paginate(PageNumberPagination, page_size=15)
 def get_public_user_profile(request, user_id: int):
     """
     Get user details by user ID.
