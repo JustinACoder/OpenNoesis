@@ -10,7 +10,7 @@ from .schemas import (
     DebateSchema,
     CommentSchema,
     StanceSchema,
-    VoteDirectionEnum, ExploreDebateListSchema,
+    VoteDirectionEnum, ExploreDebateListSchema, StanceDirectionEnum,
 )
 from .services import (
     DebateService,
@@ -37,7 +37,6 @@ def explore_debates(request):
         random=base_queryset.get_random(),
     )
 
-
 @router.get("/search", response=List[DebateSchema])
 @paginate(PageNumberPagination, page_size=25)
 def search_debates(request, query: str):
@@ -51,6 +50,13 @@ def get_debate(request, debate_id: int):
     """Get detailed information about a debate."""
     user = request.auth or request.user
     return DebateService.get_debate_details(user, debate_id)
+
+@router.get("/with-user-stance", response=List[DebateSchema], auth=django_auth)
+@paginate(PageNumberPagination, page_size=10)
+def get_debates_with_user_stance(request):
+    """Get debates with the user's stance."""
+    user = request.auth or request.user
+    return DebateService.get_debate_queryset(user).filter(user_stance__not=StanceDirectionEnum.UNSET)
 
 
 @router.get("/{int:debate_id}/suggestions", response=List[DebateSchema])
