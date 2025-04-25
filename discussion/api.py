@@ -12,7 +12,7 @@ from discussion.services import DiscussionService
 router = Router(auth=django_auth)
 
 # API Endpoints
-@router.get("/", response=List[DiscussionSchema])
+@router.get("", response=List[DiscussionSchema])
 @paginate(PageNumberPagination, page_size=15)
 def get_discussions(request, filterType: Optional[Literal["active", "archived"]] = None):
     """

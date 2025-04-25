@@ -1,48 +1,23 @@
-"""
-URL configuration for ProjectOpenDebate project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.contrib import admin
-from django.http import HttpResponseRedirect
-from django.urls import include, path, reverse
-from . import views
-from debateme.urls import accounts_urlpatterns as debateme_accounts_urlpatterns
-from debate.urls import main_urlpatterns as debate_main_urlpatterns
+from django.urls import path
 from ninja import NinjaAPI
 from discussion.api import router as discussion_router
 from debateme.api import router as debateme_router
+from debate.api import router as debate_router
+from notifications.api import router as notifications_router
+from users.api import router as users_router
+from pairing.api import router as pairing_router
 
 api = NinjaAPI()
 
-api.add_router('/discussions/', discussion_router, tags=['Discussions'])
-api.add_router('/invites/', debateme_router, tags=['Invites'])
-
-accounts_urlpatterns = [
-    path('', include('allauth.urls')),
-    path('', include('users.urls')),
-] + debateme_accounts_urlpatterns
+api.add_router('/discussions', discussion_router, tags=['Discussions'])
+api.add_router('/invites', debateme_router, tags=['Invites'])
+api.add_router('/debates', debate_router, tags=['Debate'])
+api.add_router('/notifications', notifications_router, tags=['Notifications'])
+api.add_router('/users', users_router, tags=['Users'])
+api.add_router('/pairing', pairing_router, tags=['Pairing'])
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', api.urls),
-    path('', views.main, name='main'),
-    path('d/', include('debate.urls')),
-    path('accounts/', include(accounts_urlpatterns)),
-    path('chat/', include('discussion.urls')),
-    path('debateme/', include('debateme.urls')),
-    path('accounts/notifications/', include('notifications.urls')),
-    path('pairing/', include('pairing.urls')),
-    path('__debug__/', include('debug_toolbar.urls')),
-] + debate_main_urlpatterns
+    path('api/', api.urls)
+]
