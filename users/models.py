@@ -7,7 +7,6 @@ from django.dispatch import receiver
 class Profile(models.Model):
     user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE)
     bio = models.TextField(max_length=2048, blank=True)
-    show_recent_stances = models.BooleanField(default=True)
 
     def __str__(self):
         return f"Profile for {self.user.username}"
