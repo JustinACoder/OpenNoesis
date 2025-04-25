@@ -65,3 +65,17 @@ def get_read_checkpoints(request, discussion_id: int):
     Get the read checkpoints for a discussion.
     """
     return DiscussionService.get_read_checkpoints(discussion_id, request.user)
+
+@router.get("/unread-count", response=int)
+def get_unread_count(request):
+    """
+    Get count of unread messages for the current user.
+    """
+    return DiscussionService.get_unread_count(request.user)
+
+@router.get("/{discussion_id}/unread-count", response=int)
+def get_unread_count_for_discussion(request, discussion_id: int):
+    """
+    Get count of unread messages for a specific discussion.
+    """
+    return DiscussionService.get_unread_count(request.user, discussion_id)

@@ -1,5 +1,4 @@
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
-from django.shortcuts import resolve_url
 
 
 def get_user_group_name(consumer_class_name: str, user_id: int):

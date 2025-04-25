@@ -1,8 +1,9 @@
+from datetime import datetime
 from typing import Optional, Literal
 
 from django.contrib.auth import get_user_model
-from django.db.models import Q, F, BooleanField, When, Case, Value, Subquery, OuterRef, QuerySet
-from django.db.models.functions import Greatest
+from django.db.models import Q, F, BooleanField, When, Case, Value, Subquery, OuterRef, QuerySet, Count, Sum
+from django.db.models.functions import Greatest, Coalesce
 from django.shortcuts import get_object_or_404
 
 from discussion.models import Discussion, Message, ReadCheckpoint
@@ -138,3 +139,32 @@ class DiscussionService:
             discussion.is_archived_for_p2 = archive_status
 
         discussion.save()
+
+    @staticmethod
+    def get_unread_count(user: User, discussion_id: Optional[int] = None) -> int:
+        # Subquery to get the latest read message timestamp for each discussion
+        last_read_timestamp = ReadCheckpoint.objects.filter(
+            user=user,
+            discussion=OuterRef('pk')
+        ).values('last_message_read__created_at')[:1]
+
+        # Query to get the count of messages that are after the checkpoint for each discussion
+        unread_messages_query = (
+            Discussion.objects
+            .filter(
+                (Q(participant1=user) & Q(is_archived_for_p1=False)) |
+                    (Q(participant2=user) & Q(is_archived_for_p2=False)),
+
+                # Filter by discussion_id if provided
+                Q(pk=discussion_id) if discussion_id else Q()
+            )
+            .annotate(
+                unread_count=Count(
+                    'message',
+                    filter=Q(message__created_at__gt=Coalesce(Subquery(last_read_timestamp), datetime.min))
+                )
+            )
+        )
+
+        # Get the total number of unread messages
+        return unread_messages_query.aggregate(Sum('unread_count'))['unread_count__sum']

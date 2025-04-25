@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from django.conf import settings
 
 from discussion.models import Discussion
-from discussion.views import create_discussion_and_readcheckpoints
+from discussion.services import DiscussionService
 
 
 class PairingRequestManager(models.Manager):
@@ -148,7 +148,7 @@ class PairingMatch(models.Model):
         self.pairing_request_2.switch_status(PairingRequest.Status.PAIRED)
 
         # Create the Discussion
-        discussion = create_discussion_and_readcheckpoints(
+        discussion = DiscussionService.create_discussion_and_readcheckpoints(
             self.pairing_request_1.debate_id,
             self.pairing_request_1.user_id,
             self.pairing_request_2.user_id

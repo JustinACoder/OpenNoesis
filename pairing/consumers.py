@@ -2,7 +2,6 @@ import asyncio
 
 from channels.db import database_sync_to_async
 from django.db import transaction
-from django.template.loader import render_to_string
 
 from ProjectOpenDebate.consumers import CustomBaseConsumer, get_user_group_name
 from debate.models import Debate

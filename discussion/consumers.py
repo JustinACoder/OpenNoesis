@@ -4,9 +4,9 @@ from django.db.models import Q
 from django.template.loader import render_to_string
 
 from ProjectOpenDebate.consumers import CustomBaseConsumer, get_user_group_name
-from .forms import MessageForm
 from .models import Discussion, Message
-from .views import set_message_additional_fields
+from .schemas import MessageSchema
+from .services import DiscussionService
 
 
 class DiscussionConsumer(CustomBaseConsumer):
@@ -58,11 +58,12 @@ class DiscussionConsumer(CustomBaseConsumer):
             return
 
         # Save the message to the database
-        messageForm = MessageForm({'text': message})
-        if messageForm.is_valid():
-            messageForm.instance.discussion_id = discussion.id
-            messageForm.instance.author = user
-            message_instance = await database_sync_to_async(messageForm.save)()
+        if len(message) <= 5000 and message.strip():
+            message_instance = await Message.objects.acreate(
+                discussion=discussion,
+                author=user,
+                text=message,
+            )
         else:
             await self.send_json({'status': 'error', 'message': 'Invalid message'})
             return
@@ -71,30 +72,8 @@ class DiscussionConsumer(CustomBaseConsumer):
         user_readcheckpoint = await discussion.readcheckpoint_set.aget(user=user)
         await database_sync_to_async(user_readcheckpoint.read_until)(message_instance)
 
-        # Set additional fields for the message
-        # TODO: This is a bit hacky, we should find a better way to do this
-        previous_message = await discussion.message_set.order_by('-created_at').exclude(id=message_instance.id).afirst()
-        message_instance.prev_message_created_at = previous_message.created_at if previous_message else None
-        set_message_additional_fields(message_instance)
-
-        # If the message is the first message in the group, render the time separator as well
-        if message_instance.first_of_group:
-            separator_html = render_to_string('discussion/datetime_separator.html',
-                                              context={'formatted_datetime': message_instance.formatted_datetime})
-        else:
-            separator_html = ""
-
-        # Render the message to send to the participants
-        context_sender = {
-            'message': message_instance,
-            'is_current_user': True,
-        }
-        context_receiver = {
-            'message': message_instance,
-            'is_current_user': False,
-        }
-        message_sender_html = render_to_string('discussion/message.html', context=context_sender)
-        message_receiver_html = render_to_string('discussion/message.html', context=context_receiver)
+        # Transform message instance into a schema
+        message_data = MessageSchema.model_validate(message_instance).dict()
 
         # Send the message to all participants in the discussion
         participants_ids = [discussion.participant1_id, discussion.participant2_id]
@@ -108,14 +87,8 @@ class DiscussionConsumer(CustomBaseConsumer):
                     'event_type': 'new_message',
                     'type': 'send.json',
                     'data': {
-                        'discussion_id': discussion.id,
-                        'is_archived': is_archived,
-                        'sender_id': user.id,
-                        'sender': user.username,
-                        'message': message,
-                        'html': message_sender_html if participant_id == user.id else message_receiver_html,
-                        'separator_html': separator_html,
-                        'is_current_user_sender': participant_id == user.id,
+                        'isin_archived_discussion': is_archived,
+                        'message': message_data,
                     }
                 }
             )
@@ -135,7 +108,6 @@ class DiscussionConsumer(CustomBaseConsumer):
         is_archived_flags = [discussion.is_archived_for_p1, discussion.is_archived_for_p2]
         for participant_id, is_archived in zip(participants_ids, is_archived_flags):
             user_group_name = get_user_group_name(self.__class__.__name__, participant_id)
-            is_current_user = participant_id == user.id
             await self.channel_layer.group_send(
                 user_group_name,
                 {
@@ -144,10 +116,10 @@ class DiscussionConsumer(CustomBaseConsumer):
                     'type': 'send.json',
                     'data': {
                         'discussion_id': discussion.id,
+                        'user_id': user.id,
                         'is_archived': is_archived,
-                        'is_current_user': is_current_user,
                         'num_messages_read': num_messages_read,  # used to update the unread messages count in navbar
-                        'through_load_discussion': data['through_load_discussion']
+                        'through_load_discussion': data['through_load_discussion']  # TODO: what is this for again?
                     }
                 }
             )

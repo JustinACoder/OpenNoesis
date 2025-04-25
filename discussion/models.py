@@ -2,15 +2,12 @@ from datetime import datetime
 
 from django.conf import settings
 from django.db import models
-from django.db.models.functions import Coalesce
-from django.dispatch import receiver
 from django.template.loader import render_to_string
 
 from ProjectOpenDebate.consumers import get_user_group_name
 from debate.models import Debate
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-from django.db.models.signals import post_save
 
 from discussion.deletion import SET_WITH
 

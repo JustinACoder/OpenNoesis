@@ -1,12 +1,12 @@
 from typing import Optional
 
 from django.shortcuts import get_object_or_404
-from django.db.models import Count, QuerySet
+from django.db.models import QuerySet
 from django.db import transaction
 
 from debate.models import Debate
 from debateme.models import Invite, InviteUse
-from discussion.views import create_discussion_and_readcheckpoints
+from discussion.services import DiscussionService
 from notifications.models import Notification
 
 
@@ -76,7 +76,7 @@ class InviteService:
 
         # Create discussion
         participant1, participant2 = invite.creator, user
-        discussion = create_discussion_and_readcheckpoints(invite.debate, participant1, participant2)
+        discussion = DiscussionService.create_discussion_and_readcheckpoints(invite.debate, participant1, participant2)
 
         # Create invite use record
         invite_use = InviteUse.objects.create(

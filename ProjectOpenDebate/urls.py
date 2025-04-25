@@ -1,5 +1,6 @@
+import debug_toolbar
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from ninja import NinjaAPI
 from discussion.api import router as discussion_router
 from debateme.api import router as debateme_router
@@ -19,5 +20,8 @@ api.add_router('/pairing', pairing_router, tags=['Pairing'])
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', api.urls)
+    path('api/', api.urls),
+    path("_allauth/", include("allauth.headless.urls")),
+    path("accounts/", include("allauth.urls")), # For social login
+    path('__debug__/', include(debug_toolbar.urls))
 ]

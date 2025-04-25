@@ -10,6 +10,7 @@ from users.schemas import UserPreviewSchema
 
 
 class MessageSchema(ModelSchema):
+    text: str = Field(..., max_length=5000)
     class Config:
         model = Message
         model_fields = '__all__'

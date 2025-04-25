@@ -4,10 +4,10 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.search import SearchVector, SearchVectorField, SearchQuery, SearchRank
 from django.db import models
-from django.db.models import Count, Case, When, Window, Max, Q, OuterRef, Subquery, Sum
+from django.db.models import Count, Case, When, Q, OuterRef, Subquery, Sum
 from django.template.defaultfilters import slugify
-from django.db.models import F, Func, Value, StdDev
-from django.db.models.functions import Coalesce, Log, Greatest, Now, Abs, Cast
+from django.db.models import F, Value, StdDev
+from django.db.models.functions import Coalesce, Log, Greatest, Now, Cast
 from django.contrib.postgres.indexes import GinIndex
 from voting.models import Vote
 from datetime import timedelta
