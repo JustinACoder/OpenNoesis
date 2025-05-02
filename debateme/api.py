@@ -6,6 +6,7 @@ from ninja.security import django_auth
 from ninja.errors import HttpError
 from django.http import Http404
 
+from ProjectOpenDebate.auth import optional_django_auth
 from .schemas import InviteSchema, InviteUseSchema
 from .services import InviteService, DisallowedActionError
 
@@ -18,7 +19,7 @@ def list_invites(request):
     """
     List all invites created by the authenticated user.
     """
-    user = request.auth or request.user
+    user = request.auth
     return InviteService.get_user_invites(user)
 
 
@@ -27,11 +28,11 @@ def create_invite(request, debate_slug: str):
     """
     Create a new invite for a specific debate.
     """
-    user = request.auth or request.user
+    user = request.auth
     return InviteService.create_invite(user, debate_slug)
 
 
-@router.get("/{invite_code}", response=InviteSchema, auth=None)
+@router.get("/{invite_code}", response=InviteSchema, auth=optional_django_auth)
 def view_invite(request, invite_code: str):
     """
     View details of a specific invite.
@@ -44,7 +45,7 @@ def accept_invite(request, invite_code: str):
     """
     Accept an invite and start a discussion.
     """
-    user = request.auth or request.user
+    user = request.auth
     try:
         return InviteService.accept_invite(invite_code, user)
     except DisallowedActionError as e:
@@ -57,7 +58,7 @@ def delete_invite(request, invite_code: str):
     """
     Delete an invite created by the authenticated user.
     """
-    user = request.auth or request.user
+    user = request.auth
     is_deleted = InviteService.delete_invite(invite_code, user)
     if not is_deleted:
         raise Http404("Invite not found or you do not have permission to delete it.")

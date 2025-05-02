@@ -7,6 +7,8 @@ from ninja import Router
 from ninja.pagination import paginate, PageNumberPagination
 from ninja.security import django_auth
 from ninja import PatchDict
+
+from ProjectOpenDebate.auth import optional_django_auth
 from .schemas import PublicUserSchema, PrivateUserSchema, ProfileEditSchema
 
 User = get_user_model()
@@ -14,7 +16,7 @@ User = get_user_model()
 # Initialize Ninja API router
 router = Router(auth=django_auth)
 
-@router.get("/{int:user_id}", response=PublicUserSchema, auth=None)
+@router.get("/{int:user_id}", response=PublicUserSchema, auth=optional_django_auth)
 def get_public_user_profile(request, user_id: int):
     """
     Get user details by user ID.
@@ -26,7 +28,7 @@ def get_private_user_profile(request):
     """
     Get the authenticated user's profile.
     """
-    user = request.auth or request.user
+    user = request.auth
     return get_object_or_404(User, id=user.id)
 
 
@@ -38,7 +40,7 @@ def update_private_user_profile(request, payload: PatchDict[ProfileEditSchema]):
     if len(payload) == 0:
         raise Http404("No data provided for update.")
 
-    user = request.auth or request.user
+    user = request.auth
     user_profile = user.profile # We should always have a profile due to the signal
 
     for field, value in payload.items():
