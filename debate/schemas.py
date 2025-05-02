@@ -1,6 +1,6 @@
 from ninja import ModelSchema
-from typing import List
-from ninja import Schema
+from typing import Optional
+from ninja import Schema, Field
 from enum import IntEnum
 
 from debate.models import Debate, Comment, Stance
@@ -19,98 +19,73 @@ class StanceDirectionEnum(IntEnum):
     AGAINST = -1
 
 
-class VotesSchema(Schema):
-    score: int = 0
+## These were previously used but are now replaced by flattened fields in DebateSchema and CommentSchema
+## However, we keep them here in case we need them as standalone endpoint responses in the future
+# class VotesSchema(Schema):
+#     score: int = 0
+#     num_votes: int = 0
+#     user_vote: VoteDirectionEnum = VoteDirectionEnum.UNSET
+#
+#
+# class DebateStanceInfoSchema(Schema):
+#     num_for: int = 0
+#     num_against: int = 0
+#     user_stance: StanceDirectionEnum = StanceDirectionEnum.UNSET
+#
+#
+# class UserDebateRequestSchema(Schema):
+#     has_requested_for: bool = False
+#     has_requested_against: bool = False
+
+class DebateFullSchema(ModelSchema):
+    author: Optional[UserPreviewSchema] = None # Can be None if the debate was created by the system
+
+    # Votes
+    vote_score: int = 0
     num_votes: int = 0
     user_vote: VoteDirectionEnum = VoteDirectionEnum.UNSET
 
-
-class DebateStanceInfoSchema(Schema):
+    # Stance
     num_for: int = 0
     num_against: int = 0
     user_stance: StanceDirectionEnum = StanceDirectionEnum.UNSET
 
-
-class UserDebateRequestSchema(Schema):
-    has_requested_for: bool = False
-    has_requested_against: bool = False
-
-
-class VotesMixin:
-    @classmethod
-    def build_vote_info(cls, obj):
-        return VotesSchema(
-            score=obj.vote_score,
-            num_votes=obj.num_votes,
-            user_vote=obj.user_vote
-        )
-
-
-class DebateSchema(ModelSchema):
-    author: UserPreviewSchema
-    votes: VotesSchema
-    stances: DebateStanceInfoSchema
-    user_requests: UserDebateRequestSchema
+    # User requests
+    user_has_requested_for: bool = Field(False, alias='has_requested_for')
+    user_has_requested_against: bool = Field(False, alias='has_requested_against')
 
     class Config:
         model = Debate
         model_exclude = ['search_vector', 'vote']
 
-    @staticmethod
-    def resolve_votes(obj):
-        """
-        Custom resolver for the votes field.
-        This method is called when the votes field is accessed.
-        """
-        return VotesMixin.build_vote_info(obj)
+
+class DebateSchema(DebateFullSchema):
+    description: str = Field(exclude=True)
+    description_preview: str
 
     @staticmethod
-    def resolve_stances(obj):
+    def resolve_description_preview(debate: Debate) -> str:
         """
-        Custom resolver for the stances field.
-        This method is called when the stances field is accessed.
+        Resolve the description preview for the debate.
+        :param debate: The Debate object.
+        :return: The preview of the description.
         """
-        return DebateStanceInfoSchema(
-            num_for=obj.num_for,
-            num_against=obj.num_against,
-            user_stance=StanceDirectionEnum(obj.user_stance)
-        )
-
-    @staticmethod
-    def resolve_user_requests(obj):
-        """
-        Custom resolver for the user_requests field.
-        This method is called when the user_requests field is accessed.
-        """
-        return UserDebateRequestSchema(
-            has_requested_for=obj.has_requested_for,
-            has_requested_against=obj.has_requested_against
-        )
-
-
-class ExploreDebateListSchema(Schema):
-    trending: List[DebateSchema]
-    popular: List[DebateSchema]
-    recent: List[DebateSchema]
-    controversial: List[DebateSchema]
-    random: List[DebateSchema]
+        if len(debate.description) > 200:
+            return debate.description[:200] + "..."
+        return debate.description
 
 
 class CommentSchema(ModelSchema):
     author: UserPreviewSchema
-    votes: VotesSchema
+
+    # Votes
+    vote_score: int = 0
+    num_votes: int = 0
+    user_vote: VoteDirectionEnum = VoteDirectionEnum.UNSET
 
     class Config:
         model = Comment
         model_fields = '__all__'
-
-    @staticmethod
-    def resolve_votes(obj):
-        """
-        Custom resolver for the votes field.
-        This method is called when the votes field is accessed.
-        """
-        return VotesMixin.build_vote_info(obj)
 
 
 class StanceSchema(ModelSchema):

@@ -20,7 +20,7 @@ class DebateService:
         :param user: User object to which we check the votes, stance and requests
         :return: QuerySet[Debate]
         """
-        return Debate.objects.with_votes(user).with_stance(user).with_user_requests(user).select_related('author')
+        return Debate.objects.get_queryset().with_votes(user).with_stance(user).with_user_requests(user).select_related('author')
 
     @staticmethod
     def get_debate_details(user, debate_id: int = None, debate_slug: str = None) -> Debate:
@@ -49,7 +49,7 @@ class CommentService:
         :param user: User object to which we check the votes
         :return: QuerySet[Comment]
         """
-        return Comment.objects.with_votes(user).select_related('author')
+        return Comment.objects.get_queryset().with_votes(user).select_related('author')
 
     @staticmethod
     def create_comment(user, debate_id: int, content: str) -> Comment:

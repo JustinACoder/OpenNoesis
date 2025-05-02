@@ -4,7 +4,7 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.search import SearchVector, SearchVectorField, SearchQuery, SearchRank
 from django.db import models
-from django.db.models import Count, Case, When, Q, OuterRef, Subquery, Sum
+from django.db.models import Count, Case, When, Q, OuterRef, Subquery, Sum, Exists
 from django.template.defaultfilters import slugify
 from django.db.models import F, Value, StdDev
 from django.db.models.functions import Coalesce, Log, Greatest, Now, Cast
@@ -140,12 +140,15 @@ class DebateQuerySet(models.QuerySet):
         if user.is_authenticated:
             debate_content_type = ContentType.objects.get_for_model(Debate)
             queryset = queryset.annotate(
-                user_vote=Subquery(
-                    Vote.objects.filter(
-                        debate=OuterRef('pk'),
-                        user=user,
-                        content_type=debate_content_type
-                    ).values('vote')[:1]
+                user_vote=Coalesce(
+                    Subquery(
+                        Vote.objects.filter(
+                            debate=OuterRef('pk'),
+                            user=user,
+                            content_type=debate_content_type
+                        ).values('vote')[:1]
+                    ),
+                    0
                 )
             )
         else:
@@ -183,8 +186,8 @@ class DebateQuerySet(models.QuerySet):
             )
 
             return self.annotate(
-                has_requested_for=Subquery(subquery_user_requests.filter(stance_wanted=1).exists()),
-                has_requested_against=Subquery(subquery_user_requests.filter(stance_wanted=-1).exists()),
+                has_requested_for=Exists(subquery_user_requests.filter(stance_wanted=1)),
+                has_requested_against=Exists(subquery_user_requests.filter(stance_wanted=-1)),
             )
 
     def get_popular(self):
@@ -253,12 +256,15 @@ class CommentQuerySet(models.QuerySet):
         if user.is_authenticated:
             comment_content_type = ContentType.objects.get_for_model(Comment)
             queryset = queryset.annotate(
-                user_vote=Subquery(
-                    Vote.objects.filter(
-                        content_type=comment_content_type,
-                        object_id=OuterRef('pk'),
-                        user=user
-                    ).values('vote')[:1]
+                user_vote=Coalesce(
+                    Subquery(
+                        Vote.objects.filter(
+                            content_type=comment_content_type,
+                            object_id=OuterRef('pk'),
+                            user=user
+                        ).values('vote')[:1]
+                    ),
+                    0
                 )
             )
         else:

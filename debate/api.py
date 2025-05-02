@@ -11,8 +11,9 @@ from .schemas import (
     DebateSchema,
     CommentSchema,
     StanceSchema,
-    VoteDirectionEnum, ExploreDebateListSchema, StanceDirectionEnum,
+    VoteDirectionEnum, StanceDirectionEnum, DebateFullSchema,
 )
+from .schemas2 import DebatePreviewSchema
 from .services import (
     DebateService,
     CommentService,
@@ -24,23 +25,40 @@ User = get_user_model()
 router = Router(auth=optional_django_auth)
 
 
+@router.get("/trending", response=List[DebateSchema])
+@paginate(PageNumberPagination, page_size=10)
+def trending_debates(request):
+    """Get trending debates."""
+    user = request.auth
+    return DebateService.get_debate_queryset(user).get_trending()
+    
+@router.get("/popular", response=List[DebateSchema])
+@paginate(PageNumberPagination, page_size=10)
+def popular_debates(request):
+    """Get popular debates."""
+    user = request.auth
+    return DebateService.get_debate_queryset(user).get_popular()
 
-@router.get("/explore", response=ExploreDebateListSchema)
-def explore_debates(request):
-    """Get different categories of debates."""
-    user = request.auth or request.user
-    base_queryset = DebateService.get_debate_queryset(user)
+@router.get("/recent", response=List[DebateSchema])
+@paginate(PageNumberPagination, page_size=10)
+def recent_debates(request):
+    """Get recent debates."""
+    user = request.auth
+    return DebateService.get_debate_queryset(user).get_recent()
 
-    return ExploreDebateListSchema(
-        trending=base_queryset.get_trending(),
-        popular=base_queryset.get_popular(),
-        recent=base_queryset.get_recent(),
-        controversial=base_queryset.get_controversial(),
-        random=base_queryset.get_random(),
-    )
+@router.get("/controversial", response=List[DebateSchema])
+@paginate(PageNumberPagination, page_size=10)
+def controversial_debates(request):
+    """Get controversial debates."""
     user = request.auth
+    return DebateService.get_debate_queryset(user).get_controversial()
+
+@router.get("/random", response=List[DebateSchema])
+@paginate(PageNumberPagination, page_size=10)
+def random_debates(request):
+    """Get random debates."""
     user = request.auth
-    user = request.auth
+    return DebateService.get_debate_queryset(user).get_random()
 
 @router.get("/search", response=List[DebateSchema])
 @paginate(PageNumberPagination, page_size=25)
@@ -50,7 +68,7 @@ def search_debates(request, query: str):
     return DebateService.get_debate_queryset(user).search(query)
 
 
-@router.get("/{int:debate_id}", response=DebateSchema)
+@router.get("/{int:debate_id}", response=DebateFullSchema)
 def get_debate(request, debate_id: int):
     """Get detailed information about a debate."""
     user = request.auth
