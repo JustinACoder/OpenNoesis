@@ -1,7 +1,8 @@
 import debug_toolbar
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, reverse_lazy
 from ninja import NinjaAPI
+from django.conf import settings
 from discussion.api import router as discussion_router
 from debateme.api import router as debateme_router
 from debate.api import router as debate_router
@@ -9,7 +10,7 @@ from notifications.api import router as notifications_router
 from users.api import router as users_router
 from pairing.api import router as pairing_router
 
-api = NinjaAPI()
+api = NinjaAPI(version=settings.API_VERSION, title=settings.API_TITLE, csrf=True)
 
 api.add_router('/discussions', discussion_router, tags=['Discussions'])
 api.add_router('/invites', debateme_router, tags=['Invites'])

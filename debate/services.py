@@ -52,27 +52,18 @@ class CommentService:
         return Comment.objects.get_queryset().with_votes(user).select_related('author')
 
     @staticmethod
-    def create_comment(user, debate_id: int, content: str) -> Comment:
+    def create_comment(user, debate_id: int, text: str) -> Comment:
         """Create a new comment."""
         return Comment.objects.create(
             debate_id=debate_id,
             author=user,
-            content=content
+            text=text
         )
 
     @staticmethod
-    def list_debate_comments(user, debate_id: int = None, debate_slug: str = None) -> QuerySet[Comment]:
-        """List comments for a debate."""
-        if debate_id is None and debate_slug is None:
-            raise ValueError("Either debate_id or debate_slug must be provided.")
-        elif debate_id is not None and debate_slug is not None:
-            raise ValueError("Only one of debate_id or debate_slug must be provided.")
-
-        # Define debate identifier
-        debate_identifier = {'pk': debate_id} if debate_id is not None else {'slug': debate_slug}
-
+    def list_debate_comments(user, debate_id: int) -> QuerySet[Comment]:
         # Get the comments for the debate
-        return get_object_or_404(CommentService.get_comments_queryset(user), **debate_identifier)
+        return CommentService.get_comments_queryset(user).filter(debate_id=debate_id).order_by('-date_added')
 
 
 class StanceService:

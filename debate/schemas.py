@@ -37,8 +37,17 @@ class StanceDirectionEnum(IntEnum):
 #     has_requested_for: bool = False
 #     has_requested_against: bool = False
 
+class CommentInputSchema(Schema):
+    text: str
+
+class VoteInputSchema(Schema):
+    direction: VoteDirectionEnum
+
+class StanceInputSchema(Schema):
+    stance: StanceDirectionEnum
+
 class DebateFullSchema(ModelSchema):
-    author: Optional[UserPreviewSchema] = None # Can be None if the debate was created by the system
+    author: Optional[UserPreviewSchema] = None  # Can be None if the debate was created by the system
 
     # Votes
     vote_score: int = 0

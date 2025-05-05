@@ -1,4 +1,6 @@
 from typing import List
+
+from django.db.models import Q
 from ninja import Router
 from ninja.pagination import PageNumberPagination, paginate
 from ninja.security import django_auth
@@ -11,9 +13,9 @@ from .schemas import (
     DebateSchema,
     CommentSchema,
     StanceSchema,
-    VoteDirectionEnum, StanceDirectionEnum, DebateFullSchema,
+    StanceDirectionEnum, DebateFullSchema,
+    CommentInputSchema, VoteInputSchema, StanceInputSchema,
 )
-from .schemas2 import DebatePreviewSchema
 from .services import (
     DebateService,
     CommentService,
@@ -79,7 +81,7 @@ def get_debate(request, debate_id: int):
 def get_debates_with_user_stance(request):
     """Get debates with the user's stance."""
     user = request.auth
-    return DebateService.get_debate_queryset(user).filter(user_stance__not=StanceDirectionEnum.UNSET)
+    return DebateService.get_debate_queryset(user).filter(~Q(user_stance=StanceDirectionEnum.UNSET))
 
 
 @router.get("/{int:debate_id}/suggestions", response=List[DebateSchema])
@@ -90,11 +92,12 @@ def get_debate_suggestions(request, debate_id: int):
     return DebateService.get_debate_queryset(user).get_random().exclude(pk=debate_id)
 
 
-@router.patch("/{int:debate_id}/stance", response=StanceSchema, auth=django_auth)
-def set_stance(request, debate_id: int, stance_data: StanceSchema):
+@router.patch("/{int:debate_id}/stance", response={204: None}, auth=django_auth)
+def set_stance(request, debate_id: int, stance_data: StanceInputSchema):
     """Set a user's stance on a debate."""
     user = request.auth
-    return StanceService.set_stance(user, debate_id, stance_data.stance)
+    StanceService.set_stance(user, debate_id, stance_data.stance)
+    return 204, None
 
 
 @router.get("/{int:debate_id}/comments", response=List[CommentSchema])
@@ -106,25 +109,25 @@ def get_debate_comments(request, debate_id: int):
 
 
 @router.post("/{int:debate_id}/comment", response=CommentSchema, auth=django_auth)
-def create_comment(request, debate_id: int, text: str):
+def create_comment(request, debate_id: int, comment_data: CommentInputSchema):
     """Create a new comment for a debate."""
     user = request.auth
     # Check that the debate exists
     get_object_or_404(Debate, pk=debate_id)
-    return CommentService.create_comment(user, debate_id, text)
+    return CommentService.create_comment(user, debate_id, comment_data.text)
 
 
 @router.patch("/{int:debate_id}/vote", response={204: None}, auth=django_auth)
-def vote_on_debate(request, debate_id: int, direction: VoteDirectionEnum):
+def vote_on_debate(request, debate_id: int, vote_data: VoteInputSchema):
     """Register a vote on a debate."""
     user = request.auth
-    VoteService.vote_on_debate(user, debate_id, direction)
+    VoteService.vote_on_debate(user, debate_id, vote_data.direction)
     return 204, None
 
 
 @router.patch("/{int:debate_id}/comments/{comment_id}/vote", response={204: None}, auth=django_auth)
-def vote_on_comment(request, debate_id: int, comment_id: int, direction: VoteDirectionEnum):
+def vote_on_comment(request, debate_id: int, comment_id: int, vote_data: VoteInputSchema):
     """Register a vote on a comment."""
     user = request.auth
-    VoteService.vote_on_comment(user, comment_id, direction)
+    VoteService.vote_on_comment(user, comment_id, vote_data.direction)
     return 204, None

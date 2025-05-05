@@ -4,7 +4,7 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.search import SearchVector, SearchVectorField, SearchQuery, SearchRank
 from django.db import models
-from django.db.models import Count, Case, When, Q, OuterRef, Subquery, Sum, Exists
+from django.db.models import Count, Case, When, Q, OuterRef, Subquery, Sum, Exists, IntegerField
 from django.template.defaultfilters import slugify
 from django.db.models import F, Value, StdDev
 from django.db.models.functions import Coalesce, Log, Greatest, Now, Cast
@@ -100,6 +100,7 @@ class Comment(models.Model):
     text = models.TextField()
     date_added = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
+    vote = GenericRelation(Vote, related_query_name='comment')
 
     objects = CommentManager()
 
@@ -148,11 +149,11 @@ class DebateQuerySet(models.QuerySet):
                             content_type=debate_content_type
                         ).values('vote')[:1]
                     ),
-                    0
+                    Value(0)
                 )
             )
         else:
-            queryset = queryset.annotate(user_vote=0)
+            queryset = queryset.annotate(user_vote=Value(0))
 
         return queryset
 
@@ -163,14 +164,15 @@ class DebateQuerySet(models.QuerySet):
         )
 
         if user.is_anonymous:
-            return queryset.annotate(user_stance=0)
+            return queryset.annotate(user_stance=Value(0))
         else:
             return queryset.annotate(
                 user_stance=Coalesce(
                     Subquery(
                         Stance.objects.filter(debate=OuterRef('pk'), user=user).values('stance')[:1]
                     ),
-                    0)
+                    Value(0, output_field=IntegerField())
+                )
             )
 
     def with_user_requests(self, user: User):
@@ -264,11 +266,11 @@ class CommentQuerySet(models.QuerySet):
                             user=user
                         ).values('vote')[:1]
                     ),
-                    0
+                    Value(0)
                 )
             )
         else:
-            queryset = queryset.annotate(user_vote=0)
+            queryset = queryset.annotate(user_vote=Value(0))
 
         return queryset
 

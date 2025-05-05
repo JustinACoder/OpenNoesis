@@ -93,6 +93,9 @@ DATABASES = {
         'PASSWORD': env("DB_PASSWORD"),
         'HOST': env("DB_HOST"),
         'PORT': env("DB_PORT"),
+        'TEST': {
+            'NAME': 'debate_test', # Cannot be deleted, needs --keepdb
+        }
     }
 }
 
@@ -105,6 +108,14 @@ CHANNEL_LAYERS = {
         }
     }
 }
+
+# If we are testing, we want to use the in-memory channel layer
+if DEBUG:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        }
+    }
 
 # Celery settings
 CELERY_BROKER_URL = f"redis://:{env('REDIS_PASSWORD')}@{env('REDIS_HOST')}:{env('REDIS_PORT')}/{env('REDIS_DB')}"
@@ -192,3 +203,7 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(minute="0"),
     },
 }
+
+# Ninja API settings
+API_VERSION = "1.0.0"
+API_TITLE = "ProjectOpenDebateAPI"
