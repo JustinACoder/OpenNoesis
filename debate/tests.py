@@ -1,4 +1,5 @@
-from django.test import TestCase, Client
+from django.test import Client
+from ProjectOpenDebate.common.base_tests import BaseTestCase
 from django.contrib.auth import get_user_model
 
 from ProjectOpenDebate.common.utils import reverse_lazy_api
@@ -11,7 +12,7 @@ from discussion.models import DiscussionRequest
 User = get_user_model()
 
 
-class DebateApiTestBase(TestCase):
+class DebateApiTestBase(BaseTestCase):
     def setUp(self):
         # Create test users
         self.user1 = User.objects.create_user(username='testuser1', email='user1@example.com', password='password123')

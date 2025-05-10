@@ -7,7 +7,7 @@ from ninja.errors import HttpError
 from django.http import Http404
 
 from ProjectOpenDebate.auth import optional_django_auth
-from .schemas import InviteSchema, InviteUseSchema
+from .schemas import InviteSchema, InviteUseSchema, CreateInviteSchema
 from .services import InviteService, DisallowedActionError
 
 router = Router(auth=django_auth)
@@ -24,12 +24,12 @@ def list_invites(request):
 
 
 @router.post("", response=InviteSchema)
-def create_invite(request, debate_slug: str):
+def create_invite(request, invite_data: CreateInviteSchema):
     """
     Create a new invite for a specific debate.
     """
     user = request.auth
-    return InviteService.create_invite(user, debate_slug)
+    return InviteService.create_invite(user, invite_data.debate_slug)
 
 
 @router.get("/{invite_code}", response=InviteSchema, auth=optional_django_auth)

@@ -31,7 +31,7 @@ def create_match(pairing_request, other_pairing_request):
     related_discussion = pairing_match.complete_match()
 
     # If any of the participants is online, we will add the discussion to their list of discussions live
-    related_discussion.add_discussion_to_participants_list_live()
+    related_discussion.warn_participants_of_new_discussion()
 
     # Send the notification to the participants
     Notification.objects.create_new_discussion_notification(

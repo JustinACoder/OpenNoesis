@@ -86,7 +86,7 @@ class InviteService:
         )
 
         # Add discussion to participants' live list
-        discussion.add_discussion_to_participants_list_live()
+        discussion.warn_participants_of_new_discussion()
 
         # Create notification for invite creator
         Notification.objects.create_accepted_invite_notification(invite, invite_use, user)

@@ -29,8 +29,7 @@ class NotificationManager(models.Manager):
                 'debate_title': debate_title,
                 'participant_username': other_user_name
             },
-            url_name='specific_discussion',
-            url_args={'discussion_id': discussion_id}
+            info_args={'discussion_id': discussion_id}
         )
 
     def create_new_message_notification(self, user, message):
@@ -41,8 +40,7 @@ class NotificationManager(models.Manager):
                 'debate_title': message.discussion.debate.title,
                 'participant_username': message.author.username
             },
-            url_name='specific_discussion',
-            url_args={'discussion_id': message.discussion.id}
+            info_args={'discussion_id': message.discussion.id}
         )
 
     def create_accepted_invite_notification(self, invite, invite_use, accepting_user):
@@ -53,8 +51,7 @@ class NotificationManager(models.Manager):
                 'debate_title': invite.debate.title,
                 'participant_username': accepting_user.username,
             },
-            url_name='specific_discussion',
-            url_args={'discussion_id': invite_use.resulting_discussion.id}
+            info_args={'discussion_id': invite_use.resulting_discussion.id}
         )
 
 

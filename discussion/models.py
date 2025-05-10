@@ -47,18 +47,12 @@ class Discussion(models.Model):
         ReadCheckpoint.objects.create(discussion=self, user=self.participant1)
         ReadCheckpoint.objects.create(discussion=self, user=self.participant2)
 
-    def add_discussion_to_participants_list_live(self, as_unread=True):
+    def warn_participants_of_new_discussion(self):
         # Get current channel layer
         channel_layer = get_channel_layer()
 
-        # Add the is_unread flag to the discussion
-        self.is_unread = as_unread
-
-        # Render discussion to send to the participants
-        discussion_html = render_to_string('discussion/discussion.html', context={'discussion': self})
-
         for participant_id in [self.participant1_id, self.participant2_id]:
-            user_group_name = get_user_group_name('DiscussionConsumer', participant_id)
+            user_group_name = get_user_group_name('DiscussionConsumer', int(participant_id))
 
             # TODO: when getting participant usernames and debate titles, we are making additional queries to the database.
             #   The problem is that where we call notify_participants() we usually already have the necessary information.
@@ -74,7 +68,6 @@ class Discussion(models.Model):
                     'data': {
                         'discussion_id': self.id,
                         'from_invite': self.is_from_invite,
-                        'html': discussion_html,
                     }
                 }
             )
