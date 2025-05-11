@@ -19,14 +19,14 @@ def get_notifications(request, only_unread: bool = False):
     return NotificationService.get_notifications(request.user, only_unread=only_unread)
 
 @router.get("/unread-count", response=int)
-def get_unread_count(request):
+def get_notifications_unread_count(request):
     """
     Get count of unread notifications for the current user.
     """
     return NotificationService.get_unread_count(request.user)
 
 @router.patch("/{notification_id}/read-status", response={204: None})
-def set_read_status(request, notification_id: int, read_status: bool):
+def set_notification_read_status(request, notification_id: int, read_status: bool):
     """
     Set the read status of a notification.
     """
@@ -36,7 +36,7 @@ def set_read_status(request, notification_id: int, read_status: bool):
     return 204, None
 
 @router.post("/read-all", response={204: None})
-def mark_all_as_read(request):
+def mark_all_notifications_as_read(request):
     """
     Mark all notifications as read for the current user.
     """

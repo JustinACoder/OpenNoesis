@@ -2,12 +2,15 @@
 from datetime import datetime
 from typing import Optional
 
-from ninja import ModelSchema, Field
+from ninja import ModelSchema, Field, Schema
 
 from debate.schemas2 import DebatePreviewSchema
 from discussion.models import ReadCheckpoint, Message, Discussion
 from users.schemas import UserPreviewSchema
 
+
+class ArchiveStatusInputSchema(Schema):
+    status: bool
 
 class MessageSchema(ModelSchema):
     text: str = Field(..., max_length=5000)

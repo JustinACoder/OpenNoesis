@@ -62,7 +62,7 @@ class DiscussionService:
                 default=Value(False),
                 output_field=BooleanField()
             ),
-        ).select_related('debate', 'inviteuse__id').order_by('-latest_activity')
+        ).select_related('debate', 'inviteuse').order_by('-latest_activity')
 
     @staticmethod
     def get_discussion_messages(discussion_id: int, user: User) -> QuerySet[Message]:
@@ -167,4 +167,7 @@ class DiscussionService:
         )
 
         # Get the total number of unread messages
-        return unread_messages_query.aggregate(Sum('unread_count'))['unread_count__sum']
+        total_unread = unread_messages_query.aggregate(Sum('unread_count'))['unread_count__sum']
+
+        # Return 0 if no unread messages or if the query returned None
+        return total_unread or 0

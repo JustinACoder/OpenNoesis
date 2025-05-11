@@ -5,7 +5,7 @@ from ninja import Router
 from ninja.pagination import paginate, PageNumberPagination
 from ninja.security import django_auth
 
-from discussion.schemas import MessageSchema, DiscussionSchema, ReadCheckpointSchema
+from discussion.schemas import MessageSchema, DiscussionSchema, ReadCheckpointSchema, ArchiveStatusInputSchema
 from discussion.services import DiscussionService
 
 # Initialize Ninja API
@@ -18,7 +18,7 @@ def get_discussions(request, filterType: Optional[Literal["active", "archived"]]
     """
     Get the most recent discussions for the current user.
     """
-    return DiscussionService.get_discussions_for_user(request.user, filterType)
+    return DiscussionService.get_discussions_for_user(request.auth, filterType)
 
 
 @router.get("/most-recent", response=DiscussionSchema)
@@ -26,56 +26,56 @@ def get_most_recent_discussion(request):
     """
     Get the most recent active discussion for the current user.
     """
-    discussion = DiscussionService.get_discussions_for_user(request.user, 'active').first()
+    discussion = DiscussionService.get_discussions_for_user(request.auth, 'active').first()
     if not discussion:
         return router.api.create_response(request, {"detail": "No active discussions found"}, status=404)
 
     return discussion
 
 
-@router.get("/{discussion_id}", response=DiscussionSchema)
+@router.get("/{int:discussion_id}", response=DiscussionSchema)
 def get_discussion(request, discussion_id: int):
     """
     Get a specific discussion.
     """
-    return get_object_or_404(DiscussionService.get_discussions_for_user(request.user), pk=discussion_id)
+    return get_object_or_404(DiscussionService.get_discussions_for_user(request.auth), pk=discussion_id)
 
 
-@router.get("/{discussion_id}/messages", response=List[MessageSchema])
+@router.get("/{int:discussion_id}/messages", response=List[MessageSchema])
 @paginate(PageNumberPagination, page_size=30)
 def get_discussion_messages(request, discussion_id: int):
     """
     Get messages for a specific discussion.
     """
-    return DiscussionService.get_discussion_messages(discussion_id, request.user)
+    return DiscussionService.get_discussion_messages(discussion_id, request.auth)
 
 
-@router.patch("/{discussion_id}/archive", response={204: None})
-def set_archive_status(request, discussion_id: int, status: bool):
+@router.patch("/{int:discussion_id}/archive", response={204: None})
+def set_discussion_archive_status(request, discussion_id: int, status_data: ArchiveStatusInputSchema):
     """
     Archive or unarchive a discussion.
     """
-    DiscussionService.set_discussion_archive_status(discussion_id, request.user, status)
+    DiscussionService.set_discussion_archive_status(discussion_id, request.auth, status_data.status)
     return 204, None
 
 
-@router.get("/{discussion_id}/readcheckpoints", response=List[ReadCheckpointSchema])
+@router.get("/{int:discussion_id}/readcheckpoints", response=List[ReadCheckpointSchema])
 def get_read_checkpoints(request, discussion_id: int):
     """
     Get the read checkpoints for a discussion.
     """
-    return DiscussionService.get_read_checkpoints(discussion_id, request.user)
+    return DiscussionService.get_read_checkpoints(discussion_id, request.auth)
 
 @router.get("/unread-count", response=int)
-def get_unread_count(request):
+def get_messages_unread_count(request):
     """
     Get count of unread messages for the current user.
     """
-    return DiscussionService.get_unread_count(request.user)
+    return DiscussionService.get_unread_count(request.auth)
 
-@router.get("/{discussion_id}/unread-count", response=int)
+@router.get("/{int:discussion_id}/unread-count", response=int)
 def get_unread_count_for_discussion(request, discussion_id: int):
     """
     Get count of unread messages for a specific discussion.
     """
-    return DiscussionService.get_unread_count(request.user, discussion_id)
+    return DiscussionService.get_unread_count(request.auth, discussion_id)
