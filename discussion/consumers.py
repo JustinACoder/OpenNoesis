@@ -1,74 +1,48 @@
-from asgiref.sync import sync_to_async
 from channels.db import database_sync_to_async
 from django.db.models import Q
-from django.template.loader import render_to_string
+from pydantic import ValidationError
 
 from ProjectOpenDebate.consumers import CustomBaseConsumer, get_user_group_name
 from .models import Discussion, Message
-from .schemas import MessageSchema
-from .services import DiscussionService
-
+from .schemas import MessageSchema, NewMessagePayload, ReadMessagesPayload
 
 class DiscussionConsumer(CustomBaseConsumer):
     """
     This consumer handles the WebSocket connection for all operations related to discussions.
     """
+    event_handlers = {
+        'new_message': 'handle_new_message',
+        'read_messages': 'handle_read_messages',
+    }
 
-    async def receive_json(self, content, **kwargs):
+    async def handle_new_message(self, data):
         """
-        Receives a JSON message from the client and processes it.
-        Note: all the data here is untrusted, so we should validate it before processing it.
-
-        :param content: The JSON message from the client
-        :param kwargs: Additional arguments
+        Handles receiving a new message from the client.
         """
-        # Get the data from the content
-        data = content.get('data', {})
+        try:
+            payload = NewMessagePayload(**data)
+        except ValidationError as e:
+            return await self.send_error('Invalid payload', details=e.errors())
 
-        # check that we have an integer discussion_id and an event_type
-        discussion_id = data.get('discussion_id')
-        event_type = str(content.get('event_type', ''))
-        if not isinstance(discussion_id, int) or not event_type:
-            await self.send_json({'status': 'error', 'message': 'Missing discussion_id or event_type'})
-            return
-
-        # Get the user from the scope
         user = self.scope['user']
 
-        # check that the user is a participant in the discussion
+        # Check that the user is a participant in the discussion
         try:
-            discussion = await Discussion.objects.aget(Q(participant1=user) | Q(participant2=user), id=discussion_id)
+            discussion = await Discussion.objects.aget(
+                Q(participant1=user) | Q(participant2=user),
+                id=payload.discussion_id
+            )
         except Discussion.DoesNotExist:
-            await self.send_json({'status': 'error', 'message': 'You are not a participant in this discussion'})
-            return
-
-        # Process the event according to the event_type
-        if event_type == 'new_message':
-            await self.process_new_message(user, discussion, data)
-        elif event_type == 'read_messages':
-            await self.process_read_messages(user, discussion, data)
-        else:
-            await self.send_json({'status': 'error', 'message': 'Invalid event_type'})
-
-    async def process_new_message(self, user, discussion, data):
-        # Check that the message exists
-        message = data.get('message', '').strip()
-        if not message:
-            await self.send_json({'status': 'error', 'message': 'Missing message'})
-            return
+            return await self.send_error('You are not a participant in this discussion')
 
         # Save the message to the database
-        if len(message) <= 5000 and message.strip():
-            message_instance = await Message.objects.acreate(
-                discussion=discussion,
-                author=user,
-                text=message,
-            )
-        else:
-            await self.send_json({'status': 'error', 'message': 'Invalid message'})
-            return
+        message_instance = await Message.objects.acreate(
+            discussion=discussion,
+            author=user,
+            text=payload.message,
+        )
 
-        # mark this message's discussion's read checkpoint as read until this message
+        # Mark this message's discussion's read checkpoint as read until this message
         user_readcheckpoint = await discussion.readcheckpoint_set.aget(user=user)
         await database_sync_to_async(user_readcheckpoint.read_until)(message_instance)
 
@@ -79,21 +53,35 @@ class DiscussionConsumer(CustomBaseConsumer):
         participants_ids = [discussion.participant1_id, discussion.participant2_id]
         is_archived_flags = [discussion.is_archived_for_p1, discussion.is_archived_for_p2]
         for participant_id, is_archived in zip(participants_ids, is_archived_flags):
-            user_group_name = get_user_group_name(self.__class__.__name__, participant_id)
-            await self.channel_layer.group_send(
-                user_group_name,
+            await self.send_event(
+                participant_id,
+                'new_message',
                 {
-                    'status': 'success',
-                    'event_type': 'new_message',
-                    'type': 'send.json',
-                    'data': {
-                        'isin_archived_discussion': is_archived,
-                        'message': message_data,
-                    }
+                    'isin_archived_discussion': is_archived,
+                    'message': message_data,
                 }
             )
 
-    async def process_read_messages(self, user, discussion, data):
+    async def handle_read_messages(self, data):
+        """
+        Handles marking messages as read.
+        """
+        try:
+            payload = ReadMessagesPayload(**data)
+        except ValidationError as e:
+            return await self.send_error('Invalid payload', details=e.errors())
+
+        user = self.scope['user']
+
+        # Check that the user is a participant in the discussion
+        try:
+            discussion = await Discussion.objects.aget(
+                Q(participant1=user) | Q(participant2=user),
+                id=payload.discussion_id
+            )
+        except Discussion.DoesNotExist:
+            return await self.send_error('You are not a participant in this discussion')
+
         # TODO: there could be a bug where the user reads the messages, but the other user sends a message before the
         #  read checkpoint is updated. This would mark the message as read even though the user hasn't read it.
 
@@ -107,21 +95,14 @@ class DiscussionConsumer(CustomBaseConsumer):
         participants_ids = [discussion.participant1_id, discussion.participant2_id]
         is_archived_flags = [discussion.is_archived_for_p1, discussion.is_archived_for_p2]
         for participant_id, is_archived in zip(participants_ids, is_archived_flags):
-            user_group_name = get_user_group_name(self.__class__.__name__, participant_id)
-            await self.channel_layer.group_send(
-                user_group_name,
+            await self.send_event(
+                participant_id,
+                'read_messages',
                 {
-                    'status': 'success',
-                    'event_type': 'read_messages',
-                    'type': 'send.json',
-                    'data': {
-                        'discussion_id': discussion.id,
-                        'user_id': user.id,
-                        'is_archived': is_archived,
-                        'num_messages_read': num_messages_read,  # used to update the unread messages count in navbar
-                        'through_load_discussion': data['through_load_discussion']  # TODO: what is this for again?
-                    }
+                    'discussion_id': discussion.id,
+                    'user_id': user.id,
+                    'is_archived': is_archived,
+                    'num_messages_read': num_messages_read,
+                    'through_load_discussion': payload.through_load_discussion
                 }
             )
-
-

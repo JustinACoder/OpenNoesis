@@ -1,11 +1,11 @@
 import asyncio
+from pydantic import ValidationError
 
-from channels.db import database_sync_to_async
-from django.db import transaction
-
-from ProjectOpenDebate.consumers import CustomBaseConsumer, get_user_group_name
+from ProjectOpenDebate.consumers import CustomBaseConsumer, atomic_async
 from debate.models import Debate
 from pairing.models import PairingRequest, PairingMatch
+from .schemas import PairingRequestInputSchema
+from channels.db import database_sync_to_async
 
 
 class NoCurrentPairingRequestException(Exception):
@@ -24,79 +24,121 @@ class PairingConsumer(CustomBaseConsumer):
     """
     This consumer handles the WebSocket connection for pairing users together.
     """
+    event_handlers = {
+        'request_pairing': 'handle_request_pairing',
+        'start_search': 'handle_start_search',
+        'cancel': 'handle_cancel',
+        'keepalive': 'handle_keepalive',
+    }
 
-    async def receive_json(self, content, **kwargs):
+    async def handle_keepalive(self, data):
         """
-        Receives a JSON message from the client and processes it.
-        Note: all the data here is untrusted, so we should validate it before processing it.
-
-        :param content: The JSON message from the client
-        :param kwargs: Additional arguments
+        Handles keepalive messages to maintain the connection.
         """
-        # Get the data from the content
-        data = content.get('data', {})
-
-        # check that we have an event_type
-        event_type = str(content.get('event_type', ''))
-        if not event_type:
-            await self.send_json({'status': 'error', 'message': 'Missing event_type'})
-            return
-
-        # Get the user from the scope
         user = self.scope['user']
-
-        # Process the atomic events without a retrieval of the pairing request since this will be done
-        # atomically in the methods
-        if event_type == 'request_pairing':
-            await self.request_pairing(user, data)
-            return
-        elif event_type == 'start_search':
-            await self.start_active_search(user)
-            return
-        elif event_type == 'cancel':
-            await self.cancel_pairing_request(user)
-            return
-        elif event_type == 'keepalive':
-            await self.keepalive(user)
-        else:
-            await self.send_json({'status': 'error', 'message': 'Invalid event_type'})
-
-    async def keepalive(self, user):
-        pairing_request = await database_sync_to_async(PairingRequest.objects.get_current_request)(user)
+        pairing_request = await self._get_current_request(user)
 
         if not pairing_request:
-            await self.send_json({
-                'status': 'error',
-                'no_toast': True,
-                'event_type': 'keepalive_ack',
-            })
+            await self.send_error('No active pairing request', no_toast=True, event_type='keepalive_ack')
             return
 
-        await database_sync_to_async(pairing_request.update_keepalive)()
-        await self.send_json({
-            'status': 'success',
-            'event_type': 'keepalive_ack',
-        })
+        await self._update_keepalive(pairing_request)
+        await self.send_success('keepalive_ack')
 
-    @database_sync_to_async
-    @transaction.atomic
-    def complete_match(self, pairing_match: PairingMatch):
+    async def handle_start_search(self, data):
+        """
+        Handles starting the active search for a pairing request.
+        """
+        user = self.scope['user']
+
+        try:
+            pairing_request, best_match, pairing_match = await self._create_pairing_match_or_fail(user)
+        except NoCurrentPairingRequestException as e:
+            await self.send_error(str(e))
+            return
+
+        if not pairing_match:
+            await self._notify_start_search(pairing_request)
+        else:
+            await self._notify_match_found(pairing_request, best_match)
+
+            # Wait a few seconds before completing the pairing
+            # We do not await to avoid blocking the event loop
+            _ = asyncio.create_task(self._wait_then_complete_pairing(pairing_match))
+
+    async def handle_cancel(self, data):
+        """
+        Handles cancelling a pairing request.
+        """
+        user = self.scope['user']
+
+        try:
+            deleted_pairing_request = await self._cancel_pairing_request_or_fail(user)
+        except NoCurrentPairingRequestException as e:
+            await self.send_error(str(e))
+            return
+
+        # Notify the users that the pairing request has been cancelled
+        await self._notify_cancelled(deleted_pairing_request, user_id=deleted_pairing_request.user_id)
+
+    async def handle_request_pairing(self, data):
+        """
+        Handles creating a pairing request.
+        """
+        try:
+            payload = PairingRequestInputSchema(**data)
+        except ValidationError as e:
+            return await self.send_error('Invalid payload', details=e.errors())
+
+        user = self.scope['user']
+
+        try:
+            debate = await Debate.objects.aget(id=payload.debate_id)
+        except Debate.DoesNotExist:
+            return await self.send_error('Debate does not exist')
+
+        try:
+            pairing_request = await self._create_pairing_request_or_fail(
+                user, debate, payload.desired_stance
+            )
+        except PairingRequestAlreadyExistsException as e:
+            await self.send_error(str(e))
+            return
+
+        # Notify the user that the pairing request has been created
+        await self._notify_request_pairing(pairing_request)
+
+    @atomic_async
+    def _complete_match(self, pairing_match: PairingMatch):
         """
         Completes the pairing match by creating the related discussion.
         """
         return pairing_match.complete_match()
 
-    async def wait_then_complete_pairing(self, pairing_match: PairingMatch):
+    async def _wait_then_complete_pairing(self, pairing_match: PairingMatch):
         """
         Waits for a few seconds before completing the pairing.
         """
         await asyncio.sleep(3.5)
-        await self.complete_match(pairing_match)
-        await self.notify_paired(pairing_match)
+        await self._complete_match(pairing_match)
+        await self._notify_paired(pairing_match)
 
     @database_sync_to_async
-    @transaction.atomic
-    def create_pairing_match_or_fail(self, user):
+    def _get_current_request(self, user):
+        """
+        Gets the current pairing request for a user.
+        """
+        return PairingRequest.objects.get_current_request(user)
+
+    @database_sync_to_async
+    async def _update_keepalive(self, pairing_request):
+        """
+        Updates the keepalive timestamp of a pairing request.
+        """
+        pairing_request.update_keepalive()
+
+    @atomic_async
+    def _create_pairing_match_or_fail(self, user):
         """
         Creates a pairing match between the two pairing requests.
         """
@@ -128,66 +170,28 @@ class PairingConsumer(CustomBaseConsumer):
 
         return pairing_request, best_match, pairing_match
 
-    async def start_active_search(self, user):
-        """
-        Starts the active search for a pairing request.
-
-        For now, starting the active search will also try to find a match for the pairing request.
-        In the future, we might want to first activation the search and then wait a bit to ensure that
-        we make a good match based on things such as ELO, region, etc.
-        """
-        try:
-            pairing_request, best_match, pairing_match = await self.create_pairing_match_or_fail(user)
-        except NoCurrentPairingRequestException as e:
-            await self.send_json({'status': 'error', 'message': str(e)})
-            return
-
-        if not pairing_match:
-            await self.notify_start_search(pairing_request)
-        else:
-            await self.notify_match_found(pairing_request, best_match)
-
-            # Wait a few seconds before completing the pairing
-            # We do not await to avoid blocking the event loop
-            asyncio.create_task(self.wait_then_complete_pairing(pairing_match))  # noqa
-
-    async def notify_start_search(self, pairing_request):
+    async def _notify_start_search(self, pairing_request):
         """
         Notifies the user that the active search has started.
         """
-        # Get the user group name
-        user_group_name = get_user_group_name(self.__class__.__name__, pairing_request.user_id)
-
-        # Notify the user that the active search has started
-        await self.channel_layer.group_send(
-            user_group_name,
-            {
-                'status': 'success',
-                'type': 'send.json',
-                'event_type': 'start_search',
-            }
+        await self.send_event(
+            pairing_request.user_id,
+            'start_search'
         )
 
-    async def notify_match_found(self, pairing_request, best_match):
+    async def _notify_match_found(self, pairing_request, best_match):
         """
         Notifies the two users that a match has been found and pairs them together.
         """
         # Notify the users that a match has been found
         for _pairing_request in [pairing_request, best_match]:
-            group_name = get_user_group_name(self.__class__.__name__, _pairing_request.user_id)
-
-            await self.channel_layer.group_send(
-                group_name,
-                {
-                    'status': 'success',
-                    'type': 'send.json',
-                    'event_type': 'match_found',
-                }
+            await self.send_event(
+                _pairing_request.user_id,
+                'match_found'
             )
 
-    @database_sync_to_async
-    @transaction.atomic
-    def cancel_pairing_request_or_fail(self, user):
+    @atomic_async
+    def _cancel_pairing_request_or_fail(self, user):
         """
         Cancels the pairing request for the user.
         If no pairing request is found, it will raise a NoCurrentPairingRequestException.
@@ -208,66 +212,36 @@ class PairingConsumer(CustomBaseConsumer):
         else:
             raise Exception('You cannot cancel a pairing request that is not active or idle')
 
-    async def cancel_pairing_request(self, user):
-        """
-        Cancels the pairing request.
-        """
-        try:
-            deleted_pairing_request = await self.cancel_pairing_request_or_fail(user)
-        except NoCurrentPairingRequestException as e:
-            await self.send_json({'status': 'error', 'message': str(e)})
-            return
-
-        # Notify the users that the pairing request has been cancelled
-        await self.notify_cancelled(deleted_pairing_request, user_id=deleted_pairing_request.user_id)
-
-    async def notify_cancelled(self, cancelled_pairing_request, user_id=None):
+    async def _notify_cancelled(self, cancelled_pairing_request, user_id=None):
         """
         Notifies the user that the pairing request has been cancelled.
         If you provide a user_id, it will be used instead of the pairing request's user ID.
         This is useful to notify the other user in the pairing.
         """
-        # Get the user group name
         user_id = user_id or cancelled_pairing_request.user_id
-        user_group_name = get_user_group_name(self.__class__.__name__, user_id)
-
-        # Notify the user that the pairing request has been cancelled
-        await self.channel_layer.group_send(
-            user_group_name,
+        await self.send_event(
+            user_id,
+            'cancel',
             {
-                'status': 'success',
-                'type': 'send.json',
-                'event_type': 'cancel',
-                'data': {
-                    'from_current_user': user_id == cancelled_pairing_request.user_id
-                }
+                'from_current_user': user_id == cancelled_pairing_request.user_id
             }
         )
 
-    async def notify_paired(self, pairing_match):
+    async def _notify_paired(self, pairing_match):
         """
         Notifies the users that the pairing has been completed.
         """
         for pairing_request in [pairing_match.pairing_request_1, pairing_match.pairing_request_2]:
-            # Get the user group name
-            user_group_name = get_user_group_name(self.__class__.__name__, pairing_request.user_id)
-
-            # Notify the user that the pairing has been completed
-            await self.channel_layer.group_send(
-                user_group_name,
+            await self.send_event(
+                pairing_request.user_id,
+                'paired',
                 {
-                    'status': 'success',
-                    'type': 'send.json',
-                    'event_type': 'paired',
-                    'data': {
-                        'discussion_id': pairing_match.related_discussion_id,
-                    }
+                    'discussion_id': pairing_match.related_discussion_id,
                 }
             )
 
-    @database_sync_to_async
-    @transaction.atomic
-    def create_pairing_request_or_fail(self, user, debate, desired_stance):
+    @atomic_async
+    def _create_pairing_request_or_fail(self, user, debate, desired_stance):
         """
         Creates a pairing request for the user in the specified debate.
         If the user already has an active pairing request, it will raise a PairingRequestAlreadyExistsException.
@@ -281,44 +255,11 @@ class PairingConsumer(CustomBaseConsumer):
         # Create the pairing request
         return PairingRequest.objects.create(user=user, debate=debate, desired_stance=desired_stance)
 
-    async def request_pairing(self, user, data):
-        """
-        Requests a pairing for the user in the specified debate.
-        """
-        debate_id = data.get('debate_id')
-        desired_stance = data.get('desired_stance')
-        if not isinstance(debate_id, int) or isinstance(desired_stance, int) or desired_stance not in [-1, 1]:
-            await self.send_json({'status': 'error', 'message': 'Missing valid debate_id or desired_stance'})
-            return
-
-        try:
-            debate = await Debate.objects.aget(id=debate_id)
-        except Debate.DoesNotExist:
-            await self.send_json({'status': 'error', 'message': 'Debate does not exist'})
-            return
-
-        try:
-            pairing_request = await self.create_pairing_request_or_fail(user, debate, desired_stance)
-        except PairingRequestAlreadyExistsException as e:
-            await self.send_json({'status': 'error', 'message': str(e)})
-            return
-
-        # Notify the user that the pairing request has been created
-        await self.notify_request_pairing(pairing_request)
-
-    async def notify_request_pairing(self, pairing_request):
+    async def _notify_request_pairing(self, pairing_request):
         """
         Notifies the user that the pairing request has been created.
         """
-        # Get the user group name
-        user_group_name = get_user_group_name(self.__class__.__name__, pairing_request.user_id)
-
-        # Notify the user that the pairing request has been created
-        await self.channel_layer.group_send(
-            user_group_name,
-            {
-                'status': 'success',
-                'type': 'send.json',
-                'event_type': 'request_pairing',
-            }
+        await self.send_event(
+            pairing_request.user_id,
+            'request_pairing'
         )

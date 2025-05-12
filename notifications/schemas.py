@@ -2,7 +2,11 @@ from ninja import ModelSchema, Schema
 from typing import Dict, Any
 
 from notifications.models import Notification
+from pydantic import BaseModel
 
+class NotificationReadPayload(BaseModel):
+    notification_id: int
+    is_read: bool
 
 class NotificationReadStatusInputSchema(Schema):
     read_status: bool

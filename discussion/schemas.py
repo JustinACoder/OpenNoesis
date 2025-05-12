@@ -1,6 +1,6 @@
-# Schema definitions
 from datetime import datetime
 from typing import Optional
+from pydantic import BaseModel, constr
 
 from ninja import ModelSchema, Field, Schema
 
@@ -8,6 +8,13 @@ from debate.schemas2 import DebatePreviewSchema
 from discussion.models import ReadCheckpoint, Message, Discussion
 from users.schemas import UserPreviewSchema
 
+class NewMessagePayload(BaseModel):
+    discussion_id: int
+    message: constr(min_length=1, max_length=5000) = Field(..., description="The message text")
+
+class ReadMessagesPayload(BaseModel):
+    discussion_id: int
+    through_load_discussion: bool = False
 
 class ArchiveStatusInputSchema(Schema):
     status: bool
@@ -17,7 +24,6 @@ class MessageSchema(ModelSchema):
     class Config:
         model = Message
         model_fields = '__all__'
-
 
 class DiscussionSchema(ModelSchema):
     debate: DebatePreviewSchema
