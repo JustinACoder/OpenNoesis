@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db.models import QuerySet, Q
+from django.db.models import QuerySet, Q, F
 
 from notifications.models import Notification
 
@@ -16,6 +16,8 @@ class NotificationService:
         additional_filter = {"read": False} if only_unread else {}
         return Notification.objects.filter(
             user=user, **additional_filter
+        ).annotate(
+            notification_type_name=F('notification_type__name'),
         ).order_by('-created_at')
     
     @staticmethod

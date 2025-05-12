@@ -1,10 +1,11 @@
 from ninja import ModelSchema, Schema
-from typing import Dict, Any, Optional, Type
-
-from ninja.schema import S
+from typing import Dict, Any
 
 from notifications.models import Notification
 
+
+class NotificationReadStatusInputSchema(Schema):
+    read_status: bool
 
 class NotificationSchema(ModelSchema):
     title: str

@@ -4,7 +4,7 @@ from ninja.pagination import paginate, PageNumberPagination
 from ninja.security import django_auth
 from django.http import Http404
 
-from notifications.schemas import NotificationSchema
+from notifications.schemas import NotificationSchema, NotificationReadStatusInputSchema
 from notifications.services import NotificationService
 
 # Initialize Ninja API router
@@ -25,12 +25,12 @@ def get_notifications_unread_count(request):
     """
     return NotificationService.get_unread_count(request.user)
 
-@router.patch("/{notification_id}/read-status", response={204: None})
-def set_notification_read_status(request, notification_id: int, read_status: bool):
+@router.patch("/{int:notification_id}/read-status", response={204: None})
+def set_notification_read_status(request, notification_id: int, read_status_data: NotificationReadStatusInputSchema):
     """
     Set the read status of a notification.
     """
-    success = NotificationService.set_read_status(notification_id, request.user, read_status)
+    success = NotificationService.set_read_status(notification_id, request.user, read_status_data.read_status)
     if not success:
         raise Http404("Notification not found or already read.")
     return 204, None
