@@ -6,7 +6,8 @@ from django.db.models import OuterRef, Subquery
 from debate.models import Stance
 from notifications.models import Notification
 from .models import PairingRequest, PairingMatch
-from datetime import timedelta, datetime
+from datetime import timedelta
+from django.utils import timezone
 
 from collections import deque
 
@@ -94,6 +95,7 @@ def try_pairing_passive_requests_in_debate(locked_requests):
                 # If the match fails, we need to put the oldest_matching_request back in the queue
                 # TODO: log the error
                 logger.error(f'Error creating match: {e}')
+                print(f'Error creating match: {e}')
                 matching_queue.appendleft(oldest_matching_request)
             else:
                 pairing_matches.append(pairing_match)
@@ -116,7 +118,7 @@ def try_pairing_passive_requests():
     # Get all debates with passive pairing requests that are at least 5 minutes old
     debates = PairingRequest.objects.filter(
         status=PairingRequest.Status.PASSIVE,
-        created_at__lte=datetime.now() - GRACE_PERIOD
+        created_at__lte=timezone.now() - GRACE_PERIOD
     ).values_list('debate', 'debate__title').distinct()
 
     # Define the user_stance subquery
@@ -138,7 +140,7 @@ def try_pairing_passive_requests():
         ).filter(
             debate=debate_id,
             status=PairingRequest.Status.PASSIVE,
-            created_at__lte=datetime.now() - GRACE_PERIOD
+            created_at__lte=timezone.now() - GRACE_PERIOD
         ).annotate(
             user_stance=user_stance
         ).order_by('created_at')

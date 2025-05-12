@@ -3,8 +3,9 @@ from django.db.models import F, Q, Subquery, OuterRef
 
 from debate.models import Debate, Stance
 from django.db import models
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from django.conf import settings
+from django.utils import timezone
 
 from discussion.models import Discussion
 from discussion.services import DiscussionService
@@ -15,7 +16,7 @@ class PairingRequestManager(models.Manager):
         return super().get_queryset().annotate(
             is_expired=(
                     Q(status=PairingRequest.Status.ACTIVE) &
-                    Q(last_keepalive_ping__lt=datetime.now() - timedelta(
+                    Q(last_keepalive_ping__lt=timezone.now() - timedelta(
                         seconds=settings.PAIRING_REQUEST_EXPIRY_SECONDS))
             )
         )
@@ -69,7 +70,7 @@ class PairingRequest(models.Model):
 
     @property
     def seconds_elapsed_since_creation(self):
-        return round((datetime.now(timezone.utc) - self.created_at).total_seconds())
+        return round((timezone.now() - self.created_at).total_seconds())
 
     def update_keepalive(self):
         """

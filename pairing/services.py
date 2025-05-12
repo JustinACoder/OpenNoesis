@@ -10,7 +10,7 @@ def create_passive_pairing_request(user: User, debate_id: int, stance_wanted: in
     """
     Create a passive pairing request for the given user.
 
-    Retrurns True if the request was successfully created, False if the user has already
+    Returns True if the request was successfully created, False if the user has already
     requested a passive pairing for the same debate and stance.
     """
     if stance_wanted not in [-1, 1]:
