@@ -1,15 +1,13 @@
-from typing import List
-
 from django.contrib.auth import get_user_model
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from ninja import Router
-from ninja.pagination import paginate, PageNumberPagination
+from ninja.errors import HttpError
 from ninja.security import django_auth
 from ninja import PatchDict
 
 from ProjectOpenDebate.auth import optional_django_auth
-from .schemas import PublicUserSchema, PrivateUserSchema, ProfileEditSchema
+from .schemas import PublicUserSchema, PrivateUserSchema, ProfileEditInputSchema
 
 User = get_user_model()
 
@@ -21,7 +19,7 @@ def get_public_user_profile(request, user_id: int):
     """
     Get user details by user ID.
     """
-    return get_object_or_404(User, user_id=user_id)
+    return get_object_or_404(User, id=user_id)
 
 @router.get("/me", response=PrivateUserSchema)
 def get_private_user_profile(request):
@@ -33,12 +31,12 @@ def get_private_user_profile(request):
 
 
 @router.patch("/me", response={204: None})
-def update_private_user_profile(request, payload: PatchDict[ProfileEditSchema]):
+def update_private_user_profile(request, payload: PatchDict[ProfileEditInputSchema]):
     """
     Update the authenticated user's profile.
     """
-    if len(payload) == 0:
-        raise Http404("No data provided for update.")
+    if len(payload.items()) == 0:
+        raise HttpError(400, "No data provided for update.")
 
     user = request.auth
     user_profile = user.profile # We should always have a profile due to the signal

@@ -1,7 +1,6 @@
 from django.test import Client
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from datetime import timedelta
 
 from ProjectOpenDebate.common.base_tests import BaseTestCase
 from ProjectOpenDebate.common.utils import reverse_lazy_api
