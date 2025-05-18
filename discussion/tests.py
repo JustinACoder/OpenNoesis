@@ -14,70 +14,73 @@ User = get_user_model()
 
 
 class DiscussionApiTestBase(BaseTestCase):
-    def setUp(self):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
         # Create test users
-        self.user1 = User.objects.create_user(username='testuser1', email='user1@example.com', password='password123')
-        self.user2 = User.objects.create_user(username='testuser2', email='user2@example.com', password='password123')
-        self.user3 = User.objects.create_user(username='testuser3', email='user3@example.com', password='password123')
+        cls.user1 = User.objects.create_user(username='testuser1', email='user1@example.com', password='password123')
+        cls.user2 = User.objects.create_user(username='testuser2', email='user2@example.com', password='password123')
+        cls.user3 = User.objects.create_user(username='testuser3', email='user3@example.com', password='password123')
 
         # Create test debates
-        self.debate1 = Debate.objects.create(
+        cls.debate1 = Debate.objects.create(
             title="Test Debate 1",
             description="Description for test debate 1",
-            author=self.user1
+            author=cls.user1
         )
-        self.debate2 = Debate.objects.create(
+        cls.debate2 = Debate.objects.create(
             title="Test Debate 2",
             description="Description for test debate 2",
-            author=self.user2
+            author=cls.user2
         )
 
         # Create test discussions
-        self.discussion1 = Discussion.objects.create(
-            debate=self.debate1,
-            participant1=self.user1,
-            participant2=self.user2
+        cls.discussion1 = Discussion.objects.create(
+            debate=cls.debate1,
+            participant1=cls.user1,
+            participant2=cls.user2
         )
-        self.discussion1.create_read_checkpoints()
+        cls.discussion1.create_read_checkpoints()
 
-        self.discussion2 = Discussion.objects.create(
-            debate=self.debate2,
-            participant1=self.user2,
-            participant2=self.user3
+        cls.discussion2 = Discussion.objects.create(
+            debate=cls.debate2,
+            participant1=cls.user2,
+            participant2=cls.user3
         )
-        self.discussion2.create_read_checkpoints()
+        cls.discussion2.create_read_checkpoints()
 
         # Create test messages
-        self.message1_1 = Message.objects.create(
-            discussion=self.discussion1,
-            author=self.user1,
+        cls.message1_1 = Message.objects.create(
+            discussion=cls.discussion1,
+            author=cls.user1,
             text="Message 1 from user1 to user2"
         )
-        self.message1_2 = Message.objects.create(
-            discussion=self.discussion1,
-            author=self.user2,
+        cls.message1_2 = Message.objects.create(
+            discussion=cls.discussion1,
+            author=cls.user2,
             text="Message 1 from user2 to user1"
         )
-        self.message1_3 = Message.objects.create(
-            discussion=self.discussion1,
-            author=self.user1,
+        cls.message1_3 = Message.objects.create(
+            discussion=cls.discussion1,
+            author=cls.user1,
             text="Message 2 from user1 to user2"
         )
 
-        self.message2_1 = Message.objects.create(
-            discussion=self.discussion2,
-            author=self.user2,
+        cls.message2_1 = Message.objects.create(
+            discussion=cls.discussion2,
+            author=cls.user2,
             text="Message 1 from user2 to user3"
         )
 
-        self.message2_2 = Message.objects.create(
-            discussion=self.discussion2,
-            author=self.user3,
+        cls.message2_2 = Message.objects.create(
+            discussion=cls.discussion2,
+            author=cls.user3,
             text="Message 1 from user3 to user2"
         )
 
         # Create test client
-        self.client = Client()
+        cls.client = Client()
 
     def authenticate_user1(self):
         client = Client()
@@ -412,14 +415,15 @@ class DiscussionCreationTest(DiscussionApiTestBase):
 
 
 class PaginationTest(DiscussionApiTestBase):
-    def setUp(self):
-        super().setUp()
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
 
         # Create additional messages for pagination testing
         for i in range(35):  # Create 35 additional messages
             Message.objects.create(
-                discussion=self.discussion1,
-                author=self.user1 if i % 2 == 0 else self.user2,
+                discussion=cls.discussion1,
+                author=cls.user1 if i % 2 == 0 else cls.user2,
                 text=f"Pagination test message {i}"
             )
 

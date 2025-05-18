@@ -13,65 +13,68 @@ User = get_user_model()
 
 
 class NotificationApiTestBase(BaseTestCase):
-    def setUp(self):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
         # Create test users
-        self.user1 = User.objects.create_user(username='testuser1', email='user1@example.com', password='password123')
-        self.user2 = User.objects.create_user(username='testuser2', email='user2@example.com', password='password123')
-        self.user3 = User.objects.create_user(username='testuser3', email='user3@example.com', password='password123')
+        cls.user1 = User.objects.create_user(username='testuser1', email='user1@example.com', password='password123')
+        cls.user2 = User.objects.create_user(username='testuser2', email='user2@example.com', password='password123')
+        cls.user3 = User.objects.create_user(username='testuser3', email='user3@example.com', password='password123')
         
         # Create test debates
-        self.debate1 = Debate.objects.create(
+        cls.debate1 = Debate.objects.create(
             title="Test Debate 1",
             description="Description for test debate 1",
-            author=self.user1
+            author=cls.user1
         )
         
         # Create test discussions
-        self.discussion1 = Discussion.objects.create(
-            debate=self.debate1,
-            participant1=self.user1,
-            participant2=self.user2
+        cls.discussion1 = Discussion.objects.create(
+            debate=cls.debate1,
+            participant1=cls.user1,
+            participant2=cls.user2
         )
         
         # Notifications types are already created in BaseTestCase
-        self.new_message_type = NotificationType.objects.get(name='new_message')
-        self.new_discussion_type = NotificationType.objects.get(name='new_discussion')
-        self.accepted_invite_type = NotificationType.objects.get(name='accepted_invite')
+        cls.new_message_type = NotificationType.objects.get(name='new_message')
+        cls.new_discussion_type = NotificationType.objects.get(name='new_discussion')
+        cls.accepted_invite_type = NotificationType.objects.get(name='accepted_invite')
         
         # Create test notifications
-        self.notification1 = Notification.objects.create(
-            user=self.user1,
-            notification_type=self.new_message_type,
+        cls.notification1 = Notification.objects.create(
+            user=cls.user1,
+            notification_type=cls.new_message_type,
             data={
-                'debate_title': self.debate1.title,
-                'participant_username': self.user2.username
+                'debate_title': cls.debate1.title,
+                'participant_username': cls.user2.username
             },
-            info_args={'discussion_id': self.discussion1.id}
+            info_args={'discussion_id': cls.discussion1.id}
         )
         
-        self.notification2 = Notification.objects.create(
-            user=self.user1,
-            notification_type=self.new_message_type,
+        cls.notification2 = Notification.objects.create(
+            user=cls.user1,
+            notification_type=cls.new_message_type,
             data={
-                'debate_title': self.debate1.title,
-                'participant_username': self.user3.username
+                'debate_title': cls.debate1.title,
+                'participant_username': cls.user3.username
             },
-            info_args={'discussion_id': self.discussion1.id},
+            info_args={'discussion_id': cls.discussion1.id},
             read=True  # This notification is already read
         )
         
-        self.notification3 = Notification.objects.create(
-            user=self.user2,
-            notification_type=self.new_message_type,
+        cls.notification3 = Notification.objects.create(
+            user=cls.user2,
+            notification_type=cls.new_message_type,
             data={
-                'debate_title': self.debate1.title,
-                'participant_username': self.user1.username
+                'debate_title': cls.debate1.title,
+                'participant_username': cls.user1.username
             },
-            info_args={'discussion_id': self.discussion1.id}
+            info_args={'discussion_id': cls.discussion1.id}
         )
         
         # Create test client
-        self.client = Client()
+        cls.client = Client()
 
     def authenticate_user1(self):
         client = Client()
@@ -314,19 +317,20 @@ class NotificationServiceTest(NotificationApiTestBase):
 
 
 class NotificationPaginationTest(NotificationApiTestBase):
-    def setUp(self):
-        super().setUp()
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
         
         # Create additional notifications for pagination testing
         for i in range(20):  # Create 20 additional notifications
             Notification.objects.create(
-                user=self.user1,
-                notification_type=self.new_message_type,
+                user=cls.user1,
+                notification_type=cls.new_message_type,
                 data={
                     'debate_title': f"Test Debate {i}",
-                    'participant_username': self.user2.username
+                    'participant_username': cls.user2.username
                 },
-                info_args={'discussion_id': self.discussion1.id}
+                info_args={'discussion_id': cls.discussion1.id}
             )
 
     def test_notification_pagination(self):

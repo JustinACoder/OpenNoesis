@@ -16,49 +16,52 @@ User = get_user_model()
 
 
 class PairingTestBase(BaseTestCase):
-    def setUp(self):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
         # Create test users
-        self.user1 = User.objects.create_user(username='testuser1', email='user1@example.com', password='password123')
-        self.user2 = User.objects.create_user(username='testuser2', email='user2@example.com', password='password123')
-        self.user3 = User.objects.create_user(username='testuser3', email='user3@example.com', password='password123')
-        self.user4 = User.objects.create_user(username='testuser4', email='user4@example.com', password='password123')
+        cls.user1 = User.objects.create_user(username='testuser1', email='user1@example.com', password='password123')
+        cls.user2 = User.objects.create_user(username='testuser2', email='user2@example.com', password='password123')
+        cls.user3 = User.objects.create_user(username='testuser3', email='user3@example.com', password='password123')
+        cls.user4 = User.objects.create_user(username='testuser4', email='user4@example.com', password='password123')
 
         # Create test debates
-        self.debate1 = Debate.objects.create(
+        cls.debate1 = Debate.objects.create(
             title="Test Debate 1",
             description="Description for test debate 1",
-            author=self.user1
+            author=cls.user1
         )
-        self.debate2 = Debate.objects.create(
+        cls.debate2 = Debate.objects.create(
             title="Test Debate 2",
             description="Description for test debate 2",
-            author=self.user2
+            author=cls.user2
         )
 
         # Create test stances
         Stance.objects.create(
-            user=self.user1,
-            debate=self.debate1,
+            user=cls.user1,
+            debate=cls.debate1,
             stance=1  # FOR
         )
         Stance.objects.create(
-            user=self.user2,
-            debate=self.debate1,
+            user=cls.user2,
+            debate=cls.debate1,
             stance=-1  # AGAINST
         )
         Stance.objects.create(
-            user=self.user3,
-            debate=self.debate1,
+            user=cls.user3,
+            debate=cls.debate1,
             stance=1  # FOR
         )
         Stance.objects.create(
-            user=self.user4,
-            debate=self.debate1,
+            user=cls.user4,
+            debate=cls.debate1,
             stance=-1  # AGAINST
         )
 
         # Create client
-        self.client = Client()
+        cls.client = Client()
 
     def authenticate_user1(self):
         client = Client()
@@ -142,13 +145,14 @@ class PassivePairingRequestTest(PairingTestBase):
 
 
 class GetCurrentActivePairingTest(PairingTestBase):
-    def setUp(self):
-        super().setUp()
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
         
         # Create an active pairing request
-        self.active_request = PairingRequest.objects.create(
-            user=self.user1,
-            debate=self.debate1,
+        cls.active_request = PairingRequest.objects.create(
+            user=cls.user1,
+            debate=cls.debate1,
             status=PairingRequest.Status.ACTIVE,
             desired_stance=-1
         )
@@ -182,29 +186,30 @@ class GetCurrentActivePairingTest(PairingTestBase):
 
 
 class PairingMatchingTest(PairingTestBase):
-    def setUp(self):
-        super().setUp()
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
         
         # Create pairing requests that should match
         # User1 (FOR stance) wants to debate someone AGAINST
-        self.request1 = PairingRequest.objects.create(
-            user=self.user1,
-            debate=self.debate1,
+        cls.request1 = PairingRequest.objects.create(
+            user=cls.user1,
+            debate=cls.debate1,
             status=PairingRequest.Status.PASSIVE,
             desired_stance=-1,
         )
-        self.request1.created_at = timezone.now() - timedelta(minutes=10)  # Older than grace period
-        self.request1.save()
+        cls.request1.created_at = timezone.now() - timedelta(minutes=10)  # Older than grace period
+        cls.request1.save()
         
         # User2 (AGAINST stance) wants to debate someone FOR
-        self.request2 = PairingRequest.objects.create(
-            user=self.user2,
-            debate=self.debate1,
+        cls.request2 = PairingRequest.objects.create(
+            user=cls.user2,
+            debate=cls.debate1,
             status=PairingRequest.Status.PASSIVE,
             desired_stance=1,
         )
-        self.request2.created_at = timezone.now() - timedelta(minutes=10)  # Older than grace period
-        self.request2.save()
+        cls.request2.created_at = timezone.now() - timedelta(minutes=10)  # Older than grace period
+        cls.request2.save()
 
     def test_passive_pairing_match(self):
         # Run the task to match the requests
@@ -329,44 +334,45 @@ class PairingMatchingTest(PairingTestBase):
 
 
 class PairingRequestManagerTest(PairingTestBase):
-    def setUp(self):
-        super().setUp()
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
         
         # Create an active request
-        self.active_request = PairingRequest.objects.create(
-            user=self.user1,
-            debate=self.debate1,
+        cls.active_request = PairingRequest.objects.create(
+            user=cls.user1,
+            debate=cls.debate1,
             status=PairingRequest.Status.ACTIVE,
             desired_stance=-1,
         )
         
         # Create an idle request
-        self.idle_request = PairingRequest.objects.create(
-            user=self.user2,
-            debate=self.debate1,
+        cls.idle_request = PairingRequest.objects.create(
+            user=cls.user2,
+            debate=cls.debate1,
             status=PairingRequest.Status.IDLE,
             desired_stance=1,
         )
         
         # Create a passive request
-        self.passive_request = PairingRequest.objects.create(
-            user=self.user3,
-            debate=self.debate1,
+        cls.passive_request = PairingRequest.objects.create(
+            user=cls.user3,
+            debate=cls.debate1,
             status=PairingRequest.Status.PASSIVE,
             desired_stance=-1,
         )
-        self.passive_request.last_keepalive_ping = timezone.now() - timedelta(minutes=30)
-        self.passive_request.save()
+        cls.passive_request.last_keepalive_ping = timezone.now() - timedelta(minutes=30)
+        cls.passive_request.save()
         
         # Create an expired request
-        self.expired_request = PairingRequest.objects.create(
-            user=self.user4,
-            debate=self.debate2,
+        cls.expired_request = PairingRequest.objects.create(
+            user=cls.user4,
+            debate=cls.debate2,
             status=PairingRequest.Status.ACTIVE,
             desired_stance=1,
         )
-        self.expired_request.last_keepalive_ping = timezone.now() - timedelta(hours=1)
-        self.expired_request.save()
+        cls.expired_request.last_keepalive_ping = timezone.now() - timedelta(hours=1)
+        cls.expired_request.save()
 
     def test_get_current_request(self):
         # Test active request is returned
@@ -404,28 +410,29 @@ class PairingRequestManagerTest(PairingTestBase):
 
 
 class PairingMatchModelTest(PairingTestBase):
-    def setUp(self):
-        super().setUp()
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
         
         # Create requests
-        self.request1 = PairingRequest.objects.create(
-            user=self.user1,
-            debate=self.debate1,
+        cls.request1 = PairingRequest.objects.create(
+            user=cls.user1,
+            debate=cls.debate1,
             status=PairingRequest.Status.MATCH_FOUND,
             desired_stance=-1
         )
         
-        self.request2 = PairingRequest.objects.create(
-            user=self.user2,
-            debate=self.debate1,
+        cls.request2 = PairingRequest.objects.create(
+            user=cls.user2,
+            debate=cls.debate1,
             status=PairingRequest.Status.MATCH_FOUND,
             desired_stance=1
         )
         
         # Create match
-        self.match = PairingMatch.objects.create(
-            pairing_request_1=self.request1,
-            pairing_request_2=self.request2
+        cls.match = PairingMatch.objects.create(
+            pairing_request_1=cls.request1,
+            pairing_request_2=cls.request2
         )
 
     def test_get_debate(self):

@@ -13,38 +13,41 @@ User = get_user_model()
 
 
 class InviteTestBase(BaseTestCase):
-    def setUp(self):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
         # Create test users
-        self.user1 = User.objects.create_user(username='testuser1', email='user1@example.com', password='password123')
-        self.user2 = User.objects.create_user(username='testuser2', email='user2@example.com', password='password123')
-        self.user3 = User.objects.create_user(username='testuser3', email='user3@example.com', password='password123')
+        cls.user1 = User.objects.create_user(username='testuser1', email='user1@example.com', password='password123')
+        cls.user2 = User.objects.create_user(username='testuser2', email='user2@example.com', password='password123')
+        cls.user3 = User.objects.create_user(username='testuser3', email='user3@example.com', password='password123')
 
         # Create test debates
-        self.debate1 = Debate.objects.create(
+        cls.debate1 = Debate.objects.create(
             title="Test Debate 1",
             description="Description for test debate 1",
-            author=self.user1
+            author=cls.user1
         )
-        self.debate2 = Debate.objects.create(
+        cls.debate2 = Debate.objects.create(
             title="Test Debate 2",
             description="Description for test debate 2",
-            author=self.user2
+            author=cls.user2
         )
 
         # Create test invites
-        self.invite1 = Invite.objects.create(
-            creator=self.user1,
-            debate=self.debate1,
+        cls.invite1 = Invite.objects.create(
+            creator=cls.user1,
+            debate=cls.debate1,
             code="abcdefgh"  # Override the default random generation for testing
         )
-        self.invite2 = Invite.objects.create(
-            creator=self.user2,
-            debate=self.debate2,
+        cls.invite2 = Invite.objects.create(
+            creator=cls.user2,
+            debate=cls.debate2,
             code="12345678"  # Override the default random generation for testing
         )
 
         # Create test client
-        self.client = Client()
+        cls.client = Client()
 
     def authenticate_user1(self):
         client = Client()
@@ -271,12 +274,15 @@ class InviteApiEndpointsTest(InviteTestBase):
 
 
 class InviteModelTest(BaseTestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(username='testuser', email='test@example.com', password='password123')
-        self.debate = Debate.objects.create(
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
+        cls.user = User.objects.create_user(username='testuser', email='test@example.com', password='password123')
+        cls.debate = Debate.objects.create(
             title="Test Debate",
             description="Description for test debate",
-            author=self.user
+            author=cls.user
         )
 
     def test_invite_creation(self):

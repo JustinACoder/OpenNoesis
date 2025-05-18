@@ -10,28 +10,31 @@ User = get_user_model()
 
 
 class UserApiTestBase(BaseTestCase):
-    def setUp(self):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
         # Create test users
-        self.user1 = User.objects.create_user(
+        cls.user1 = User.objects.create_user(
             username='testuser1', 
             email='user1@example.com', 
             password='password123'
         )
-        self.user2 = User.objects.create_user(
+        cls.user2 = User.objects.create_user(
             username='testuser2', 
             email='user2@example.com', 
             password='password123'
         )
         
         # Update profiles with bio
-        self.user1.profile.bio = "Test bio for user1"
-        self.user1.profile.save()
+        cls.user1.profile.bio = "Test bio for user1"
+        cls.user1.profile.save()
         
-        self.user2.profile.bio = "Test bio for user2"
-        self.user2.profile.save()
+        cls.user2.profile.bio = "Test bio for user2"
+        cls.user2.profile.save()
 
         # Create test client
-        self.client = Client()
+        cls.client = Client()
 
     def authenticate_user1(self):
         client = Client()

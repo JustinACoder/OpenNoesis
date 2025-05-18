@@ -13,37 +13,40 @@ User = get_user_model()
 
 
 class DebateApiTestBase(BaseTestCase):
-    def setUp(self):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
         # Create test users
-        self.user1 = User.objects.create_user(username='testuser1', email='user1@example.com', password='password123')
-        self.user2 = User.objects.create_user(username='testuser2', email='user2@example.com', password='password123')
+        cls.user1 = User.objects.create_user(username='testuser1', email='user1@example.com', password='password123')
+        cls.user2 = User.objects.create_user(username='testuser2', email='user2@example.com', password='password123')
 
         # Create test debates
-        self.debate1 = Debate.objects.create(
+        cls.debate1 = Debate.objects.create(
             title="Test Debate 1",
             description="Description for test debate 1",
-            author=self.user1
+            author=cls.user1
         )
-        self.debate2 = Debate.objects.create(
+        cls.debate2 = Debate.objects.create(
             title="Test Debate 2",
             description="Description for test debate 2",
-            author=self.user2
+            author=cls.user2
         )
 
         # Create test comments
-        self.comment1 = Comment.objects.create(
-            debate=self.debate1,
-            author=self.user2,
+        cls.comment1 = Comment.objects.create(
+            debate=cls.debate1,
+            author=cls.user2,
             text="Comment from user2 on debate1"
         )
-        self.comment2 = Comment.objects.create(
-            debate=self.debate1,
-            author=self.user1,
+        cls.comment2 = Comment.objects.create(
+            debate=cls.debate1,
+            author=cls.user1,
             text="Comment from user1 on debate1"
         )
 
         # Create test client
-        self.client = Client()
+        cls.client = Client()
 
     def authenticate_user1(self):
         client = Client()
