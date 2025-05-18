@@ -131,7 +131,7 @@ class PairingConsumer(CustomBaseConsumer):
         return PairingRequest.objects.get_current_request(user)
 
     @database_sync_to_async
-    async def _update_keepalive(self, pairing_request):
+    def _update_keepalive(self, pairing_request):
         """
         Updates the keepalive timestamp of a pairing request.
         """

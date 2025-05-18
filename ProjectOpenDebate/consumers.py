@@ -30,7 +30,8 @@ class EventRouterMixin:
         handler_name = self.event_handlers.get(event_type)
 
         if not handler_name or not hasattr(self, handler_name):
-            return await self.send_error('Invalid event_type')
+            print(f'Invalid event_type (content: {content})')
+            return await self.send_error(f'Invalid event_type: {event_type}')
 
         data = content.get('data', {})
         await getattr(self, handler_name)(data)

@@ -47,7 +47,7 @@ class DiscussionConsumer(CustomBaseConsumer):
         await database_sync_to_async(user_readcheckpoint.read_until)(message_instance)
 
         # Transform message instance into a schema
-        message_data = MessageSchema.model_validate(message_instance).dict()
+        message_data = MessageSchema.model_validate(message_instance).model_dump(mode="json")
 
         # Send the message to all participants in the discussion
         participants_ids = [discussion.participant1_id, discussion.participant2_id]
