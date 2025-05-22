@@ -36,13 +36,13 @@ def create_match(pairing_request, other_pairing_request):
 
     # Send the notification to the participants
     Notification.objects.create_new_discussion_notification(
-        pairing_request.user_id,
+        pairing_request.user,
         other_pairing_request.user.username,
         related_discussion.id,
         related_discussion.debate.title
     )
     Notification.objects.create_new_discussion_notification(
-        other_pairing_request.user_id,
+        other_pairing_request.user,
         pairing_request.user.username,
         related_discussion.id,
         related_discussion.debate.title

@@ -352,7 +352,7 @@ class NotificationManagerTest(NotificationApiTestBase):
     def test_create_new_discussion_notification(self):
         # Create a new discussion notification
         notification = Notification.objects.create_new_discussion_notification(
-            user_to_notify=self.user3.id,
+            user_to_notify=self.user3,
             other_user_name=self.user1.username,
             discussion_id=self.discussion1.id,
             debate_title=self.debate1.title
