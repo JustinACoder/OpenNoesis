@@ -89,7 +89,7 @@ class PassivePairingRequestTest(PairingTestBase):
         client = self.authenticate_user1()
         response = client.post(
             reverse_lazy_api("request_passive_pairing"),
-            data={"debate_id": self.debate1.id, "stance_wanted": -1},
+            data={"debate_id": self.debate1.id, "desired_stance": -1},
             content_type="application/json"
         )
         self.assertEqual(response.status_code, 204)
@@ -117,7 +117,7 @@ class PassivePairingRequestTest(PairingTestBase):
         client = self.authenticate_user1()
         response = client.post(
             reverse_lazy_api("request_passive_pairing"),
-            data={"debate_id": self.debate1.id, "stance_wanted": -1},
+            data={"debate_id": self.debate1.id, "desired_stance": -1},
             content_type="application/json"
         )
         self.assertEqual(response.status_code, 400)
@@ -130,7 +130,7 @@ class PassivePairingRequestTest(PairingTestBase):
         client = self.authenticate_user1()
         response = client.post(
             reverse_lazy_api("request_passive_pairing"),
-            data={"debate_id": self.debate1.id, "stance_wanted": 0},  # Invalid stance
+            data={"debate_id": self.debate1.id, "desired_stance": 0},  # Invalid stance
             content_type="application/json"
         )
         self.assertEqual(response.status_code, 422)  # Validation error
@@ -138,7 +138,7 @@ class PassivePairingRequestTest(PairingTestBase):
     def test_unauthenticated_request_fails(self):
         response = self.client.post(
             reverse_lazy_api("request_passive_pairing"),
-            data={"debate_id": self.debate1.id, "stance_wanted": -1},
+            data={"debate_id": self.debate1.id, "desired_stance": -1},
             content_type="application/json"
         )
         self.assertEqual(response.status_code, 401)

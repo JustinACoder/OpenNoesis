@@ -6,9 +6,10 @@ from ProjectOpenDebate.common.base_tests import BaseTestCase
 from ProjectOpenDebate.common.utils import reverse_lazy_api
 from debate.models import Debate
 from debate.schemas import StanceDirectionEnum
-from discussion.models import Discussion, Message, ReadCheckpoint, DiscussionRequest
+from discussion.models import Discussion, Message, ReadCheckpoint
 from discussion.schemas import ArchiveStatusInputSchema
 from discussion.services import DiscussionService
+from pairing.models import PairingRequest
 
 User = get_user_model()
 
@@ -341,30 +342,6 @@ class UnreadCountEndpointsTest(DiscussionApiTestBase):
             reverse_lazy_api("get_unread_count_for_discussion", discussion_id=self.discussion1.id)
         )
         self.assertEqual(response.status_code, 401)  # Should require authentication
-
-
-class DiscussionRequestTest(DiscussionApiTestBase):
-    def test_stance_removes_discussion_requests(self):
-        # Create a discussion request
-        request = DiscussionRequest.objects.create(
-            requester=self.user1,
-            debate=self.debate1,
-            stance_wanted=StanceDirectionEnum.FOR
-        )
-
-        # Import and set up the services we need to test
-        from debate.services import StanceService
-
-        # Set a stance (which should remove the request)
-        StanceService.set_stance(self.user1, self.debate1.id, StanceDirectionEnum.FOR)
-
-        # Verify discussion request was removed
-        self.assertFalse(
-            DiscussionRequest.objects.filter(
-                requester=self.user1,
-                debate=self.debate1
-            ).exists()
-        )
 
 
 class DiscussionCreationTest(DiscussionApiTestBase):

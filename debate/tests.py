@@ -7,7 +7,8 @@ from debate.models import Debate, Comment, Stance
 from debate.schemas import VoteDirectionEnum, StanceDirectionEnum, CommentInputSchema, VoteInputSchema, StanceSchema, \
     StanceInputSchema
 from voting.models import Vote
-from discussion.models import DiscussionRequest
+
+from pairing.models import PairingRequest
 
 User = get_user_model()
 
@@ -310,10 +311,10 @@ class StanceEndpointsTest(DebateApiTestBase):
 
     def test_set_stance_removes_discussion_requests(self):
         # Create a discussion request
-        request = DiscussionRequest.objects.create(
-            requester=self.user1,
+        request = PairingRequest.objects.create(
+            user=self.user1,
             debate=self.debate1,
-            stance_wanted=StanceDirectionEnum.FOR
+            desired_stance=StanceDirectionEnum.FOR
         )
 
         # Set a stance
@@ -329,8 +330,9 @@ class StanceEndpointsTest(DebateApiTestBase):
 
         # Verify discussion request was removed
         self.assertFalse(
-            DiscussionRequest.objects.filter(
-                requester=self.user1,
-                debate=self.debate1
+            PairingRequest.objects.filter(
+                user=self.user1,
+                debate=self.debate1,
+                is_completed=False
             ).exists()
         )

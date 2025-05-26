@@ -34,13 +34,18 @@ class EventRouterMixin:
             return await self.send_error(f'Invalid event_type: {event_type}')
 
         data = content.get('data', {})
-        await getattr(self, handler_name)(data)
+        try:
+            await getattr(self, handler_name)(data)
+        except Exception as e:
+            print(f'Error handling event {event_type}: {e}')
+            await self.send_error(f'An error occurred while processing the request ({str(e)})', details=str(e))
 
     async def send_error(self, message: str, **extra):
         """
         Sends an error message to the client.
         """
         payload = {'status': 'error', 'message': message, **extra}
+        print(f'Sending error: {payload}')
         await self.send_json(payload)
 
     async def send_success(self, event_type: str, data: dict = None, **extra):

@@ -1,8 +1,9 @@
 from channels.db import database_sync_to_async
 from django.db.models import Q
 from pydantic import ValidationError
+import json
 
-from ProjectOpenDebate.consumers import CustomBaseConsumer, get_user_group_name
+from ProjectOpenDebate.consumers import CustomBaseConsumer
 from .models import Discussion, Message
 from .schemas import MessageSchema, NewMessagePayload, ReadMessagesPayload
 
@@ -22,7 +23,7 @@ class DiscussionConsumer(CustomBaseConsumer):
         try:
             payload = NewMessagePayload(**data)
         except ValidationError as e:
-            return await self.send_error('Invalid payload', details=e.errors())
+            return await self.send_error('Invalid payload', details=json.loads(e.json()))
 
         user = self.scope['user']
 
@@ -69,7 +70,7 @@ class DiscussionConsumer(CustomBaseConsumer):
         try:
             payload = ReadMessagesPayload(**data)
         except ValidationError as e:
-            return await self.send_error('Invalid payload', details=e.errors())
+            return await self.send_error('Invalid payload', details=json.loads(e.json()))
 
         user = self.scope['user']
 

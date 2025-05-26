@@ -125,8 +125,8 @@ class Stance(models.Model):
         return f"Stance of {self.user} on \"{self.debate.title}\""
 
 
-# Must be after Debate to avoid circular import
-from discussion.models import DiscussionRequest
+# Must be imported after the Debate model to avoid circular imports
+from pairing.models import PairingRequest
 
 
 class DebateQuerySet(models.QuerySet):
@@ -182,14 +182,15 @@ class DebateQuerySet(models.QuerySet):
                 has_requested_against=Value(False, output_field=models.BooleanField()),
             )
         else:
-            subquery_user_requests = DiscussionRequest.objects.filter(
+            subquery_user_requests = PairingRequest.objects.filter(
                 debate=OuterRef('pk'),
-                requester=user
+                user=user,
+                status=PairingRequest.Status.PASSIVE
             )
 
             return self.annotate(
-                has_requested_for=Exists(subquery_user_requests.filter(stance_wanted=1)),
-                has_requested_against=Exists(subquery_user_requests.filter(stance_wanted=-1)),
+                has_requested_for=Exists(subquery_user_requests.filter(desired_stance=1)),
+                has_requested_against=Exists(subquery_user_requests.filter(desired_stance=-1)),
             )
 
     def get_popular(self):

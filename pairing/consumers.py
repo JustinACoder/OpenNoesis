@@ -1,4 +1,6 @@
 import asyncio
+import json
+
 from pydantic import ValidationError
 
 from ProjectOpenDebate.consumers import CustomBaseConsumer, atomic_async
@@ -88,7 +90,7 @@ class PairingConsumer(CustomBaseConsumer):
         try:
             payload = PairingRequestInputSchema(**data)
         except ValidationError as e:
-            return await self.send_error('Invalid payload', details=e.errors())
+            return await self.send_error('Invalid payload', details=json.loads(e.json()))
 
         user = self.scope['user']
 

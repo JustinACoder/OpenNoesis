@@ -15,9 +15,11 @@ class PairingRequestManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().annotate(
             is_expired=(
-                    Q(status=PairingRequest.Status.ACTIVE) &
                     Q(last_keepalive_ping__lt=timezone.now() - timedelta(
                         seconds=settings.PAIRING_REQUEST_EXPIRY_SECONDS))
+            ),
+            is_completed=(
+                Q(status=PairingRequest.Status.PAIRED) | Q(status=PairingRequest.Status.MATCH_FOUND)
             )
         )
 

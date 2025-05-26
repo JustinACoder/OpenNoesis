@@ -8,7 +8,7 @@ from pairing.models import PairingRequest
 
 class PairingRequestInputSchema(Schema):
     debate_id: int
-    stance_wanted: Literal[-1, 1]
+    desired_stance: Literal[-1, 1]
 
 
 class PairingRequestSchema(ModelSchema):

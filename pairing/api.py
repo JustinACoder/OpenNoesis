@@ -16,7 +16,7 @@ def request_passive_pairing(request, data: PairingRequestInputSchema):
     """
     Request passive pairing for the current user.
     """
-    is_new_and_valid_request = create_passive_pairing_request(request.user, data.debate_id, data.stance_wanted)
+    is_new_and_valid_request = create_passive_pairing_request(request.user, data.debate_id, data.desired_stance)
     if not is_new_and_valid_request:
         raise HttpError(400, "You already have a passive pairing request for this debate and stance.")
     return 204, None

@@ -6,15 +6,15 @@ from pairing.models import PairingRequest
 
 User = get_user_model()
 
-def create_passive_pairing_request(user: User, debate_id: int, stance_wanted: int):
+def create_passive_pairing_request(user: User, debate_id: int, desired_stance: int):
     """
     Create a passive pairing request for the given user.
 
     Returns True if the request was successfully created, False if the user has already
     requested a passive pairing for the same debate and stance.
     """
-    if stance_wanted not in [-1, 1]:
-        raise ValueError("Invalid stance_wanted value. Must be -1 or 1.")
+    if desired_stance not in [-1, 1]:
+        raise ValueError("Invalid desired_stance value. Must be -1 or 1.")
 
     debate = get_object_or_404(Debate, id=debate_id)
 
@@ -22,7 +22,7 @@ def create_passive_pairing_request(user: User, debate_id: int, stance_wanted: in
     if user.pairingrequest_set.filter(
             debate=debate,
             status=PairingRequest.Status.PASSIVE,
-            desired_stance=stance_wanted
+            desired_stance=desired_stance
     ).exists():
         return False
 
@@ -31,6 +31,6 @@ def create_passive_pairing_request(user: User, debate_id: int, stance_wanted: in
         user=user,
         debate=debate,
         status=PairingRequest.Status.PASSIVE,
-        desired_stance=stance_wanted
+        desired_stance=desired_stance
     )
     return True

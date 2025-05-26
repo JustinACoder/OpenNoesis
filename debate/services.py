@@ -3,7 +3,7 @@ from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 
 from voting.models import Vote
-from discussion.models import DiscussionRequest
+from pairing.models import PairingRequest
 from .models import Debate, Comment, DebateQuerySet, CommentQuerySet
 from .schemas import VoteDirectionEnum, StanceDirectionEnum
 
@@ -78,8 +78,12 @@ class StanceService:
         else:
             debate.stance_set.update_or_create(user=user, defaults={'stance': stance})
 
-        # Delete any pending discussion requests for the user on this debate
-        DiscussionRequest.objects.filter(requester=user, debate=debate).delete()
+        # Delete any pending pairing requests for the user on this debate
+        PairingRequest.objects.filter(
+            user=user,
+            debate=debate,
+            is_completed=False
+        ).delete()
 
 class VoteService:
     @staticmethod

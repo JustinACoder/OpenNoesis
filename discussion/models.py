@@ -100,16 +100,6 @@ class Message(models.Model):
         return f"Message {self.id} by {self.author} in discussion on \"{self.discussion.debate.title}\""
 
 
-class DiscussionRequest(models.Model):
-    requester = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    stance_wanted = models.IntegerField(choices=[(1, 'FOR'), (-1, 'AGAINST')])
-    debate = models.ForeignKey(Debate, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Request by {self.requester} for debate \"{self.debate.title}\""
-
-
 class ReadCheckpoint(models.Model):
     discussion = models.ForeignKey(Discussion, on_delete=models.CASCADE)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
