@@ -13,7 +13,7 @@ jobs:
     strategy:
       max-parallel: 4
       matrix:
-        python-version: ['3.10']
+        python-version: ['3.12']
 
     env:
       SECRET_KEY: ${{ secrets.SECRET_KEY }}
@@ -41,4 +41,4 @@ jobs:
         pip install -r requirements.txt
     - name: Run Tests
       run: |
-        python manage.py test
+        python manage.py test --settings=ProjectOpenDebate.test_settings --keepdb
