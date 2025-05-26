@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 
 from ProjectOpenDebate.common.utils import reverse_lazy_api
 from debate.models import Debate, Comment, Stance
-from debate.schemas import VoteDirectionEnum, StanceDirectionEnum, CommentInputSchema, VoteInputSchema, StanceSchema, \
+from debate.schemas import VoteDirectionEnum, StanceDirectionEnum, CommentInputSchema, VoteInputSchema, \
     StanceInputSchema
 from voting.models import Vote
 
@@ -97,13 +97,13 @@ class DebateListingEndpointsTest(DebateApiTestBase):
 
     def test_search_debates_endpoint(self):
         # Search for a term in the debate title
-        response = self.client.get(reverse_lazy_api("search_debates"), data={"query":"Test Debate"})
+        response = self.client.get(reverse_lazy_api("search_debates"), data={"query": "Test Debate"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("items", response.json())
         self.assertTrue(len(response.json()["items"]) > 0)
 
         # Search for a non-existent term
-        response = self.client.get(reverse_lazy_api("search_debates"), data={"query":"NonExistentTerm"})
+        response = self.client.get(reverse_lazy_api("search_debates"), data={"query": "NonExistentTerm"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("items", response.json())
         self.assertEqual(len(response.json()["items"]), 0)
@@ -187,7 +187,8 @@ class CommentEndpointsTest(DebateApiTestBase):
     def test_create_comment_unauthenticated(self):
         text = "This comment should not be created"
         comment_data = CommentInputSchema(text=text).dict()
-        response = self.client.post(reverse_lazy_api("create_comment", debate_id=self.debate1.id), data=comment_data, content_type='application/json')
+        response = self.client.post(reverse_lazy_api("create_comment", debate_id=self.debate1.id), data=comment_data,
+                                    content_type='application/json')
 
         self.assertEqual(response.status_code, 401)  # Should require authentication
 
@@ -195,7 +196,8 @@ class CommentEndpointsTest(DebateApiTestBase):
         client = self.authenticate_user1()
         text = "This comment should not be created"
         comment_data = CommentInputSchema(text=text).dict()
-        response = client.post(reverse_lazy_api("create_comment", debate_id=999999), data=comment_data, content_type='application/json')
+        response = client.post(reverse_lazy_api("create_comment", debate_id=999999), data=comment_data,
+                               content_type='application/json')
 
         self.assertEqual(response.status_code, 404)  # Debate does not exist
 
@@ -206,7 +208,8 @@ class VotingEndpointsTest(DebateApiTestBase):
 
         # Test upvote
         vote_data = VoteInputSchema(direction=VoteDirectionEnum.UP).dict()
-        response = client.patch(reverse_lazy_api("vote_on_debate", debate_id=self.debate2.id), data=vote_data, content_type='application/json')
+        response = client.patch(reverse_lazy_api("vote_on_debate", debate_id=self.debate2.id), data=vote_data,
+                                content_type='application/json')
         self.assertEqual(response.status_code, 204)
 
         # Verify vote was recorded
@@ -219,7 +222,8 @@ class VotingEndpointsTest(DebateApiTestBase):
 
         # Test downvote
         vote_data = VoteInputSchema(direction=VoteDirectionEnum.DOWN).dict()
-        response = client.patch(reverse_lazy_api("vote_on_debate", debate_id=self.debate2.id), data=vote_data, content_type='application/json')
+        response = client.patch(reverse_lazy_api("vote_on_debate", debate_id=self.debate2.id), data=vote_data,
+                                content_type='application/json')
         self.assertEqual(response.status_code, 204)
 
         # Verify vote was updated
@@ -228,7 +232,8 @@ class VotingEndpointsTest(DebateApiTestBase):
 
     def test_vote_on_debate_unauthenticated(self):
         vote_data = VoteInputSchema(direction=VoteDirectionEnum.UP).dict()
-        response = self.client.patch(reverse_lazy_api("vote_on_debate", debate_id=self.debate1.id), data=vote_data, content_type='application/json')
+        response = self.client.patch(reverse_lazy_api("vote_on_debate", debate_id=self.debate1.id), data=vote_data,
+                                     content_type='application/json')
         self.assertEqual(response.status_code, 401)  # Should require authentication
 
     def test_vote_on_comment_authenticated(self):
