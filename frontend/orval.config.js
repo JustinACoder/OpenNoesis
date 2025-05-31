@@ -6,7 +6,7 @@ module.exports = {
       schemas: "src/lib/models",
       client: "react-query",
       mock: true,
-      baseUrl: "http://localhost:3000",
+      baseUrl: "http://localhost:8000",
     },
     input: {
       target: "./openapi.json",
