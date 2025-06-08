@@ -19,11 +19,11 @@ export default async function HomePage() {
   ]);
 
   const sections = [
-    { title: "Trending Debates", items: trending.data.items },
-    { title: "Popular Debates", items: popular.data.items },
-    { title: "Controversial Debates", items: controversial.data.items },
-    { title: "Recent Debates", items: recent.data.items },
-    { title: "Other Debates", items: random.data.items },
+    { title: "Trending Debates", items: trending.items },
+    { title: "Popular Debates", items: popular.items },
+    { title: "Controversial Debates", items: controversial.items },
+    { title: "Recent Debates", items: recent.items },
+    { title: "Other Debates", items: random.items },
   ];
 
   return (

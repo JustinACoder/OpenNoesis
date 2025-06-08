@@ -7,6 +7,12 @@ module.exports = {
       client: "react-query",
       mock: true,
       baseUrl: "http://localhost:8000",
+      override: {
+        mutator: {
+          path: "./src/lib/axiosClient.ts",
+          name: "customInstance",
+        },
+      },
     },
     input: {
       target: "./openapi.json",

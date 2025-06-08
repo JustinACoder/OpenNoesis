@@ -763,17 +763,17 @@
         ]
       }
     },
-    "/api/debates/{debate_id}": {
+    "/api/debates/slug/{debate_slug}": {
       "get": {
         "operationId": "debate_api_get_debate",
         "summary": "Get Debate",
         "parameters": [
           {
             "in": "path",
-            "name": "debate_id",
+            "name": "debate_slug",
             "schema": {
-              "title": "Debate Id",
-              "type": "integer"
+              "title": "Debate Slug",
+              "type": "string"
             },
             "required": true
           }
@@ -841,17 +841,17 @@
         ]
       }
     },
-    "/api/debates/{debate_id}/suggestions": {
+    "/api/debates/slug/{debate_slug}/suggestions": {
       "get": {
         "operationId": "debate_api_get_debate_suggestions",
         "summary": "Get Debate Suggestions",
         "parameters": [
           {
             "in": "path",
-            "name": "debate_id",
+            "name": "debate_slug",
             "schema": {
-              "title": "Debate Id",
-              "type": "integer"
+              "title": "Debate Slug",
+              "type": "string"
             },
             "required": true
           },
@@ -890,17 +890,17 @@
         ]
       }
     },
-    "/api/debates/{debate_id}/stance": {
+    "/api/debates/slug/{debate_slug}/stance": {
       "patch": {
         "operationId": "debate_api_set_stance",
         "summary": "Set Stance",
         "parameters": [
           {
             "in": "path",
-            "name": "debate_id",
+            "name": "debate_slug",
             "schema": {
-              "title": "Debate Id",
-              "type": "integer"
+              "title": "Debate Slug",
+              "type": "string"
             },
             "required": true
           }
@@ -931,17 +931,17 @@
         ]
       }
     },
-    "/api/debates/{debate_id}/comments": {
+    "/api/debates/slug/{debate_slug}/comments": {
       "get": {
         "operationId": "debate_api_get_debate_comments",
         "summary": "Get Debate Comments",
         "parameters": [
           {
             "in": "path",
-            "name": "debate_id",
+            "name": "debate_slug",
             "schema": {
-              "title": "Debate Id",
-              "type": "integer"
+              "title": "Debate Slug",
+              "type": "string"
             },
             "required": true
           },
@@ -980,17 +980,17 @@
         ]
       }
     },
-    "/api/debates/{debate_id}/comment": {
+    "/api/debates/slug/{debate_slug}/comment": {
       "post": {
         "operationId": "debate_api_create_comment",
         "summary": "Create Comment",
         "parameters": [
           {
             "in": "path",
-            "name": "debate_id",
+            "name": "debate_slug",
             "schema": {
-              "title": "Debate Id",
-              "type": "integer"
+              "title": "Debate Slug",
+              "type": "string"
             },
             "required": true
           }
@@ -1028,17 +1028,17 @@
         ]
       }
     },
-    "/api/debates/{debate_id}/vote": {
+    "/api/debates/slug/{debate_slug}/vote": {
       "patch": {
         "operationId": "debate_api_vote_on_debate",
         "summary": "Vote On Debate",
         "parameters": [
           {
             "in": "path",
-            "name": "debate_id",
+            "name": "debate_slug",
             "schema": {
-              "title": "Debate Id",
-              "type": "integer"
+              "title": "Debate Slug",
+              "type": "string"
             },
             "required": true
           }
@@ -1069,17 +1069,17 @@
         ]
       }
     },
-    "/api/debates/{debate_id}/comments/{comment_id}/vote": {
+    "/api/debates/slug/{debate_slug}/comments/{comment_id}/vote": {
       "patch": {
         "operationId": "debate_api_vote_on_comment",
         "summary": "Vote On Comment",
         "parameters": [
           {
             "in": "path",
-            "name": "debate_id",
+            "name": "debate_slug",
             "schema": {
-              "title": "Debate Id",
-              "type": "integer"
+              "title": "Debate Slug",
+              "type": "string"
             },
             "required": true
           },
@@ -1417,6 +1417,28 @@
           {
             "SessionAuth": []
           }
+        ]
+      }
+    },
+    "/api/set-csrf-token": {
+      "get": {
+        "operationId": "ProjectOpenDebate_api_get_csrf_token",
+        "summary": "Get Csrf Token",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CSRFTokenSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "General"
         ]
       }
     },
@@ -4574,6 +4596,19 @@
         "title": "PairingRequestSchema",
         "type": "object"
       },
+      "CSRFTokenSchema": {
+        "properties": {
+          "csrftoken": {
+            "title": "Csrftoken",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrftoken"
+        ],
+        "title": "CSRFTokenSchema",
+        "type": "object"
+      },
       "Session": {
         "type": "object",
         "properties": {
@@ -5959,6 +5994,15 @@
       }
     },
     "examples": {
+      "User": {
+        "value": {
+          "id": 123,
+          "display": "Magic Wizard",
+          "has_usable_password": true,
+          "email": "email@domain.org",
+          "username": "wizard"
+        }
+      },
       "AuthenticatedByPassword": {
         "summary": "Authenticated by password.\n",
         "value": {
@@ -5966,7 +6010,7 @@
           "data": {
             "user": {
               "id": 123,
-              "display": "wizard",
+              "display": "Magic Wizard",
               "has_usable_password": true,
               "email": "email@domain.org",
               "username": "wizard"
@@ -5993,7 +6037,7 @@
           "data": {
             "user": {
               "id": 123,
-              "display": "wizard",
+              "display": "Magic Wizard",
               "has_usable_password": true,
               "email": "email@domain.org",
               "username": "wizard"
@@ -6371,7 +6415,7 @@
           "data": {
             "user": {
               "id": 123,
-              "display": "wizard",
+              "display": "Magic Wizard",
               "has_usable_password": true,
               "email": "email@domain.org",
               "username": "wizard"
@@ -7176,7 +7220,7 @@
                   "data": {
                     "user": {
                       "id": 123,
-                      "display": "wizard",
+                      "display": "Magic Wizard",
                       "has_usable_password": true,
                       "email": "email@domain.org",
                       "username": "wizard"
