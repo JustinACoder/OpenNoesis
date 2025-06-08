@@ -18,3 +18,4 @@ django-ninja~=1.3.0
 tqdm~=4.67.1
 requests~=2.32.3
 pyyaml
+django-cors-headers~=4.7.0

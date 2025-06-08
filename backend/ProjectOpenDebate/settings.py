@@ -14,7 +14,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env("DEBUG", default="dev") == "dev"
+ENV = env("ENV", default="dev")
+DEBUG = ENV == "dev"
+print("Running in", ENV, "mode")
 
 ALLOWED_HOSTS = []  # TODO: Add allowed hosts such as the domain name of the website
 
@@ -58,6 +60,19 @@ MIDDLEWARE = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
     'allauth.account.middleware.AccountMiddleware',
 ]
+if ENV == "dev":
+    # Add to 'corsheaders' if we are in dev (to allow cors requests from the frontend running on different port)
+    INSTALLED_APPS.append('corsheaders')
+    MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')  # Ensure CORS middleware is first
+    CORS_ALLOWED_ORIGINS = [
+        'http://localhost:3000',  # React frontend running on port 3000
+    ]
+    CORS_ALLOW_CREDENTIALS = True
+
+    # Allow CSRF for local development
+    CSRF_TRUSTED_ORIGINS = [
+        'http://localhost:3000',
+    ]
 
 ROOT_URLCONF = 'ProjectOpenDebate.urls'
 
