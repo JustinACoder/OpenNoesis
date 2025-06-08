@@ -70,11 +70,11 @@ def search_debates(request, query: str):
     return DebateService.get_debate_queryset(user).search(query)
 
 
-@router.get("/{int:debate_id}", response=DebateFullSchema)
-def get_debate(request, debate_id: int):
+@router.get("/slug/{slug:debate_slug}", response=DebateFullSchema)
+def get_debate(request, debate_slug: str):
     """Get detailed information about a debate."""
     user = request.auth
-    return DebateService.get_debate_details(user, debate_id)
+    return DebateService.get_debate_details(user, debate_slug=debate_slug)
 
 @router.get("/with-user-stance", response=List[DebateSchema], auth=django_auth)
 @paginate(PageNumberPagination, page_size=10)
@@ -84,49 +84,49 @@ def get_debates_with_user_stance(request):
     return DebateService.get_debate_queryset(user).filter(~Q(user_stance=StanceDirectionEnum.UNSET))
 
 
-@router.get("/{int:debate_id}/suggestions", response=List[DebateSchema])
+@router.get("/slug/{slug:debate_slug}/suggestions", response=List[DebateSchema])
 @paginate(PageNumberPagination, page_size=10)
-def get_debate_suggestions(request, debate_id: int):
+def get_debate_suggestions(request, debate_slug: str):
     """Get suggested debates based on the current debate."""
     user = request.auth
-    return DebateService.get_debate_queryset(user).get_random().exclude(pk=debate_id)
+    return DebateService.get_debate_queryset(user).get_random().exclude(slug=debate_slug)
 
 
-@router.patch("/{int:debate_id}/stance", response={204: None}, auth=django_auth)
-def set_stance(request, debate_id: int, stance_data: StanceInputSchema):
+@router.patch("/slug/{slug:debate_slug}/stance", response={204: None}, auth=django_auth)
+def set_stance(request, debate_slug: str, stance_data: StanceInputSchema):
     """Set a user's stance on a debate."""
     user = request.auth
-    StanceService.set_stance(user, debate_id, stance_data.stance)
+    StanceService.set_stance(user, debate_slug, stance_data.stance)
     return 204, None
 
 
-@router.get("/{int:debate_id}/comments", response=List[CommentSchema])
+@router.get("/slug/{slug:debate_slug}/comments", response=List[CommentSchema])
 @paginate(PageNumberPagination, page_size=10)
-def get_debate_comments(request, debate_id: int):
+def get_debate_comments(request, debate_slug: str):
     """Get paginated comments for a debate."""
     user = request.auth
-    return CommentService.list_debate_comments(user, debate_id)
+    return CommentService.list_debate_comments(user, debate_slug)
 
 
-@router.post("/{int:debate_id}/comment", response=CommentSchema, auth=django_auth)
-def create_comment(request, debate_id: int, comment_data: CommentInputSchema):
+@router.post("/slug/{slug:debate_slug}/comment", response=CommentSchema, auth=django_auth)
+def create_comment(request, debate_slug: str, comment_data: CommentInputSchema):
     """Create a new comment for a debate."""
     user = request.auth
     # Check that the debate exists
-    get_object_or_404(Debate, pk=debate_id)
-    return CommentService.create_comment(user, debate_id, comment_data.text)
+    debate = get_object_or_404(Debate, slug=debate_slug)
+    return CommentService.create_comment(user, debate.id, comment_data.text)
 
 
-@router.patch("/{int:debate_id}/vote", response={204: None}, auth=django_auth)
-def vote_on_debate(request, debate_id: int, vote_data: VoteInputSchema):
+@router.patch("/slug/{slug:debate_slug}/vote", response={204: None}, auth=django_auth)
+def vote_on_debate(request, debate_slug: str, vote_data: VoteInputSchema):
     """Register a vote on a debate."""
     user = request.auth
-    VoteService.vote_on_debate(user, debate_id, vote_data.direction)
+    VoteService.vote_on_debate(user, debate_slug, vote_data.direction)
     return 204, None
 
 
-@router.patch("/{int:debate_id}/comments/{comment_id}/vote", response={204: None}, auth=django_auth)
-def vote_on_comment(request, debate_id: int, comment_id: int, vote_data: VoteInputSchema):
+@router.patch("/slug/{slug:debate_slug}/comments/{comment_id}/vote", response={204: None}, auth=django_auth)
+def vote_on_comment(request, debate_slug: str, comment_id: int, vote_data: VoteInputSchema):
     """Register a vote on a comment."""
     user = request.auth
     VoteService.vote_on_comment(user, comment_id, vote_data.direction)

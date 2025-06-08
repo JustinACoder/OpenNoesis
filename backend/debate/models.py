@@ -144,7 +144,7 @@ class DebateQuerySet(models.QuerySet):
                 user_vote=Coalesce(
                     Subquery(
                         Vote.objects.filter(
-                            debate=OuterRef('pk'),
+                            object_id=Cast(OuterRef('pk'), output_field=models.TextField()),
                             user=user,
                             content_type=debate_content_type
                         ).values('vote')[:1]
@@ -263,7 +263,7 @@ class CommentQuerySet(models.QuerySet):
                     Subquery(
                         Vote.objects.filter(
                             content_type=comment_content_type,
-                            object_id=OuterRef('pk'),
+                            object_id=Cast(OuterRef('pk'), output_field=models.TextField()),
                             user=user
                         ).values('vote')[:1]
                     ),

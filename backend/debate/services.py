@@ -61,16 +61,16 @@ class CommentService:
         )
 
     @staticmethod
-    def list_debate_comments(user, debate_id: int) -> QuerySet[Comment]:
+    def list_debate_comments(user, debate_slug: str) -> QuerySet[Comment]:
         # Get the comments for the debate
-        return CommentService.get_comments_queryset(user).filter(debate_id=debate_id).order_by('-date_added')
+        return CommentService.get_comments_queryset(user).filter(debate__slug=debate_slug).order_by('-date_added')
 
 
 class StanceService:
     @staticmethod
-    def set_stance(user, debate_id: int, stance: StanceDirectionEnum) -> None:
+    def set_stance(user, debate_slug: str, stance: StanceDirectionEnum) -> None:
         """Set a user's stance on a debate."""
-        debate = get_object_or_404(Debate, pk=debate_id)
+        debate = get_object_or_404(Debate, slug=debate_slug)
 
         # Update the user's stance on the debate
         if stance == StanceDirectionEnum.UNSET:
@@ -87,9 +87,9 @@ class StanceService:
 
 class VoteService:
     @staticmethod
-    def vote_on_debate(user, debate_id: int, direction: VoteDirectionEnum) -> None:
+    def vote_on_debate(user, debate_slug: str, direction: VoteDirectionEnum) -> None:
         """Register a vote on a debate."""
-        debate = get_object_or_404(Debate, pk=debate_id)
+        debate = get_object_or_404(Debate, slug=debate_slug)
 
         # Record the vote
         Vote.objects.record_vote(debate, user, direction)
