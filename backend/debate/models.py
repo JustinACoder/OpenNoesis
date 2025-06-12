@@ -11,6 +11,7 @@ from django.db.models.functions import Coalesce, Log, Greatest, Now, Cast
 from django.contrib.postgres.indexes import GinIndex
 from voting.models import Vote
 from datetime import timedelta
+from debate.enums import StanceDirectionEnum
 
 User = get_user_model()
 
@@ -159,8 +160,8 @@ class DebateQuerySet(models.QuerySet):
 
     def with_stance(self, user: User):
         queryset = self.annotate(
-            num_for=Count(Case(When(stance__stance=True, then=1))),
-            num_against=Count(Case(When(stance__stance=False, then=1))),
+            num_for=Count(Case(When(stance__stance=StanceDirectionEnum.FOR.value, then=1))),
+            num_against=Count(Case(When(stance__stance=StanceDirectionEnum.AGAINST.value, then=1))),
         )
 
         if user.is_anonymous:
