@@ -159,9 +159,19 @@ class DebateQuerySet(models.QuerySet):
         return queryset
 
     def with_stance(self, user: User):
+        # TODO: We use distinct for simplicity but subqueries with indees could be more scalable
+        # We have to use distinct=True because joining both votes and stances caused each stance row to be duplicated for every matching vote, inflating the COUNT results.
         queryset = self.annotate(
-            num_for=Count(Case(When(stance__stance=StanceDirectionEnum.FOR.value, then=1))),
-            num_against=Count(Case(When(stance__stance=StanceDirectionEnum.AGAINST.value, then=1))),
+            num_for=Count(
+                'stance',
+                filter=Q(stance__stance=StanceDirectionEnum.FOR.value),
+                distinct=True,
+            ),
+            num_against=Count(
+                'stance',
+                filter=Q(stance__stance=StanceDirectionEnum.AGAINST.value),
+                distinct=True,
+            ),
         )
 
         if user.is_anonymous:
