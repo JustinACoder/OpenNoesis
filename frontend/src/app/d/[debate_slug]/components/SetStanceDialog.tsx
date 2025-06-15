@@ -115,7 +115,7 @@ const SetStanceDialog = ({
           Set Your Stance
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Set Your Stance</DialogTitle>
           <DialogDescription>

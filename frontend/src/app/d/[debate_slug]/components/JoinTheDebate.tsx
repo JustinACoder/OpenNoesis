@@ -23,7 +23,7 @@ export const JoinTheDebate = ({ debate }: DebateContentProps) => {
 
         {/* Debate Now Button */}
         <div className="flex-1">
-          <DebateNowDialog />
+          <DebateNowDialog debate={debate} />
         </div>
 
         {/* Invite to Debate Button */}
