@@ -39,6 +39,7 @@ export function useOptimisticMutation<
       serverData: TResponse,
       variables: TVariables,
     ) => TData;
+    shouldInvalidate?: boolean;
   },
 ) {
   const queryClient = useQueryClient();
@@ -86,15 +87,23 @@ export function useOptimisticMutation<
           "[OptimisticMutation] onSettled - Invalidating query:",
           config.queryKey,
         );
-        queryClient
-          .invalidateQueries({ queryKey: config.queryKey })
-          .then((r) =>
-            console.debug(
-              "[OptimisticMutation] Query invalidated:",
-              config.queryKey,
-              r,
-            ),
+
+        if (config.shouldInvalidate) {
+          console.debug(
+            "[OptimisticMutation] Invalidating query:",
+            config.queryKey,
           );
+
+          queryClient
+            .invalidateQueries({ queryKey: config.queryKey })
+            .then((r) =>
+              console.debug(
+                "[OptimisticMutation] Query invalidated:",
+                config.queryKey,
+                r,
+              ),
+            );
+        }
       },
     },
   });

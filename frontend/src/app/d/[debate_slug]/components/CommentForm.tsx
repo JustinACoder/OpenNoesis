@@ -2,11 +2,40 @@
 
 import React, { useState } from "react";
 import { Send } from "lucide-react";
-import { useDebateApiCreateComment } from "@/lib/api/debate";
-import { CommentInputSchema } from "@/lib/models";
+import {
+  useDebateApiCreateComment,
+  getDebateApiGetDebateCommentsQueryKey,
+} from "@/lib/api/debate";
+import {
+  CommentInputSchema,
+  CommentSchema,
+  PagedCommentSchema,
+} from "@/lib/models";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { useOptimisticMutation } from "@/lib/utils";
+
+// function useCreateCommentAndUpdateList(debateSlug: string, params: DebateApiGetDebateCommentsParams) {
+//   const queryClient = useQueryClient();
+//
+//   return useDebateApiCreateComment({
+//     mutation: {
+//       // this handler runs after the POST /comment returns the new comment
+//       onSuccess: (createdComment) => {
+//         const key = getDebateApiGetDebateCommentsQueryKey(debateSlug, params);
+//         queryClient.setQueryData<PagedCommentSchema>(key, old => {
+//           if (!old) return old;
+//           return {
+//             ...old,
+//             count: old.count + 1,
+//             items: [createdComment, ...old.items],
+//           };
+//         });
+//       },
+//     },
+//   });
+// }
 
 interface CommentFormProps {
   debateSlug: string;
@@ -14,7 +43,15 @@ interface CommentFormProps {
 
 export const CommentForm = ({ debateSlug }: CommentFormProps) => {
   const [content, setContent] = useState("");
-  const { mutateAsync, isPending } = useDebateApiCreateComment();
+  const { mutate: createComment, isPending } = useOptimisticMutation<
+    PagedCommentSchema,
+    { debateSlug: string; data: CommentInputSchema },
+    CommentSchema
+  >(useDebateApiCreateComment, {
+    queryKey: getDebateApiGetDebateCommentsQueryKey(debateSlug),
+    updateFn: (p) => p, // We don't update the comment list optimistically here
+    shouldInvalidate: true, // We want to refetch the comment page after creating the new one
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,10 +61,7 @@ export const CommentForm = ({ debateSlug }: CommentFormProps) => {
       const commentData: CommentInputSchema = {
         text: content.trim(),
       };
-      await mutateAsync({
-        debateSlug: debateSlug,
-        data: commentData,
-      });
+      createComment({ debateSlug, data: commentData });
       setContent("");
     } catch (error) {
       console.error("Failed to create comment:", error);

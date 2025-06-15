@@ -42,3 +42,7 @@ next-env.d.ts
 
 # Other
 package-lock.json
+
+# Orval generated files
+src/lib/api
+src/lib/models

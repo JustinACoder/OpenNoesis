@@ -2,12 +2,17 @@ import {
   debateApiGetDebate,
   debateApiGetDebateSuggestions,
   debateApiGetDebateComments,
+  getDebateApiGetDebateQueryKey,
+  getDebateApiGetDebateCommentsQueryKey,
+  getDebateApiGetDebateSuggestionsQueryKey,
 } from "@/lib/api/debate";
 
-import { DebateDetailHeader } from "./components/DebateDetailHeader";
-import { JoinTheDebate } from "./components/JoinTheDebate";
-import { DebateComments } from "./components/DebateComments";
-import { RelatedDebates } from "./components/RelatedDebates";
+import {
+  HydrationBoundary,
+  QueryClient,
+  dehydrate,
+} from "@tanstack/react-query";
+import DebateRootClient from "./components/DebateRootClient";
 
 interface DebateDetailPageProps {
   params: Promise<{ debate_slug: string }>;
@@ -15,7 +20,7 @@ interface DebateDetailPageProps {
 
 const DebateDetailPage = async ({ params }: DebateDetailPageProps) => {
   const { debate_slug } = await params;
-  // const queryClient = new QueryClient();
+  const queryClient = new QueryClient();
 
   const [debate, suggestions, comments] = await Promise.all([
     debateApiGetDebate(debate_slug),
@@ -25,31 +30,20 @@ const DebateDetailPage = async ({ params }: DebateDetailPageProps) => {
 
   // Populate the cache with server data
   // This is necessary to ensure the data is available for optimistic updates (e.g., voting)
-  // queryClient.setQueryData(getDebateApiGetDebateQueryKey(debate_slug), debate);
+  queryClient.setQueryData(getDebateApiGetDebateQueryKey(debate_slug), debate);
+  queryClient.setQueryData(
+    getDebateApiGetDebateSuggestionsQueryKey(debate_slug),
+    suggestions,
+  );
+  queryClient.setQueryData(
+    getDebateApiGetDebateCommentsQueryKey(debate_slug),
+    comments,
+  );
 
   return (
-    //<HydrationBoundary state={dehydrate(queryClient)}>
-    <main className="min-h-[calc(100vh-4rem)]">
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            <DebateDetailHeader debate={debate} />
-            <JoinTheDebate debate={debate} />
-            <DebateComments
-              comments={comments.items}
-              debateSlug={debate_slug} // Pass slug for comment submission
-            />
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            <RelatedDebates debates={suggestions.items} />
-          </div>
-        </div>
-      </div>
-    </main>
-    //</HydrationBoundary>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <DebateRootClient debateSlug={debate_slug} />
+    </HydrationBoundary>
   );
 };
 export default DebateDetailPage;
