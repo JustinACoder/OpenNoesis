@@ -16,27 +16,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useOptimisticMutation } from "@/lib/utils";
 
-// function useCreateCommentAndUpdateList(debateSlug: string, params: DebateApiGetDebateCommentsParams) {
-//   const queryClient = useQueryClient();
-//
-//   return useDebateApiCreateComment({
-//     mutation: {
-//       // this handler runs after the POST /comment returns the new comment
-//       onSuccess: (createdComment) => {
-//         const key = getDebateApiGetDebateCommentsQueryKey(debateSlug, params);
-//         queryClient.setQueryData<PagedCommentSchema>(key, old => {
-//           if (!old) return old;
-//           return {
-//             ...old,
-//             count: old.count + 1,
-//             items: [createdComment, ...old.items],
-//           };
-//         });
-//       },
-//     },
-//   });
-// }
-
 interface CommentFormProps {
   debateSlug: string;
 }
