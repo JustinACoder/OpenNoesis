@@ -28,7 +28,7 @@ export const JoinTheDebate = ({ debate }: DebateContentProps) => {
 
         {/* Invite to Debate Button */}
         <div className="flex-1">
-          <CreateInviteDialog />
+          <CreateInviteDialog debate={debate} />
         </div>
       </div>
     </Box>
