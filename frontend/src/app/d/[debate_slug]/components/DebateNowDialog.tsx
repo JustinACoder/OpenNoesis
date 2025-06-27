@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { DebateFullSchema } from "@/lib/models";
+import UserStanceInlineIndicator from "@/app/d/[debate_slug]/components/UserStanceInlineIndicator";
 
 interface DebateNowDialogProps {
   debate: DebateFullSchema;
@@ -63,12 +64,6 @@ const DebateNowDialog = ({ debate }: DebateNowDialogProps) => {
     setSearchType(value as "active" | "passive");
   };
 
-  const getUserStanceText = () => {
-    if (userStance === 1) return "Support";
-    if (userStance === -1) return "Oppose";
-    return "Undecided";
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -103,22 +98,10 @@ const DebateNowDialog = ({ debate }: DebateNowDialogProps) => {
         ) : (
           <div className="space-y-6">
             {/* Show current user stance */}
-            <div className="">
-              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                <span>Your stance:</span>
-                <div className="flex items-center space-x-1">
-                  {userStance === 1 ? (
-                    <ThumbsUp className="w-4 h-4 text-primary" />
-                  ) : (
-                    <ThumbsDown className="w-4 h-4 text-amber-500" />
-                  )}
-                  <span className="font-medium">{getUserStanceText()}</span>
-                </div>
-              </div>
-            </div>
+            <UserStanceInlineIndicator userStance={userStance} />
 
             {/* Opponent stance selection */}
-            <div className="">
+            <div>
               <div className="mb-3">
                 <h4 className="font-medium text-sm">Find an opponent who:</h4>
                 <p className="text-xs text-muted-foreground">
