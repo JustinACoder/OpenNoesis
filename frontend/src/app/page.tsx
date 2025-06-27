@@ -7,6 +7,8 @@ import {
 } from "@/lib/api/debate";
 import { DebateCard } from "@/components/DebateCard";
 import { DebateGrid } from "@/components/DebateGrid";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 
 export default async function HomePage() {
   // Parallel fetching to speed up SSR
@@ -27,19 +29,23 @@ export default async function HomePage() {
   ];
 
   return (
-    <main className="min-h-[calc(100vh-4rem)]">
-      <div className="container mx-auto px-4 py-8 space-y-12">
-        {sections.map(({ title, items }) => (
-          <section key={title}>
-            <h2 className="text-2xl font-semibold mb-6">{title}</h2>
-            <DebateGrid>
-              {items.map((debate) => (
-                <DebateCard key={debate.id} {...debate} />
-              ))}
-            </DebateGrid>
-          </section>
-        ))}
-      </div>
-    </main>
+    <>
+      <Header />
+      <main className="min-h-[calc(100vh-4rem)]">
+        <div className="container mx-auto px-4 py-8 space-y-12">
+          {sections.map(({ title, items }) => (
+            <section key={title}>
+              <h2 className="text-2xl font-semibold mb-6">{title}</h2>
+              <DebateGrid>
+                {items.map((debate) => (
+                  <DebateCard key={debate.id} {...debate} />
+                ))}
+              </DebateGrid>
+            </section>
+          ))}
+        </div>
+      </main>
+      <Footer />
+    </>
   );
 }

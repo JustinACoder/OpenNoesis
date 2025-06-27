@@ -13,6 +13,8 @@ import {
   dehydrate,
 } from "@tanstack/react-query";
 import DebateRootClient from "./components/DebateRootClient";
+import { Footer } from "@/components/Footer";
+import { Header } from "@/components/Header";
 
 interface DebateDetailPageProps {
   params: Promise<{ debate_slug: string }>;
@@ -41,9 +43,13 @@ const DebateDetailPage = async ({ params }: DebateDetailPageProps) => {
   );
 
   return (
-    <HydrationBoundary state={dehydrate(queryClient)}>
-      <DebateRootClient debateSlug={debate_slug} />
-    </HydrationBoundary>
+    <>
+      <Header />
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <DebateRootClient debateSlug={debate_slug} />
+      </HydrationBoundary>
+      <Footer />
+    </>
   );
 };
 export default DebateDetailPage;
