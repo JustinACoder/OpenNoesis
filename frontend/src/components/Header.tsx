@@ -2,17 +2,14 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
-import { SiteMainIcon } from "@/components/ui/icons/SiteMainIcon";
+import ClickableLogo from "@/components/ClickableLogo";
 
 export function Header() {
   return (
     <header className="bg-gray-900 border-b border-gray-800">
       <div className="container mx-auto flex flex-col md:flex-row items-center justify-between px-4 py-4">
         {/* Logo */}
-        <Link href="/" className="flex items-center mb-4 md:mb-0">
-          <SiteMainIcon size="lg" />
-          <span className="text-xl font-bold text-white">DebateHub</span>
-        </Link>
+        <ClickableLogo />
 
         {/* Search */}
         <div className="relative w-full md:w-1/3">

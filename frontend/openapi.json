@@ -1442,6 +1442,29 @@
         ]
       }
     },
+    "/api/is-authenticated": {
+      "get": {
+        "operationId": "ProjectOpenDebate_api_is_authenticated",
+        "summary": "Is Authenticated",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthenticatedResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Check if the user is authenticated.\nReturns True if authenticated, False otherwise.",
+        "tags": [
+          "General"
+        ]
+      }
+    },
     "/_allauth/{client}/v1/config": {
       "get": {
         "summary": "Get configuration",
@@ -4609,6 +4632,31 @@
         "title": "CSRFTokenSchema",
         "type": "object"
       },
+      "AuthenticatedResponse": {
+        "properties": {
+          "is_authenticated": {
+            "title": "Is Authenticated",
+            "type": "boolean"
+          },
+          "status": {
+            "$ref": "#/components/schemas/StatusOK"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Authenticated"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/AuthenticationMeta"
+          }
+        },
+        "required": [
+          "is_authenticated",
+          "status",
+          "data",
+          "meta"
+        ],
+        "title": "AuthenticatedResponse",
+        "type": "object"
+      },
       "Session": {
         "type": "object",
         "properties": {
@@ -5076,25 +5124,6 @@
               "type"
             ]
           }
-        ]
-      },
-      "AuthenticatedResponse": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "$ref": "#/components/schemas/StatusOK"
-          },
-          "data": {
-            "$ref": "#/components/schemas/Authenticated"
-          },
-          "meta": {
-            "$ref": "#/components/schemas/AuthenticationMeta"
-          }
-        },
-        "required": [
-          "status",
-          "data",
-          "meta"
         ]
       },
       "MFAAuthenticate": {

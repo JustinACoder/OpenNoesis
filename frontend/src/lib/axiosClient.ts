@@ -1,4 +1,5 @@
 import axios, {
+  AxiosError,
   AxiosRequestConfig,
   AxiosResponse,
   InternalAxiosRequestConfig,
@@ -6,13 +7,32 @@ import axios, {
 
 // Detect server vs. client
 const isServer = typeof window === "undefined";
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+
+async function queryServerForCSRFCookie(): Promise<string | undefined> {
+  return await fetch(apiUrl + "/set-csrf-token", {
+    method: "GET",
+    credentials: "include", // Ensure cookies are sent
+  })
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error("Failed to fetch CSRF token");
+      }
+      const jsonResponse = await response.json();
+      return jsonResponse.csrftoken || undefined;
+    })
+    .catch((error) => {
+      console.error("Error fetching CSRF token:", error);
+      return undefined;
+    });
+}
 
 /**
  * Read the `csrftoken` cookie:
  * - Client: from document.cookie
  * - Server: from Next.js App Router cookies()
  */
-async function getCSRFCookie(): Promise<string | undefined> {
+async function getCSRFTokenFromCookie(): Promise<string | undefined> {
   if (isServer) {
     const { cookies } = await import("next/headers");
     const cookieStore = await cookies();
@@ -25,6 +45,19 @@ async function getCSRFCookie(): Promise<string | undefined> {
     const [, v] = raw.split(/=(.+)/); // split on first '='
     return v ? decodeURIComponent(v) : undefined;
   }
+}
+
+async function getCSRFToken(): Promise<string | undefined> {
+  let csrftoken: string | undefined;
+  // First, try to get it from the cookie
+  csrftoken = await getCSRFTokenFromCookie();
+
+  // If we still don't have it, query the server
+  if (!csrftoken) {
+    console.warn("Could not find CSRF token, querying server...");
+    csrftoken = await queryServerForCSRFCookie();
+  }
+  return csrftoken;
 }
 
 /**
@@ -46,7 +79,7 @@ function parseSetCookie(raw: string) {
 }
 
 export const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api",
+  baseURL: apiUrl,
   withCredentials: true, // browser: send cookies; SSR: we’ll forward manually
 });
 
@@ -66,7 +99,7 @@ apiClient.interceptors.request.use(
     // 2) Add CSRF header on unsafe methods
     const method = (config.method || "").toLowerCase();
     if (["post", "put", "patch", "delete"].includes(method)) {
-      const token = await getCSRFCookie();
+      const token = await getCSRFToken();
       if (token) {
         config.headers.set("X-CSRFToken", token);
       }
@@ -77,43 +110,72 @@ apiClient.interceptors.request.use(
 );
 
 // RESPONSE: parse any Set-Cookie headers on SSR and propagate them
-apiClient.interceptors.response.use(async (response: AxiosResponse) => {
-  if (isServer) {
-    const rawSet = response.headers["set-cookie"];
-    if (rawSet) {
-      const { cookies } = await import("next/headers");
-      const cookieStore = await cookies();
+// we also handle 401 Unauthorized responses to redirect to login
+apiClient.interceptors.response.use(
+  async (response: AxiosResponse) => {
+    if (isServer) {
+      const rawSet = response.headers["set-cookie"];
+      if (rawSet) {
+        const { cookies } = await import("next/headers");
+        const cookieStore = await cookies();
 
-      const list = Array.isArray(rawSet) ? rawSet : [rawSet];
-      for (const raw of list) {
-        const { name, value, attrs } = parseSetCookie(raw);
+        const list = Array.isArray(rawSet) ? rawSet : [rawSet];
+        for (const raw of list) {
+          const { name, value, attrs } = parseSetCookie(raw);
 
-        cookieStore.set({
-          name,
-          value,
-          path: typeof attrs.Path === "string" ? attrs.Path : "/",
-          domain: typeof attrs.Domain === "string" ? attrs.Domain : undefined,
-          secure: attrs.Secure === true,
-          httpOnly: attrs.HttpOnly === true,
-          sameSite:
-            typeof attrs.SameSite === "string"
-              ? (attrs.SameSite as "lax" | "strict" | "none")
-              : "lax",
-          maxAge:
-            typeof attrs["Max-Age"] === "string"
-              ? parseInt(attrs["Max-Age"], 10)
-              : undefined,
-          expires:
-            typeof attrs.Expires === "string"
-              ? new Date(attrs.Expires)
-              : undefined,
-        });
+          cookieStore.set({
+            name,
+            value,
+            path: typeof attrs.Path === "string" ? attrs.Path : "/",
+            domain: typeof attrs.Domain === "string" ? attrs.Domain : undefined,
+            secure: attrs.Secure === true,
+            httpOnly: attrs.HttpOnly === true,
+            sameSite:
+              typeof attrs.SameSite === "string"
+                ? (attrs.SameSite as "lax" | "strict" | "none")
+                : "lax",
+            maxAge:
+              typeof attrs["Max-Age"] === "string"
+                ? parseInt(attrs["Max-Age"], 10)
+                : undefined,
+            expires:
+              typeof attrs.Expires === "string"
+                ? new Date(attrs.Expires)
+                : undefined,
+          });
+        }
       }
     }
-  }
 
-  return response;
-});
+    return response;
+  },
+  async (error: AxiosError) => {
+    const response = error.response;
+
+    if (!response) {
+      // If there's no response, it might be a network error or timeout
+      return Promise.reject(error);
+    }
+
+    if (isServer) {
+      if (response.status === 401) {
+        // Handle 401 Unauthorized by redirecting to login
+        const { redirect } = await import("next/navigation");
+        if (
+          response.config.method?.toLowerCase() === "get" &&
+          response.config.url
+        ) {
+          redirect("/login?next=" + encodeURIComponent(response.config.url));
+        } else {
+          // For non-GET requests, redirect to login without a next parameter
+          redirect("/login");
+        }
+      }
+    }
+
+    return Promise.reject(error);
+  },
+);
 
 export const customInstance = <T>(
   config: AxiosRequestConfig,
