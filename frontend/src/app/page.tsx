@@ -7,8 +7,8 @@ import {
 } from "@/lib/api/debate";
 import { DebateCard } from "@/components/DebateCard";
 import { DebateGrid } from "@/components/DebateGrid";
-import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import NavigationOverlay from "@/components/navigation/NavigationOverlay";
 
 export default async function HomePage() {
   // Parallel fetching to speed up SSR
@@ -29,8 +29,7 @@ export default async function HomePage() {
   ];
 
   return (
-    <>
-      <Header />
+    <NavigationOverlay>
       <main className="min-h-[calc(100vh-4rem)]">
         <div className="container mx-auto px-4 py-8 space-y-12">
           {sections.map(({ title, items }) => (
@@ -46,6 +45,6 @@ export default async function HomePage() {
         </div>
       </main>
       <Footer />
-    </>
+    </NavigationOverlay>
   );
 }

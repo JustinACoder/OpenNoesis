@@ -14,7 +14,7 @@ import {
 } from "@tanstack/react-query";
 import DebateRootClient from "./components/DebateRootClient";
 import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
+import NavigationOverlay from "@/components/navigation/NavigationOverlay";
 
 interface DebateDetailPageProps {
   params: Promise<{ debate_slug: string }>;
@@ -43,13 +43,12 @@ const DebateDetailPage = async ({ params }: DebateDetailPageProps) => {
   );
 
   return (
-    <>
-      <Header />
+    <NavigationOverlay>
       <HydrationBoundary state={dehydrate(queryClient)}>
         <DebateRootClient debateSlug={debate_slug} />
       </HydrationBoundary>
       <Footer />
-    </>
+    </NavigationOverlay>
   );
 };
 export default DebateDetailPage;

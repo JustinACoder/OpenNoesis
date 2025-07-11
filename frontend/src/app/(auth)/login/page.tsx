@@ -60,6 +60,11 @@ export default function LoginPage() {
   });
   const [errorMessages, setErrors] = useState<string[]>([]);
 
+  // Track if the user has successfully logged in
+  // We can't use login.isSuccess because it can stay isSuccess after going back to the login page
+  // Since it tracks the last mutation state and not whether it was successful for the current page load
+  const [hasLoggedIn, setHasLoggedIn] = useState(false);
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setErrors([]);
     login
@@ -71,6 +76,7 @@ export default function LoginPage() {
         },
       })
       .then(() => {
+        setHasLoggedIn(true);
         router.push(nextUrl);
       })
       .catch(
@@ -190,11 +196,11 @@ export default function LoginPage() {
                 type="submit"
                 className="w-full"
                 isLoading={login.isPending}
-                disabled={login.isPending || login.isSuccess}
+                disabled={login.isPending || hasLoggedIn}
               >
                 {login.isPending
                   ? "Signing in..."
-                  : login.isSuccess
+                  : hasLoggedIn
                     ? "Success! You will be redirected soon."
                     : "Sign in"}
               </Button>

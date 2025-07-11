@@ -1465,6 +1465,29 @@
         ]
       }
     },
+    "/api/get-current-user-object": {
+      "get": {
+        "operationId": "ProjectOpenDebate_api_get_current_user_object",
+        "summary": "Get Current User Object",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentUserResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get the current user object no matter if authenticated or not.",
+        "tags": [
+          "General"
+        ]
+      }
+    },
     "/_allauth/{client}/v1/config": {
       "get": {
         "summary": "Get configuration",
@@ -4655,6 +4678,131 @@
           "meta"
         ],
         "title": "AuthenticatedResponse",
+        "type": "object"
+      },
+      "CurrentUserResponse": {
+        "properties": {
+          "is_authenticated": {
+            "title": "Is Authenticated",
+            "type": "boolean"
+          },
+          "is_anonymous": {
+            "title": "Is Anonymous",
+            "type": "boolean"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "ID"
+          },
+          "last_login": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login"
+          },
+          "is_superuser": {
+            "default": false,
+            "description": "Designates that this user has all permissions without explicitly assigning them.",
+            "title": "Superuser Status",
+            "type": "boolean"
+          },
+          "username": {
+            "description": "Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.",
+            "maxLength": 150,
+            "title": "Username",
+            "type": "string"
+          },
+          "first_name": {
+            "anyOf": [
+              {
+                "maxLength": 150,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "maxLength": 150,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "maxLength": 254,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Address"
+          },
+          "is_staff": {
+            "default": false,
+            "description": "Designates whether the user can log into this admin site.",
+            "title": "Staff Status",
+            "type": "boolean"
+          },
+          "is_active": {
+            "default": true,
+            "description": "Designates whether this user should be treated as active. Unselect this instead of deleting accounts.",
+            "title": "Active",
+            "type": "boolean"
+          },
+          "date_joined": {
+            "format": "date-time",
+            "title": "Date Joined",
+            "type": "string"
+          },
+          "groups": {
+            "description": "The groups this user belongs to. A user will get all permissions granted to each of their groups.",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "user_permissions": {
+            "description": "Specific permissions for this user.",
+            "items": {
+              "type": "integer"
+            },
+            "title": "User Permissions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "is_authenticated",
+          "is_anonymous",
+          "username",
+          "groups",
+          "user_permissions"
+        ],
+        "title": "CurrentUserResponse",
         "type": "object"
       },
       "Session": {

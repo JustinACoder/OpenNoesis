@@ -7,12 +7,22 @@ import {
   QueryClientProvider,
   QueryCache,
   MutationCache,
+  HydrationBoundary,
 } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { toast } from "sonner";
 import { AuthProvider } from "@/providers/authProvider";
+import { DehydratedState } from "@tanstack/query-core";
 
-export default function Providers({ children }: { children: ReactNode }) {
+interface ProvidersProps {
+  dehydratedState?: DehydratedState;
+  children: ReactNode;
+}
+
+export default function Providers({
+  dehydratedState,
+  children,
+}: ProvidersProps) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -49,7 +59,9 @@ export default function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>{children}</AuthProvider>
+      <HydrationBoundary state={dehydratedState}>
+        <AuthProvider>{children}</AuthProvider>
+      </HydrationBoundary>
     </QueryClientProvider>
   );
 }

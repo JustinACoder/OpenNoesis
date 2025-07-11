@@ -1,21 +1,27 @@
 "use client";
 
-import React, { createContext, useContext, useMemo } from "react";
-import { useDeleteAllauthClientV1AuthSession } from "@/lib/api/authentication-current-session";
-import {
-  getProjectOpenDebateApiIsAuthenticatedQueryKey,
-  useProjectOpenDebateApiIsAuthenticated,
-} from "@/lib/api/general";
-import { usePostAllauthClientV1AuthLogin } from "@/lib/api/authentication-account";
+import React, { createContext, useCallback, useContext, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import {
+  useProjectOpenDebateApiGetCurrentUserObject,
+  getProjectOpenDebateApiGetCurrentUserObjectQueryKey,
+} from "@/lib/api/general";
+import { useDeleteAllauthClientV1AuthSession } from "@/lib/api/authentication-current-session";
+import { usePostAllauthClientV1AuthLogin } from "@/lib/api/authentication-account";
+import type { CurrentUserResponse } from "@/lib/models";
 
 // Define the shape of the context
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
 interface AuthContextType {
   authStatus: AuthStatus;
+  user: CurrentUserResponse | undefined;
+  isLoading: boolean;
+  error: unknown;
   login: ReturnType<typeof usePostAllauthClientV1AuthLogin>;
   logout: ReturnType<typeof useDeleteAllauthClientV1AuthSession>;
+  refetchUser: () => void;
+  invalidateUser: () => Promise<void>;
 }
 
 // Create the context
@@ -23,52 +29,76 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // The provider component
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  // Get the query client to manage cache
   const queryClient = useQueryClient();
-
-  // Fetch initial auth status
-  const { data, isLoading } = useProjectOpenDebateApiIsAuthenticated({
+  // Use the current user endpoint to determine auth status
+  // The response now includes is_authenticated and is_anonymous fields
+  const {
+    data: user,
+    isLoading,
+    error,
+    refetch,
+  } = useProjectOpenDebateApiGetCurrentUserObject({
     query: {
       staleTime: 1000 * 60 * 5, // 5 minutes
-      refetchOnWindowFocus: true, // Refetch when the window regains focus
+      refetchOnWindowFocus: true,
     },
   });
+
+  // Determine auth status based on the user query
+  const authStatus: AuthStatus = useMemo(() => {
+    if (isLoading) return "loading";
+    if (error) return "unauthenticated";
+    if (user && user.is_authenticated) return "authenticated";
+    return "unauthenticated";
+  }, [isLoading, error, user]);
 
   const loginMutation = usePostAllauthClientV1AuthLogin({
     mutation: {
       onSuccess: async (data) => {
         console.log("Login successful:", data);
-        // We invalidate the auth status query to ensure it reflects the new state
-        await queryClient.invalidateQueries({
-          queryKey: getProjectOpenDebateApiIsAuthenticatedQueryKey(),
-        });
+        await refetch();
       },
     },
   });
 
   const logoutMutation = useDeleteAllauthClientV1AuthSession({
     mutation: {
-      onSuccess: async () => {
-        console.log("Logout successful");
-        // Invalidate the auth status query to reflect the logged-out state
-        await queryClient.invalidateQueries({
-          queryKey: getProjectOpenDebateApiIsAuthenticatedQueryKey(),
-        });
+      onError: async (error) => {
+        // Logout returns 401 on success as the session is deleted
+        // It's a weird pattern, but anyway, we handle it here by refetching the user
+        console.log("Logout successful:", error);
+        await refetch();
       },
     },
   });
 
-  const value: AuthContextType = useMemo<AuthContextType>(() => {
+  const invalidateUser = useCallback(async () => {
+    await queryClient.invalidateQueries({
+      queryKey: getProjectOpenDebateApiGetCurrentUserObjectQueryKey(),
+    });
+  }, [queryClient]);
+
+  const value: AuthContextType = useMemo(() => {
     return {
-      authStatus: isLoading
-        ? "loading"
-        : data?.is_authenticated
-          ? "authenticated"
-          : "unauthenticated",
+      authStatus,
+      user,
+      isLoading,
+      error,
       login: loginMutation,
       logout: logoutMutation,
+      refetchUser: refetch,
+      invalidateUser,
     };
-  }, [isLoading, data, loginMutation, logoutMutation]);
+  }, [
+    authStatus,
+    user,
+    isLoading,
+    error,
+    loginMutation,
+    logoutMutation,
+    refetch,
+    invalidateUser,
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

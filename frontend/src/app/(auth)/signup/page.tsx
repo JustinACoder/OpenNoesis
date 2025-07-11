@@ -68,13 +68,11 @@ export default function SignUpPage() {
       terms: false,
     },
   });
-  const {
-    mutateAsync: signup,
-    isPending,
-    isSuccess,
-  } = usePostAllauthClientV1AuthSignup();
+  const { mutateAsync: signup, isPending } = usePostAllauthClientV1AuthSignup();
   const [errorMessages, setErrors] = useState<string[]>([]);
   const router = useRouter();
+
+  const [hasSignedUp, setHasSignedUp] = useState(false);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     setErrors([]);
@@ -87,6 +85,7 @@ export default function SignUpPage() {
       },
     })
       .then(() => {
+        setHasSignedUp(true);
         router.push("/verify-email");
       })
       .catch(
@@ -247,11 +246,11 @@ export default function SignUpPage() {
                 type="submit"
                 className="w-full"
                 isLoading={isPending}
-                disabled={isSuccess || isPending}
+                disabled={hasSignedUp || isPending}
               >
                 {isPending
                   ? "Creating account..."
-                  : isSuccess
+                  : hasSignedUp
                     ? "Account created! You will be redirected soon..."
                     : "Create account"}
               </Button>

@@ -1,5 +1,4 @@
 import axios, {
-  AxiosError,
   AxiosRequestConfig,
   AxiosResponse,
   InternalAxiosRequestConfig,
@@ -111,71 +110,43 @@ apiClient.interceptors.request.use(
 
 // RESPONSE: parse any Set-Cookie headers on SSR and propagate them
 // we also handle 401 Unauthorized responses to redirect to login
-apiClient.interceptors.response.use(
-  async (response: AxiosResponse) => {
-    if (isServer) {
-      const rawSet = response.headers["set-cookie"];
-      if (rawSet) {
-        const { cookies } = await import("next/headers");
-        const cookieStore = await cookies();
+apiClient.interceptors.response.use(async (response: AxiosResponse) => {
+  if (isServer) {
+    const rawSet = response.headers["set-cookie"];
+    if (rawSet) {
+      const { cookies } = await import("next/headers");
+      const cookieStore = await cookies();
 
-        const list = Array.isArray(rawSet) ? rawSet : [rawSet];
-        for (const raw of list) {
-          const { name, value, attrs } = parseSetCookie(raw);
+      const list = Array.isArray(rawSet) ? rawSet : [rawSet];
+      for (const raw of list) {
+        const { name, value, attrs } = parseSetCookie(raw);
 
-          cookieStore.set({
-            name,
-            value,
-            path: typeof attrs.Path === "string" ? attrs.Path : "/",
-            domain: typeof attrs.Domain === "string" ? attrs.Domain : undefined,
-            secure: attrs.Secure === true,
-            httpOnly: attrs.HttpOnly === true,
-            sameSite:
-              typeof attrs.SameSite === "string"
-                ? (attrs.SameSite as "lax" | "strict" | "none")
-                : "lax",
-            maxAge:
-              typeof attrs["Max-Age"] === "string"
-                ? parseInt(attrs["Max-Age"], 10)
-                : undefined,
-            expires:
-              typeof attrs.Expires === "string"
-                ? new Date(attrs.Expires)
-                : undefined,
-          });
-        }
+        cookieStore.set({
+          name,
+          value,
+          path: typeof attrs.Path === "string" ? attrs.Path : "/",
+          domain: typeof attrs.Domain === "string" ? attrs.Domain : undefined,
+          secure: attrs.Secure === true,
+          httpOnly: attrs.HttpOnly === true,
+          sameSite:
+            typeof attrs.SameSite === "string"
+              ? (attrs.SameSite as "lax" | "strict" | "none")
+              : "lax",
+          maxAge:
+            typeof attrs["Max-Age"] === "string"
+              ? parseInt(attrs["Max-Age"], 10)
+              : undefined,
+          expires:
+            typeof attrs.Expires === "string"
+              ? new Date(attrs.Expires)
+              : undefined,
+        });
       }
     }
+  }
 
-    return response;
-  },
-  async (error: AxiosError) => {
-    const response = error.response;
-
-    if (!response) {
-      // If there's no response, it might be a network error or timeout
-      return Promise.reject(error);
-    }
-
-    if (isServer) {
-      if (response.status === 401) {
-        // Handle 401 Unauthorized by redirecting to login
-        const { redirect } = await import("next/navigation");
-        if (
-          response.config.method?.toLowerCase() === "get" &&
-          response.config.url
-        ) {
-          redirect("/login?next=" + encodeURIComponent(response.config.url));
-        } else {
-          // For non-GET requests, redirect to login without a next parameter
-          redirect("/login");
-        }
-      }
-    }
-
-    return Promise.reject(error);
-  },
-);
+  return response;
+});
 
 export const customInstance = <T>(
   config: AxiosRequestConfig,
