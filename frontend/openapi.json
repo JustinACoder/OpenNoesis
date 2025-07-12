@@ -834,6 +834,16 @@
         "tags": [
           "Debate"
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DebateWithStanceInputSchema"
+              }
+            }
+          },
+          "required": true
+        },
         "security": [
           {
             "SessionAuth": []
@@ -1288,6 +1298,44 @@
           }
         },
         "description": "Get user details by user ID.",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "OptionalDjangoAuth": []
+          }
+        ]
+      }
+    },
+    "/api/users/by-username/{username}": {
+      "get": {
+        "operationId": "users_api_get_public_user_profile_by_username",
+        "summary": "Get Public User Profile By Username",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "schema": {
+              "title": "Username",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicUserSchema"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get user details by username.",
         "tags": [
           "Users"
         ],
@@ -4235,6 +4283,17 @@
         "title": "DebateFullSchema",
         "type": "object"
       },
+      "DebateWithStanceInputSchema": {
+        "properties": {
+          "user_id": {
+            "description": "User ID to retrieve debates for, if not provided, retrieves for the authenticated user",
+            "title": "User Id",
+            "type": "integer"
+          }
+        },
+        "title": "DebateWithStanceInputSchema",
+        "type": "object"
+      },
       "StanceInputSchema": {
         "properties": {
           "stance": {
@@ -5190,6 +5249,75 @@
             "required": [
               "method",
               "at"
+            ]
+          },
+          {
+            "type": "object",
+            "title": "Authenticated after password reset\n",
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": [
+                  "password_reset"
+                ]
+              },
+              "at": {
+                "$ref": "#/components/schemas/Timestamp"
+              },
+              "email": {
+                "$ref": "#/components/schemas/Email"
+              }
+            },
+            "required": [
+              "at",
+              "email",
+              "method"
+            ]
+          },
+          {
+            "type": "object",
+            "title": "Authenticated by confirming a code sent by email.\n",
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": [
+                  "code"
+                ]
+              },
+              "at": {
+                "$ref": "#/components/schemas/Timestamp"
+              },
+              "email": {
+                "$ref": "#/components/schemas/Email"
+              }
+            },
+            "required": [
+              "at",
+              "email",
+              "method"
+            ]
+          },
+          {
+            "type": "object",
+            "title": "Authenticated by confirming a code sent by phone.\n",
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": [
+                  "code"
+                ]
+              },
+              "at": {
+                "$ref": "#/components/schemas/Timestamp"
+              },
+              "phone": {
+                "$ref": "#/components/schemas/Phone"
+              }
+            },
+            "required": [
+              "at",
+              "method",
+              "phone"
             ]
           },
           {

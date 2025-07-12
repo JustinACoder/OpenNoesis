@@ -14,7 +14,7 @@ from .schemas import (
     CommentSchema,
     StanceSchema,
     StanceDirectionEnum, DebateFullSchema,
-    CommentInputSchema, VoteInputSchema, StanceInputSchema,
+    CommentInputSchema, VoteInputSchema, StanceInputSchema, DebateWithStanceInputSchema,
 )
 from .services import (
     DebateService,
@@ -78,9 +78,13 @@ def get_debate(request, debate_slug: str):
 
 @router.get("/with-user-stance", response=List[DebateSchema], auth=django_auth)
 @paginate(PageNumberPagination, page_size=10)
-def get_debates_with_user_stance(request):
+def get_debates_with_user_stance(request, debate_with_stance_input_data: DebateWithStanceInputSchema):
     """Get debates with the user's stance."""
-    user = request.auth
+    provided_user_id = debate_with_stance_input_data.user_id
+    if provided_user_id is not None:
+        user = get_object_or_404(User, id=provided_user_id)
+    else:
+        user = request.auth
     return DebateService.get_debate_queryset(user).filter(~Q(user_stance=StanceDirectionEnum.UNSET))
 
 

@@ -33,6 +33,9 @@ class VoteInputSchema(Schema):
 class StanceInputSchema(Schema):
     stance: StanceDirectionEnum
 
+class DebateWithStanceInputSchema(Schema):
+    user_id: int = Field(None, description="User ID to retrieve debates for, if not provided, retrieves for the authenticated user")
+
 class DebateFullSchema(ModelSchema):
     author: Optional[UserPreviewSchema] = None  # Can be None if the debate was created by the system
 
