@@ -2,25 +2,31 @@
 
 import { DebateGrid } from "@/components/DebateGrid";
 import { DebateCard } from "@/components/DebateCard";
-import { AlertCircleIcon } from "lucide-react";
+import { AlertCircleIcon, LoaderCircle } from "lucide-react";
 import { useDebateApiGetDebatesWithUserStance } from "@/lib/api/debate";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { PublicUserSchema } from "@/lib/models";
 
-interface RecentDebateListProps {
-  userId: number;
+interface ParticipatingDebateListProps {
+  user: PublicUserSchema;
 }
 
-const RecentDebateList = ({ userId }: RecentDebateListProps) => {
+const ParticipatingDebateList = ({ user }: ParticipatingDebateListProps) => {
   const {
     data: userDebates,
     error,
     isPending,
   } = useDebateApiGetDebatesWithUserStance({
-    user_id: userId,
+    page: 1,
+    user_id: user.id!, // Since the user should always be non-anonymous, we can assert that user.id is defined
   });
 
   if (isPending) {
-    return null;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <LoaderCircle className="size-10 animate-spin text-primary" />
+      </div>
+    );
   }
 
   if (error) {
@@ -53,10 +59,15 @@ const RecentDebateList = ({ userId }: RecentDebateListProps) => {
   return (
     <DebateGrid>
       {userDebates.items.map((debate) => (
-        <DebateCard key={debate.id} {...debate} />
+        <DebateCard
+          key={debate.id}
+          {...debate}
+          target_user_stance={debate.target_user_stance}
+          target_user_name={user.username}
+        />
       ))}
     </DebateGrid>
   );
 };
 
-export default RecentDebateList;
+export default ParticipatingDebateList;

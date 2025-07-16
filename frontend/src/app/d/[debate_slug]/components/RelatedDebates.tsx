@@ -8,7 +8,7 @@ interface RelatedDebatesProps {
 
 export const RelatedDebates = ({ debates }: RelatedDebatesProps) => {
   return (
-    <Box className="p-6 space-y-4" hover={false}>
+    <Box className="p-6 space-y-4">
       <h2 className="text-xl font-semibold text-white">Related Debates</h2>
       <div className="space-y-4">
         {debates.slice(0, 3).map((debate) => (

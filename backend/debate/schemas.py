@@ -61,6 +61,7 @@ class DebateFullSchema(ModelSchema):
 class DebateSchema(DebateFullSchema):
     description: str = Field(exclude=True)
     description_preview: str
+    target_user_stance: StanceDirectionEnum = Field(None, description="Stance of the user targeted by the search, if applicable. This is different from user_stance which is the stance of the connected user on the debate.")
 
     @staticmethod
     def resolve_description_preview(debate: Debate) -> str:

@@ -808,6 +808,15 @@
         "parameters": [
           {
             "in": "query",
+            "name": "user_id",
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
             "name": "page",
             "schema": {
               "default": 1,
@@ -830,20 +839,10 @@
             }
           }
         },
-        "description": "Get debates with the user's stance.",
+        "description": "Get debates with the user's stance.\n\nNote: the user_stance Field returned represents the stance of the connected user on the debate while\nthe targeted_user_stance Field represents the stance of the user targeted by the search with stance.",
         "tags": [
           "Debate"
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DebateWithStanceInputSchema"
-              }
-            }
-          },
-          "required": true
-        },
         "security": [
           {
             "SessionAuth": []
@@ -4134,6 +4133,14 @@
           "description_preview": {
             "title": "Description Preview",
             "type": "string"
+          },
+          "target_user_stance": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StanceDirectionEnum"
+              }
+            ],
+            "description": "Stance of the user targeted by the search, if applicable. This is different from user_stance which is the stance of the connected user on the debate."
           }
         },
         "required": [
@@ -4281,17 +4288,6 @@
           "slug"
         ],
         "title": "DebateFullSchema",
-        "type": "object"
-      },
-      "DebateWithStanceInputSchema": {
-        "properties": {
-          "user_id": {
-            "description": "User ID to retrieve debates for, if not provided, retrieves for the authenticated user",
-            "title": "User Id",
-            "type": "integer"
-          }
-        },
-        "title": "DebateWithStanceInputSchema",
         "type": "object"
       },
       "StanceInputSchema": {

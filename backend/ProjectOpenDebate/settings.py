@@ -185,6 +185,15 @@ ACCOUNT_CHANGE_EMAIL = True
 ACCOUNT_EMAIL_UNKNOWN_ACCOUNTS = False
 ACCOUNT_USERNAME_VALIDATORS = 'users.validators.username_validators'
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 7  # One week
+ACCOUNT_USERNAME_BLACKLIST = [
+    # Common usernames that should not be allowed
+    'admin', 'administrator', 'root', 'system', 'support', 'help', 'info',
+    'contact', 'webmaster', 'test', 'demo', 'guest', 'user', 'users',
+    'moderator', 'moderators',
+
+    # The 'me' username is used to redirect to the current user's profile
+    'me',
+]
 
 # TODO: Change this to the actual frontend URL in production
 HEADLESS_FRONTEND_URLS = {

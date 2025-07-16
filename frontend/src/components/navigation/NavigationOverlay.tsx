@@ -42,7 +42,6 @@ export const NavigationOverlay = async ({
   children: React.ReactNode;
 }) => {
   const user = await projectOpenDebateApiGetCurrentUserObject();
-  console.log("user", user);
 
   return (
     <NavigationProvider>

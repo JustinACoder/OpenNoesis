@@ -13,7 +13,7 @@ export const DebateComments = ({
   debateSlug,
 }: DebateCommentsProps) => {
   return (
-    <Box className="p-6 space-y-6" hover={false}>
+    <Box className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-white flex items-center gap-2">
           <MessageCircle className="w-5 h-5" />

@@ -10,7 +10,7 @@ interface DebateContentProps {
 
 export const JoinTheDebate = ({ debate }: DebateContentProps) => {
   return (
-    <Box className="p-6" hover={false}>
+    <Box className="p-6">
       <h2 className="text-xl font-semibold text-white mb-4">Join the Debate</h2>
       <div className="flex flex-col sm:flex-row gap-3">
         {/* Set Your Stance Button */}

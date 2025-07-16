@@ -55,7 +55,7 @@ const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            <Box className="p-6 space-y-5" hover={false}>
+            <Box className="p-6 space-y-5">
               {/* Header with category and actions */}
               <div className="flex flex-row justify-between items-start gap-4">
                 <span className="bg-amber-500 text-gray-900 text-xs font-bold px-3 py-1 rounded">

@@ -1,6 +1,7 @@
 from typing import List
 
-from django.db.models import Q
+from django.db.models import Q, F, Subquery, OuterRef
+from django.db.models.functions import Coalesce
 from ninja import Router
 from ninja.pagination import PageNumberPagination, paginate
 from ninja.security import django_auth
@@ -78,14 +79,50 @@ def get_debate(request, debate_slug: str):
 
 @router.get("/with-user-stance", response=List[DebateSchema], auth=django_auth)
 @paginate(PageNumberPagination, page_size=10)
-def get_debates_with_user_stance(request, debate_with_stance_input_data: DebateWithStanceInputSchema):
-    """Get debates with the user's stance."""
-    provided_user_id = debate_with_stance_input_data.user_id
-    if provided_user_id is not None:
-        user = get_object_or_404(User, id=provided_user_id)
-    else:
-        user = request.auth
-    return DebateService.get_debate_queryset(user).filter(~Q(user_stance=StanceDirectionEnum.UNSET))
+def get_debates_with_user_stance(request, user_id: int = None):
+    """
+    Get debates with the user's stance.
+
+    Note: the user_stance Field returned represents the stance of the connected user on the debate while
+    the targeted_user_stance Field represents the stance of the user targeted by the search with stance.
+    """
+    connected_user = request.auth
+    targeted_user = (
+        get_object_or_404(User, id=user_id)
+        if user_id is not None
+        else connected_user
+    )
+
+    # 1) Base queryset with targeted user’s stance already annotated as `user_stance`
+    targeted_qs = (
+        DebateService.get_debate_queryset(targeted_user)
+        .filter(~Q(user_stance=StanceDirectionEnum.UNSET))
+        .annotate(target_user_stance=F('user_stance'))
+    )
+
+    # 2) Inner queryset for connected user’s stances
+    connected_qs = (
+        Debate.objects.get_queryset()
+        .with_stance(connected_user)
+        .filter(~Q(user_stance=StanceDirectionEnum.UNSET))
+    )
+
+    # 3) Correlated subquery: pull the connected_user’s stance for *this* debate
+    connected_stance_sq = Subquery(
+        connected_qs
+            .filter(id=OuterRef('id'))
+            .values('user_stance')[:1]
+    )
+
+    # 4) Final annotation
+    debates = targeted_qs.annotate(user_stance=Coalesce(
+        connected_stance_sq,
+        StanceDirectionEnum.UNSET,  # Default if no stance is found
+    ))
+
+    print(debates.query)
+
+    return debates
 
 
 @router.get("/slug/{slug:debate_slug}/suggestions", response=List[DebateSchema])

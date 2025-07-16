@@ -24,7 +24,7 @@ const containerVariants = cva(
     },
     defaultVariants: {
       variant: "default",
-      hover: true,
+      hover: false,
     },
   },
 );

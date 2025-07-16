@@ -5,16 +5,35 @@ import UserAvatar from "@/components/UserAvatar";
 import { Footer } from "@/components/Footer";
 import NavigationOverlay from "@/components/navigation/NavigationOverlay";
 import { usersApiGetPublicUserProfileByUsername } from "@/lib/api/users";
-import RecentDebateList from "@/app/u/[username]/components/RecentDebateList";
+import ParticipatingDebateList from "@/app/u/[username]/components/ParticipatingDebateList";
+import { projectOpenDebateApiGetCurrentUserObject } from "@/lib/api/general";
+import { redirect } from "next/navigation";
 
 interface UserPageProps {
-  params: {
+  params: Promise<{
     username: string;
-  };
+  }>;
 }
 
+const redirectToUserProfile = async () => {
+  const currentUser = await projectOpenDebateApiGetCurrentUserObject();
+
+  if (currentUser.is_authenticated) {
+    const encodedUsername = encodeURIComponent(currentUser.username);
+    redirect(`/u/${encodedUsername}`);
+  } else {
+    redirect("/login?next=/u/me");
+  }
+};
+
 export default async function UserPage({ params }: UserPageProps) {
-  const { username } = params;
+  const { username } = await params;
+
+  // If the username is "me", redirect to the current user's profile
+  if (username === "me") {
+    await redirectToUserProfile();
+    // No need to return anything here, redirect() internally throws an error that triggers a redirect
+  }
 
   // Get user data using the new username endpoint
   const user = await usersApiGetPublicUserProfileByUsername(username).catch(
@@ -31,15 +50,6 @@ export default async function UserPage({ params }: UserPageProps) {
         day: "numeric",
       })
     : null;
-
-  // Calculate years since joining for statistics
-  const yearsSinceJoining = user.date_joined
-    ? Math.max(
-        (new Date().getTime() - new Date(user.date_joined).getTime()) /
-          (1000 * 60 * 60 * 24 * 365),
-        0.1,
-      )
-    : 0;
 
   return (
     <NavigationOverlay>
@@ -91,22 +101,18 @@ export default async function UserPage({ params }: UserPageProps) {
             )}
           </Box>
 
-          {/* User Statistics */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Box className="p-6 text-center" variant="subtle">
-              <div className="text-2xl font-bold text-white">
-                {Math.round(yearsSinceJoining * 10) / 10}
-              </div>
-              <div className="text-gray-400">Years Active</div>
-            </Box>
-          </div>
-
           {/* Recent Debates Section */}
           <section>
-            <h2 className="text-2xl font-semibold mb-6 text-white">
-              Recent Debates
-            </h2>
-            <RecentDebateList userId={user.id!} />
+            <div className="mb-6">
+              <h2 className="text-2xl font-semibold text-white mb-2">
+                Recent Debates
+              </h2>
+              <p className="text-gray-400 text-sm">
+                These are the debates on which {user.username} has most recently
+                taken a stance.
+              </p>
+            </div>
+            <ParticipatingDebateList user={user} />
           </section>
         </div>
       </main>
