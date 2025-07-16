@@ -44,8 +44,6 @@ export const DebateCard = (props: DebateCardProps) => {
     return stance !== undefined && stance !== 0;
   };
 
-  console.log(target_user_stance);
-
   return (
     <Link href={`/d/${slug}`} className="block group">
       <Box

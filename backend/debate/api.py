@@ -120,8 +120,6 @@ def get_debates_with_user_stance(request, user_id: int = None):
         StanceDirectionEnum.UNSET,  # Default if no stance is found
     ))
 
-    print(debates.query)
-
     return debates
 
 
