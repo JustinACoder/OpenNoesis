@@ -1,7 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
-const iconVariants = cva("text-primary mr-2", {
+const iconVariants = cva("text-primary", {
   variants: {
     size: {
       sm: "h-6 w-6",
