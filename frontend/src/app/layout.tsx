@@ -3,11 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import React from "react";
 import Providers from "@/providers/providers";
-import {
-  getProjectOpenDebateApiGetCurrentUserObjectQueryKey,
-  getProjectOpenDebateApiGetCurrentUserObjectQueryOptions,
-  projectOpenDebateApiGetCurrentUserObject,
-} from "@/lib/api/general";
+import { getProjectOpenDebateApiGetCurrentUserObjectQueryOptions } from "@/lib/api/general";
 import { dehydrate, QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
