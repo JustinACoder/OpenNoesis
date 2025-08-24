@@ -30,7 +30,7 @@ export const StanceDistribution = ({
           style={{ width: `${againstPercent}%` }}
         />
       </div>
-      <div className="flex justify-between text-xs text-gray-500">
+      <div className="flex justify-between text-xs text-gray-400">
         <span>{forPercent}% for</span>
         <span>{againstPercent}% against</span>
       </div>

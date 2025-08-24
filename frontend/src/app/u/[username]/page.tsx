@@ -53,70 +53,67 @@ export default async function UserPage({ params }: UserPageProps) {
 
   return (
     <NavigationOverlay>
-      <main className="min-h-[calc(100vh-4rem)]">
-        <div className="container mx-auto px-4 py-8 space-y-8">
-          {/* User Profile Header */}
-          <Box className="p-8">
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-              {/* Avatar and Basic Info */}
-              <div className="flex items-center gap-4">
-                <UserAvatar user={{ username: user.username }} size="large" />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-3xl font-bold text-white">
-                      {user.username}
-                    </h1>
-                    {user.is_staff && (
-                      <div title="Staff Member">
-                        <Shield className="w-5 h-5 text-amber-500" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 text-gray-400 mt-1">
-                    <Calendar className="w-4 h-4" />
-                    <span>Joined {joinDate}</span>
-                  </div>
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        {/* User Profile Header */}
+        <Box className="p-8">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+            {/* Avatar and Basic Info */}
+            <div className="flex items-center gap-4">
+              <UserAvatar user={{ username: user.username }} size="large" />
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-3xl font-bold text-white">
+                    {user.username}
+                  </h1>
+                  {user.is_staff && (
+                    <div title="Staff Member">
+                      <Shield className="w-5 h-5 text-amber-500" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-gray-400 mt-1">
+                  <Calendar className="w-4 h-4" />
+                  <span>Joined {joinDate}</span>
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Bio */}
-            {user.bio && (
-              <div className="mt-6 pt-6 border-t border-gray-700">
-                <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                  <User className="w-5 h-5" />
-                  About
-                </h3>
-                <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
-                  {user.bio}
-                </p>
-              </div>
-            )}
-
-            {/* No bio placeholder */}
-            {!user.bio && (
-              <div className="mt-6 pt-6 border-t border-gray-700">
-                <p className="text-gray-500 italic">No bio yet.</p>
-              </div>
-            )}
-          </Box>
-
-          {/* Recent Debates Section */}
-          <section>
-            <div className="mb-6">
-              <h2 className="text-2xl font-semibold text-white mb-2">
-                Recent Debates
-              </h2>
-              <p className="text-gray-400 text-sm">
-                These are the debates on which {user.username} has most recently
-                taken a stance.
+          {/* Bio */}
+          {user.bio && (
+            <div className="mt-6 pt-6 border-t border-gray-700">
+              <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                <User className="w-5 h-5" />
+                About
+              </h3>
+              <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+                {user.bio}
               </p>
             </div>
-            <ParticipatingDebateList user={user} />
-          </section>
-        </div>
-      </main>
-      <Footer />
+          )}
+
+          {/* No bio placeholder */}
+          {!user.bio && (
+            <div className="mt-6 pt-6 border-t border-gray-700">
+              <p className="text-gray-400 italic">No bio yet.</p>
+            </div>
+          )}
+        </Box>
+
+        {/* Recent Debates Section */}
+        <section>
+          <div className="mb-6">
+            <h2 className="text-2xl font-semibold text-white mb-2">
+              Recent Debates
+            </h2>
+            <p className="text-gray-400 text-sm">
+              These are the debates on which {user.username} has most recently
+              taken a stance.
+            </p>
+          </div>
+          <ParticipatingDebateList user={user} />
+        </section>
+      </div>
     </NavigationOverlay>
   );
 }

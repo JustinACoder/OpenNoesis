@@ -10,7 +10,7 @@ const BottomNavigation = async () => {
   const user = await projectOpenDebateApiGetCurrentUserObject();
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t">
+    <div className="z-50 border-t w-full">
       <div className="grid grid-cols-5 h-16">
         <Link
           href="/"

@@ -55,7 +55,7 @@ const getNotificationColor = (type: string) => {
     case "accepted_invite":
       return "text-green-500";
     default:
-      return "text-gray-500";
+      return "text-gray-400";
   }
 };
 

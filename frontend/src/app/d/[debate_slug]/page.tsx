@@ -47,7 +47,6 @@ const DebateDetailPage = async ({ params }: DebateDetailPageProps) => {
       <HydrationBoundary state={dehydrate(queryClient)}>
         <DebateRootClient debateSlug={debate_slug} />
       </HydrationBoundary>
-      <Footer />
     </NavigationOverlay>
   );
 };

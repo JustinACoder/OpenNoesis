@@ -7,7 +7,6 @@ export default function SearchPage() {
   return (
     <NavigationOverlay>
       <SearchClient />
-      <Footer />
     </NavigationOverlay>
   );
 }

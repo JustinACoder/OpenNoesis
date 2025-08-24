@@ -42,7 +42,7 @@ def get_discussion(request, discussion_id: int):
 
 
 @router.get("/{int:discussion_id}/messages", response=List[MessageSchema])
-@paginate(PageNumberPagination, page_size=30)
+@paginate(PageNumberPagination, page_size=10)
 def get_discussion_messages(request, discussion_id: int):
     """
     Get messages for a specific discussion.

@@ -14,6 +14,7 @@ import MobileSearchOverlay from "@/components/navigation/MobileSearchOverlay";
 import NavigationProvider from "@/components/navigation/NavigationProvider";
 import NavigationActions from "@/components/navigation/NavigationActions";
 import links from "./links";
+import { Footer } from "@/components/Footer";
 
 const HeaderLinks = () => {
   return (
@@ -36,44 +37,62 @@ const HeaderLinks = () => {
   );
 };
 
-export const NavigationOverlay = async ({
-  children,
-}: {
+interface NavigationOverlayProps {
+  hide_bottom_menu?: boolean;
+  show_footer?: boolean;
+  main_y_scroll?: boolean;
+  header_full_width?: boolean;
   children: React.ReactNode;
-}) => {
+}
+
+export const NavigationOverlay = async ({
+  hide_bottom_menu = false,
+  show_footer = true,
+  main_y_scroll = true,
+  header_full_width = false,
+  children,
+}: NavigationOverlayProps) => {
   const user = await projectOpenDebateApiGetCurrentUserObject();
 
   return (
     <NavigationProvider>
       <MobileSearchOverlay />
+      <div className="h-screen flex flex-col overflow-hidden">
+        {/* Render the top header */}
+        <header className="flex z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div
+            className={`${header_full_width ? "w-full" : "container mx-auto"} flex h-16 items-center justify-between px-2`}
+          >
+            <div className="flex items-center space-x-4">
+              <ClickableLogo />
+            </div>
 
-      {/* Render the top header */}
-      <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto flex h-16 items-center justify-between px-2">
-          <div className="flex items-center space-x-4">
-            <ClickableLogo />
+            <SearchBar />
+
+            <HeaderLinks />
+
+            {/* Desktop User Actions & Mobile Controls */}
+            <NavigationActions />
           </div>
+        </header>
 
-          <SearchBar />
-
-          <HeaderLinks />
-
-          {/* Desktop User Actions & Mobile Controls */}
-          <NavigationActions />
+        {/* Render the children components */}
+        <div
+          className={`flex flex-col flex-1 ${main_y_scroll ? "overflow-y-auto" : "overflow-hidden"}`}
+        >
+          <main className={main_y_scroll ? "" : "flex-1 min-h-0"}>
+            {children}
+          </main>
+          {show_footer && <Footer />}
         </div>
-      </header>
 
-      {/* Render the children components */}
-      {children}
-
-      {/* Render the bottom navigation bar if the user is authenticated */}
-      {user.is_authenticated && (
-        <>
-          <BottomNavigation />
-          {/* Add bottom padding to main content when bottom nav is visible */}
-          <div className="md:hidden h-16" />
-        </>
-      )}
+        {/* Render the bottom navigation bar if the user is authenticated */}
+        {user.is_authenticated && !hide_bottom_menu && (
+          <div className="md:hidden flex">
+            <BottomNavigation />
+          </div>
+        )}
+      </div>
     </NavigationProvider>
   );
 };

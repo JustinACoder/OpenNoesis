@@ -30,21 +30,18 @@ export default async function HomePage() {
 
   return (
     <NavigationOverlay>
-      <main className="min-h-[calc(100vh-4rem)]">
-        <div className="container mx-auto px-4 py-8 space-y-12">
-          {sections.map(({ title, items }) => (
-            <section key={title}>
-              <h2 className="text-2xl font-semibold mb-6">{title}</h2>
-              <DebateGrid>
-                {items.map((debate) => (
-                  <DebateCard key={debate.id} {...debate} />
-                ))}
-              </DebateGrid>
-            </section>
-          ))}
-        </div>
-      </main>
-      <Footer />
+      <div className="container mx-auto px-4 py-8 space-y-12">
+        {sections.map(({ title, items }) => (
+          <section key={title}>
+            <h2 className="text-2xl font-semibold mb-6">{title}</h2>
+            <DebateGrid>
+              {items.map((debate) => (
+                <DebateCard key={debate.id} {...debate} />
+              ))}
+            </DebateGrid>
+          </section>
+        ))}
+      </div>
     </NavigationOverlay>
   );
 }

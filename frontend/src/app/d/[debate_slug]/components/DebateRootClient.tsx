@@ -36,7 +36,7 @@ const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
     // Therefore, we show treat this as an error state
     return (
       <main className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
-        <div className="text-gray-500 text-lg">
+        <div className="text-gray-400 text-lg">
           A problem occurred while loading the debate data.
         </div>
       </main>
@@ -101,7 +101,7 @@ const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
                 debateSlug={debateSlug} // Pass slug for comment submission
               />
             ) : (
-              <div className="text-gray-500">
+              <div className="text-gray-400">
                 A problem occurred while loading the comments.
               </div>
             )}
@@ -111,7 +111,7 @@ const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
           {suggestions ? (
             <RelatedDebates debates={suggestions.items} />
           ) : (
-            <div className="text-gray-500">
+            <div className="text-gray-400">
               A problem occurred while loading related debates.
             </div>
           )}

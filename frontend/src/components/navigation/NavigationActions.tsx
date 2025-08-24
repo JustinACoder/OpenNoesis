@@ -25,8 +25,6 @@ import {
 import UnreadNotifBadgeCount from "@/components/navigation/UnreadNotifBadgeCount";
 import UnreadMessagesBadgeCount from "@/components/navigation/UnreadMessagesBadgeCount";
 import UserAvatar from "@/components/UserAvatar";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import links from "./links";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
