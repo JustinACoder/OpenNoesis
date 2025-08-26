@@ -149,12 +149,21 @@
           },
           {
             "in": "query",
-            "name": "page",
+            "name": "cursor",
             "schema": {
-              "default": 1,
-              "minimum": 1,
-              "title": "Page",
-              "type": "integer"
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
             },
             "required": false
           }
@@ -2335,6 +2344,9 @@
             "$ref": "#/components/parameters/SessionToken"
           }
         ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/MFAAuthenticate"
+        },
         "responses": {
           "200": {
             "$ref": "#/components/responses/AuthenticatedByPasswordAnd2FA"
@@ -2583,7 +2595,7 @@
             "$ref": "#/components/parameters/SessionToken"
           }
         ],
-        "description": "You initiate the passkey signup flow by inputting (`POST`) the required properties (e.g. email)\nsimilar to the regular account signup, except that the `password` is to be left out.\nThe user will then be required to verify the email address, after which WebAuthn credential\ncreation options can be retrieved (`GET`) and used to actualy complete (`PUT`) the flow.\n",
+        "description": "You initiate the passkey signup flow by inputting (`POST`) the required properties (e.g. email)\nsimilar to the regular account signup, except that the `password` is to be left out.\nThe user will then be required to verify the email address, after which WebAuthn credential\ncreation options can be retrieved (`GET`) and used to actually complete (`PUT`) the flow.\n",
         "requestBody": {
           "$ref": "#/components/requestBodies/PasskeySignup"
         },
@@ -2908,7 +2920,7 @@
           "Account: Email"
         ],
         "summary": "List email addresses",
-        "description": "Retrieves the list of email addreses of the account.\n",
+        "description": "Retrieves the list of email addresses of the account.\n",
         "parameters": [
           {
             "$ref": "#/components/parameters/Client"
@@ -3270,6 +3282,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/ReauthenticationRequired"
+          },
           "409": {
             "$ref": "#/components/responses/AddAuthenticatorConflict"
           }
@@ -3373,6 +3388,9 @@
           },
           {
             "$ref": "#/components/parameters/SessionToken"
+          },
+          {
+            "$ref": "#/components/parameters/PasswordLess"
           }
         ],
         "description": "Returns the WebAuthn credential creation options, that can be\nprocessed using `parseCreationOptionsFromJSON()` on the frontend.\n",
@@ -3853,6 +3871,36 @@
             },
             "title": "Items",
             "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "current_cursor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Cursor"
           },
           "count": {
             "title": "Count",
@@ -5078,7 +5126,7 @@
             ]
           },
           "data": {
-            "$ref": "#/components/schemas/Authenticated"
+            "$ref": "#/components/schemas/ReauthenticationRequired"
           },
           "meta": {
             "$ref": "#/components/schemas/AuthenticatedMeta"
@@ -5176,6 +5224,7 @@
             "type": "string",
             "enum": [
               "login",
+              "login_by_code",
               "mfa_authenticate",
               "mfa_reauthenticate",
               "provider_redirect",
@@ -5195,6 +5244,13 @@
             "enum": [
               true
             ]
+          },
+          "types": {
+            "type": "array",
+            "description": "Matches `settings.MFA_SUPPORTED_TYPES`.",
+            "items": {
+              "$ref": "#/components/schemas/AuthenticatorType"
+            }
           }
         },
         "required": [
@@ -5219,6 +5275,32 @@
           "user",
           "methods"
         ]
+      },
+      "ReauthenticationRequired": {
+        "properties": {
+          "flows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Flow"
+            }
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "methods": {
+            "type": "array",
+            "description": "A list of methods used to authenticate.\n",
+            "items": {
+              "$ref": "#/components/schemas/AuthenticationMethod"
+            }
+          }
+        },
+        "required": [
+          "flows",
+          "user",
+          "methods"
+        ],
+        "type": "object"
       },
       "AuthenticationMethod": {
         "oneOf": [
@@ -5844,7 +5926,8 @@
         "type": "string",
         "enum": [
           "recovery_codes",
-          "totp"
+          "totp",
+          "webauthn"
         ],
         "description": "The type of authenticator.\n"
       },
@@ -7012,9 +7095,7 @@
               "type": "object",
               "properties": {
                 "email": {
-                  "type": "string",
-                  "description": "An email address.\n",
-                  "example": "email@domain.org"
+                  "$ref": "#/components/schemas/Email"
                 }
               },
               "required": [
@@ -7192,10 +7273,21 @@
       "SessionToken": {
         "in": "header",
         "name": "X-Session-Token",
+        "required": false,
         "description": "Session token. Only needed when `client` is equal to `app`.\n",
         "schema": {
           "type": "string"
         }
+      },
+      "PasswordLess": {
+        "in": "query",
+        "name": "passwordless",
+        "required": false,
+        "schema": {
+          "type": "boolean"
+        },
+        "allowEmptyValue": true,
+        "description": "When present (regardless of its value), enables passwordless sign-in via a WebAuthn credential (Passkey),\nbut may enforce additional multi-factor authentication (MFA) requirements. Omit the parameter to disable.\n"
       }
     },
     "responses": {
@@ -7513,6 +7605,22 @@
         "description": "The response indicates reauthentication is required.\n",
         "content": {
           "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/ReauthenticationResponse"
+                },
+                "status": {
+                  "type": "integer",
+                  "example": 200
+                }
+              },
+              "required": [
+                "data",
+                "status"
+              ]
+            },
             "examples": {
               "reauthentication_required": {
                 "summary": "Reauthentication required\n",
@@ -7667,6 +7775,15 @@
               "properties": {
                 "status": {
                   "$ref": "#/components/schemas/StatusOK"
+                },
+                "meta": {
+                  "properties": {
+                    "recovery_codes_generated": {
+                      "description": "Whether or not recovery codes where generated automatically.",
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
                 },
                 "data": {
                   "$ref": "#/components/schemas/TOTPAuthenticator"

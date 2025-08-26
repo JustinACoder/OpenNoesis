@@ -11,6 +11,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Send, Loader2, AlertCircle, CircleCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDiscussionWebSocket } from "@/lib/hooks/useDiscussionWebSocket";
+import { PagedMessageSchema } from "@/lib/models";
 
 interface ChatConversationProps {
   discussionId: number;
@@ -71,15 +72,14 @@ export const ChatConversation = ({
     isFetchingNextPage,
     isLoading: messagesLoading,
     error: messagesError,
-  } = useInfiniteQuery({
+  } = useInfiniteQuery<PagedMessageSchema>({
     queryKey: getDiscussionApiGetDiscussionMessagesQueryKey(discussionId),
-    queryFn: ({ pageParam = 1 }) =>
-      discussionApiGetDiscussionMessages(discussionId, { page: pageParam }),
-    getNextPageParam: (lastPage, allPages) => {
-      if (lastPage.items.length === 0) return undefined;
-      return allPages.length + 1;
+    queryFn: ({ pageParam = null }) =>
+      discussionApiGetDiscussionMessages(discussionId, { cursor: pageParam }),
+    getNextPageParam: (lastPage) => {
+      return lastPage.next_cursor ?? undefined;
     },
-    initialPageParam: 1,
+    initialPageParam: null,
     enabled: !!discussionId,
   });
 
