@@ -1,23 +1,21 @@
-import { useCallback } from "react";
+import React, { useCallback } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { discussionApiGetDiscussions } from "@/lib/api/discussions";
 import { DiscussionSchema } from "@/lib/models";
 import UserAvatar from "@/components/UserAvatar";
 import { formatDistanceToNow } from "date-fns";
 import { MessageCircle, Loader2, AlertCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 interface DiscussionListProps {
   selectedDiscussionId?: number;
-  onDiscussionSelect: (discussion: DiscussionSchema) => void;
-  className?: string;
+  onDiscussionSelect: () => void;
   currentUserId?: number | null;
 }
 
 export const DiscussionList = ({
   selectedDiscussionId,
   onDiscussionSelect,
-  className,
   currentUserId,
 }: DiscussionListProps) => {
   const {
@@ -47,7 +45,7 @@ export const DiscussionList = ({
         hasNextPage &&
         !isFetchingNextPage
       ) {
-        fetchNextPage();
+        void fetchNextPage();
       }
     },
     [fetchNextPage, hasNextPage, isFetchingNextPage],
@@ -72,7 +70,7 @@ export const DiscussionList = ({
 
   if (isLoading) {
     return (
-      <div className={cn("h-full flex items-center justify-center", className)}>
+      <div className={"h-full flex items-center justify-center flex-1"}>
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
@@ -80,9 +78,7 @@ export const DiscussionList = ({
 
   if (error) {
     return (
-      <div
-        className={cn("h-full flex items-center justify-center p-8", className)}
-      >
+      <div className={"h-full flex items-center justify-center p-8 flex-1"}>
         <div className="text-center">
           <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
           <h3 className="text-lg font-semibold mb-2">
@@ -98,7 +94,7 @@ export const DiscussionList = ({
 
   if (discussions.length === 0) {
     return (
-      <div className={cn("p-8 text-center text-gray-400", className)}>
+      <div className={"p-8 text-center text-gray-400 h-full flex-1"}>
         <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
         <p className="text-lg font-medium mb-2">No discussions yet</p>
         <p className="text-sm">
@@ -110,7 +106,7 @@ export const DiscussionList = ({
 
   return (
     <div
-      className={cn("flex flex-col overflow-y-auto p-2 shadow-xl", className)}
+      className={"flex flex-col overflow-y-auto p-2 shadow-xl h-full flex-1"}
       style={{ scrollbarColor: "var(--secondary) transparent" }}
       onScroll={handleScroll}
     >
@@ -124,13 +120,15 @@ export const DiscussionList = ({
           const isSelected = discussion.id === selectedDiscussionId;
 
           return (
-            <div
+            <Link
               key={discussion.id}
-              className={cn(
-                "p-4 cursor-pointer rounded hover:bg-primary/20 transition-colors",
-                isSelected && "bg-primary/50",
-              )}
-              onClick={() => onDiscussionSelect(discussion)}
+              className={`block p-4 cursor-pointer rounded hover:bg-primary/20 transition-colors ${isSelected ? "bg-primary/50" : ""}`}
+              href={
+                discussion.id !== selectedDiscussionId
+                  ? `/chat/${discussion.id}`
+                  : "#"
+              }
+              onNavigate={onDiscussionSelect}
             >
               <div className="flex items-center space-x-3">
                 <div className="relative">
@@ -154,12 +152,7 @@ export const DiscussionList = ({
                   {discussion.latest_message_text ? (
                     <div className="flex items-center justify-between">
                       <p
-                        className={cn(
-                          "text-sm truncate flex-1",
-                          discussion.is_unread
-                            ? "font-medium text-primary"
-                            : "text-gray-400",
-                        )}
+                        className={`text-sm truncate flex-1 ${discussion.is_unread ? "font-medium text-primary" : "text-gray-400"}`}
                       >
                         {discussion.latest_message_text}
                       </p>
@@ -176,7 +169,7 @@ export const DiscussionList = ({
                   )}
                 </div>
               </div>
-            </div>
+            </Link>
           );
         })}
 

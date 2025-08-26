@@ -1,23 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { ChatConversation } from "./ChatConversation";
+import React, { useState } from "react";
 import { DiscussionList } from "./DiscussionList";
 import { Loader2, ArrowLeft, AlertCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/providers/authProvider";
-import { DiscussionSchema } from "@/lib/models";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface DiscussionPageClientProps {
   discussionId: number;
+  children: React.ReactNode;
 }
 
-export const DiscussionPageClient = ({
+export const DiscussionPageClientWrapper = ({
   discussionId,
+  children,
 }: DiscussionPageClientProps) => {
-  const router = useRouter();
   const { user, isLoading: userLoading, error: userError } = useAuth();
   const currentUserId = user?.id;
 
@@ -25,10 +23,7 @@ export const DiscussionPageClient = ({
   const [showMobileDiscussionList, setShowMobileDiscussionList] =
     useState(false);
 
-  const handleDiscussionSelect = (selectedDiscussion: DiscussionSchema) => {
-    if (selectedDiscussion.id && selectedDiscussion.id !== discussionId) {
-      router.push(`/chat/${selectedDiscussion.id}`);
-    }
+  const handleDiscussionSelect = () => {
     setShowMobileDiscussionList(false);
   };
 
@@ -72,7 +67,6 @@ export const DiscussionPageClient = ({
           selectedDiscussionId={discussionId}
           onDiscussionSelect={handleDiscussionSelect}
           currentUserId={currentUserId}
-          className="h-full flex-1"
         />
       </div>
 
@@ -96,11 +90,7 @@ export const DiscussionPageClient = ({
           <span className="text-sm font-medium">Back to discussions</span>
         </div>
 
-        <ChatConversation
-          discussionId={discussionId}
-          currentUserId={currentUserId}
-          className="flex-1"
-        />
+        {children}
       </div>
     </div>
   );
