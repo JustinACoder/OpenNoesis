@@ -122,7 +122,7 @@ export const DiscussionList = ({
           return (
             <Link
               key={discussion.id}
-              className={`block p-4 cursor-pointer rounded hover:bg-primary/20 transition-colors ${isSelected ? "bg-primary/50" : ""}`}
+              className={`block p-4 cursor-pointer rounded-lg hover:bg-primary/20 transition-colors ${isSelected ? "bg-primary/50" : ""}`}
               href={
                 discussion.id !== selectedDiscussionId
                   ? `/chat/${discussion.id}`

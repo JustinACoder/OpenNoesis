@@ -9,13 +9,13 @@ import {
 } from "@/lib/api/discussions";
 import { Textarea } from "@/components/ui/textarea";
 import UserAvatar from "@/components/UserAvatar";
-import { formatDistanceToNow } from "date-fns";
 import { Send, Loader2, AlertCircle, CircleCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDiscussionWebSocket } from "@/lib/hooks/useDiscussionWebSocket";
 import { PagedMessageSchema } from "@/lib/models";
 import { useAuth } from "@/providers/authProvider";
 import { useParams } from "next/navigation";
+import { ChatMessageGroups } from "@/app/chat/[discussion_id]/components/ChatMessageGroups";
 
 const ChatConversation = () => {
   const { discussion_id: discussionIdString } = useParams<{
@@ -236,44 +236,11 @@ const ChatConversation = () => {
             </p>
           </div>
         ) : (
-          messages.map((message) => {
-            const isOwnMessage = message.author === currentUserId;
-
-            return (
-              <div
-                key={message.id}
-                className={cn(
-                  "flex",
-                  isOwnMessage ? "justify-end" : "justify-start",
-                )}
-              >
-                <div className={cn("max-w-xs lg:max-w-md xl:max-w-lg")}>
-                  <div
-                    className={cn(
-                      "px-4 py-3 rounded-2xl w-fit ml-auto",
-                      isOwnMessage
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-100 text-gray-900",
-                    )}
-                  >
-                    <p className="text-sm whitespace-pre-wrap break-words">
-                      {message.text}
-                    </p>
-                  </div>
-                  <p
-                    className={cn(
-                      "text-xs text-gray-400 mt-1 px-1",
-                      isOwnMessage ? "text-right" : "text-left",
-                    )}
-                  >
-                    {formatDistanceToNow(new Date(message.created_at), {
-                      addSuffix: true,
-                    })}
-                  </p>
-                </div>
-              </div>
-            );
-          })
+          <ChatMessageGroups
+            messages={messages}
+            currentUserId={currentUserId}
+            gapMinutes={15}
+          />
         )}
 
         <div ref={loadOnIntersectionTargetRef} className="h-px" />
