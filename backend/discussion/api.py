@@ -2,7 +2,7 @@ from typing import List, Literal, Optional
 
 from django.shortcuts import get_object_or_404
 from ninja import Router
-from ninja.pagination import paginate, PageNumberPagination
+from ninja.pagination import paginate
 from ninja.security import django_auth
 
 from ProjectOpenDebate.common.utils import CursorPagination
@@ -14,7 +14,7 @@ router = Router(auth=django_auth)
 
 # API Endpoints
 @router.get("", response=List[DiscussionSchema])
-@paginate(PageNumberPagination, page_size=15)
+@paginate(CursorPagination, cursor_type="date+id", date_field="latest_activity")
 def get_discussions(request, filterType: Optional[Literal["active", "archived"]] = None):
     """
     Get the most recent discussions for the current user.
@@ -43,7 +43,7 @@ def get_discussion(request, discussion_id: int):
 
 
 @router.get("/{int:discussion_id}/messages", response=List[MessageSchema])
-@paginate(CursorPagination, page_size=10)
+@paginate(CursorPagination)
 def get_discussion_messages(request, discussion_id: int):
     """
     Get messages for a specific discussion.

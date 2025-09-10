@@ -1,7 +1,10 @@
 import React, { useCallback } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { discussionApiGetDiscussions } from "@/lib/api/discussions";
-import { DiscussionSchema } from "@/lib/models";
+import {
+  discussionApiGetDiscussions,
+  getDiscussionApiGetDiscussionsQueryKey,
+} from "@/lib/api/discussions";
+import { DiscussionSchema, PagedDiscussionSchema } from "@/lib/models";
 import UserAvatar from "@/components/UserAvatar";
 import { formatDistanceToNow } from "date-fns";
 import { MessageCircle, Loader2, AlertCircle } from "lucide-react";
@@ -25,15 +28,16 @@ export const DiscussionList = ({
     isFetchingNextPage,
     isLoading,
     error,
-  } = useInfiniteQuery({
-    queryKey: ["discussions"],
-    queryFn: ({ pageParam = 1 }) =>
-      discussionApiGetDiscussions({ page: pageParam }),
-    getNextPageParam: (lastPage, allPages) => {
-      if (lastPage.items.length === 0) return undefined;
-      return allPages.length + 1;
+  } = useInfiniteQuery<PagedDiscussionSchema>({
+    queryKey: getDiscussionApiGetDiscussionsQueryKey(),
+    queryFn: ({ pageParam = null }) => {
+      const cursor = pageParam as string | null | undefined;
+      return discussionApiGetDiscussions({ cursor });
     },
-    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      return lastPage.next_cursor ?? undefined;
+    },
+    initialPageParam: null,
   });
 
   const handleScroll = useCallback(

@@ -34,11 +34,28 @@
           },
           {
             "in": "query",
-            "name": "page",
+            "name": "cursor",
             "schema": {
-              "default": 1,
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "maximum": 75,
               "minimum": 1,
-              "title": "Page",
+              "title": "Limit",
               "type": "integer"
             },
             "required": false
@@ -153,10 +170,6 @@
             "schema": {
               "anyOf": [
                 {
-                  "type": "integer"
-                },
-                {
-                  "format": "date-time",
                   "type": "string"
                 },
                 {
@@ -164,6 +177,18 @@
                 }
               ],
               "title": "Cursor"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "maximum": 75,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
             },
             "required": false
           }
@@ -3784,6 +3809,28 @@
             "title": "Items",
             "type": "array"
           },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "current_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Cursor"
+          },
           "count": {
             "title": "Count",
             "type": "integer"
@@ -3875,10 +3922,6 @@
           "next_cursor": {
             "anyOf": [
               {
-                "type": "integer"
-              },
-              {
-                "format": "date-time",
                 "type": "string"
               },
               {
@@ -3890,10 +3933,6 @@
           "current_cursor": {
             "anyOf": [
               {
-                "type": "integer"
-              },
-              {
-                "format": "date-time",
                 "type": "string"
               },
               {

@@ -11,7 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 import UserAvatar from "@/components/UserAvatar";
 import { Send, Loader2, AlertCircle, CircleCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useDiscussionWebSocket } from "@/lib/hooks/useDiscussionWebSocket";
+import {
+  NewMessageData,
+  useDiscussionWebSocket,
+} from "@/lib/hooks/ws/discussionWebsocket";
 import { PagedMessageSchema } from "@/lib/models";
 import { useAuth } from "@/providers/authProvider";
 import { useParams } from "next/navigation";
@@ -29,35 +32,52 @@ const ChatConversation = () => {
   const { user } = useAuth();
   const currentUserId = user?.id;
 
+  // We use a ref to prevent circular dependencies in useCallback
+  // for onNewMessage since it is passed to the WS hook but itself calls
+  // markMessagesAsRead which is returned by the WS hook.
+  // TODO: find a cleaner way to do this
+  const markMessagesAsReadRef = useRef<() => void>(() => {
+    console.log("markMessagesAsReadRef not set");
+  });
+
   const scrollToBottom = useCallback(() => {
     console.log("Scrolling to bottom");
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  const postEventHandler = useCallback(
-    (event_type: string, data: unknown) => {
-      console.log("Received event:", event_type, data);
-      if (event_type === "new_message") {
-        if (!messagesEndRef.current) {
-          console.warn(
-            "Received a discussion event too soon. It will be ignored.",
-          );
-          return;
-        }
+  const onNewMessage = useCallback(
+    (message: NewMessageData) => {
+      // For now, ignore messages that are not for the current discussion
+      if (message.message.discussion !== discussionId) return;
 
-        // ScrollTop is 0 when we are at the bottom because of flex-col-reverse
-        const containerScrollPosition =
-          messagesEndRef.current.parentElement?.parentElement?.scrollTop ?? 0;
-        if (containerScrollPosition < 200) {
-          scrollToBottom();
-        }
+      if (!messagesEndRef.current) {
+        console.warn(
+          "Received a discussion event too soon. The custom handler will be skipped.",
+        );
+        return;
+      }
+
+      if (message.message.author !== currentUserId) {
+        // Only mark as read if the message is from the other user
+        // If it's from the current user, it is already read by definition
+        // (Actually, the backend marks it as read immediately when sending)
+        // (The frontend is designed to always mark your own messages as read immediately)
+        markMessagesAsReadRef.current();
+      }
+
+      // ScrollTop is 0 when we are at the bottom because of flex-col-reverse
+      const containerScrollPosition =
+        messagesEndRef.current.parentElement?.parentElement?.scrollTop ?? 0;
+      if (containerScrollPosition < 200) {
+        scrollToBottom();
       }
     },
-    [scrollToBottom],
+    [discussionId, currentUserId, scrollToBottom],
   );
 
-  const { sendMessage, markMessagesAsRead, connectionStatus, isConnected } =
-    useDiscussionWebSocket({ postEventHandler });
+  const { sendMessage, markMessagesAsRead, connectionStatus } =
+    useDiscussionWebSocket({ discussionId, onNewMessage });
+  markMessagesAsReadRef.current = markMessagesAsRead;
 
   const {
     data: discussion,
@@ -75,10 +95,8 @@ const ChatConversation = () => {
   } = useInfiniteQuery<PagedMessageSchema>({
     queryKey: getDiscussionApiGetDiscussionMessagesQueryKey(discussionId),
     queryFn: ({ pageParam = null }) => {
-      const cursor = pageParam as string | number | null | undefined;
-      return discussionApiGetDiscussionMessages(discussionId, {
-        cursor: cursor,
-      });
+      const cursor = pageParam as string | null | undefined;
+      return discussionApiGetDiscussionMessages(discussionId, { cursor });
     },
     getNextPageParam: (lastPage) => {
       return lastPage.next_cursor ?? undefined;
@@ -125,18 +143,22 @@ const ChatConversation = () => {
   );
 
   const handleSendMessage = useCallback(async () => {
-    if (!newMessage.trim() || isSending || !discussionId || !isConnected)
+    if (
+      !newMessage.trim() ||
+      isSending ||
+      !discussionId ||
+      connectionStatus !== "connected"
+    )
       return;
 
     setIsSending(true);
     try {
-      const success = sendMessage(discussionId, newMessage.trim());
-      if (success) {
-        setNewMessage("");
-        setTimeout(() => scrollToBottom(), 100);
-      }
+      sendMessage(newMessage.trim());
+      setNewMessage("");
+      setTimeout(() => scrollToBottom(), 100);
     } catch (error) {
       console.error("Failed to send message:", error);
+      // This is pretty rare, the only error that can happen is if the WS connection closes while sending
     } finally {
       setIsSending(false);
     }
@@ -144,7 +166,7 @@ const ChatConversation = () => {
     newMessage,
     isSending,
     discussionId,
-    isConnected,
+    connectionStatus,
     sendMessage,
     scrollToBottom,
   ]);
@@ -161,7 +183,7 @@ const ChatConversation = () => {
 
   useEffect(() => {
     if (discussion?.id && discussion.is_unread) {
-      markMessagesAsRead(discussion.id, true);
+      markMessagesAsRead(true);
     }
   }, [discussion?.id, discussion?.is_unread, markMessagesAsRead]);
 
@@ -265,9 +287,9 @@ const ChatConversation = () => {
           </p>
         )}
 
-        {connectionStatus === "error" && (
-          <p className="text-xs text-red-500 mb-2">
-            Error connecting to discussion. Please try again later.
+        {connectionStatus === "disconnecting" && (
+          <p className="text-xs text-gray-400 mb-2">
+            Disconnecting from discussion...
           </p>
         )}
 
@@ -277,21 +299,25 @@ const ChatConversation = () => {
             <span>Connected to discussion.</span>
           </div>
         )}
-        <div className="flex items-end space-x-3">
+        <form className="flex items-end space-x-3" autoComplete={"off"}>
           <Textarea
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={handleKeyPress}
             placeholder="Type a message..."
             className="flex-1 min-h-[44px] max-h-32 resize-none border-gray-200 rounded-xl"
-            disabled={isSending || !isConnected}
+            disabled={isSending || connectionStatus !== "connected"}
           />
           <button
             onClick={handleSendMessage}
-            disabled={!newMessage.trim() || isSending || !isConnected}
+            disabled={
+              !newMessage.trim() ||
+              isSending ||
+              connectionStatus !== "connected"
+            }
             className={cn(
               "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
-              newMessage.trim() && isConnected
+              newMessage.trim() && connectionStatus === "connected"
                 ? "bg-blue-500 hover:bg-blue-600 text-white"
                 : "bg-gray-200 text-gray-400",
             )}
@@ -302,7 +328,7 @@ const ChatConversation = () => {
               <Send className="w-4 h-4" />
             )}
           </button>
-        </div>
+        </form>
       </div>
     </div>
   );
