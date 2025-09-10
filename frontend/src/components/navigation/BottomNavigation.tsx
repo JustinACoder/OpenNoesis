@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, Home, Mail, Settings } from "lucide-react";
+import { Bell, Home, MessageCircle, Settings } from "lucide-react";
 import React from "react";
 import UserAvatar from "@/components/UserAvatar";
 import UnreadNotifBadgeCount from "@/components/navigation/UnreadNotifBadgeCount";
@@ -31,7 +31,7 @@ const BottomNavigation = async () => {
           href="/chat/"
           className="flex flex-col items-center justify-center space-y-1 hover:bg-accent transition-colors relative"
         >
-          <Mail className="h-5 w-5" />
+          <MessageCircle className="h-5 w-5" />
           <span className="text-xs">Messages</span>
           <UnreadMessagesBadgeCount />
         </Link>

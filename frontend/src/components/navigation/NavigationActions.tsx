@@ -1,7 +1,15 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Bell, LogOut, Mail, Menu, Search, Settings, User } from "lucide-react";
+import {
+  Bell,
+  LogOut,
+  Menu,
+  MessageCircle,
+  Search,
+  Settings,
+  User,
+} from "lucide-react";
 import Link from "next/link";
 import {
   Sheet,
@@ -66,7 +74,7 @@ const NavigationActions = () => {
           {/* Messages */}
           <Button variant="ghost" size="icon" className="relative" asChild>
             <Link href="/chat/">
-              <Mail className="h-5 w-5" />
+              <MessageCircle className="h-5 w-5" />
               <UnreadMessagesBadgeCount />
               <span className="sr-only">Messages</span>
             </Link>
@@ -186,7 +194,7 @@ const NavigationActions = () => {
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   <div className="flex items-center space-x-2">
-                    <Mail className="h-5 w-5" />
+                    <MessageCircle className="h-5 w-5" />
                     <span>Messages</span>
                   </div>
                   <UnreadMessagesBadgeCount simpleSecondary={true} />
