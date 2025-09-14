@@ -126,11 +126,11 @@ export default function ChangePasswordPage() {
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Link
-              href="/account/settings/"
+              href="/settings/account/"
               className="flex items-center justify-center text-sm text-muted-foreground hover:text-primary"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to settings
+              Back to account settings
             </Link>
           </CardFooter>
         </Card>
@@ -226,11 +226,11 @@ export default function ChangePasswordPage() {
                 {isPending ? "Updating..." : "Update Password"}
               </Button>
               <Link
-                href="/account/settings/"
+                href="/settings/account/"
                 className="flex items-center justify-center text-sm text-muted-foreground hover:text-primary"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to settings
+                Back to account settings
               </Link>
             </CardFooter>
           </form>

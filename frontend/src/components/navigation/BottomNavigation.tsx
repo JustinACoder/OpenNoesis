@@ -36,7 +36,7 @@ const BottomNavigation = async () => {
           <UnreadMessagesBadgeCount />
         </Link>
         <Link
-          href="/account/settings/"
+          href="/settings/"
           className="flex flex-col items-center justify-center space-y-1 hover:bg-accent transition-colors"
         >
           <Settings className="h-5 w-5" />

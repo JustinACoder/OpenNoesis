@@ -109,7 +109,7 @@ const NavigationActions = () => {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/account/settings/" className="flex items-center">
+                <Link href="/settings/" className="flex items-center">
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
                 </Link>
@@ -208,7 +208,7 @@ const NavigationActions = () => {
                   <span>Profile</span>
                 </Link>
                 <Link
-                  href="/account/settings/"
+                  href="/settings/"
                   className="flex items-center space-x-2 p-2 rounded-lg hover:bg-accent transition-colors"
                   onClick={() => setMobileMenuOpen(false)}
                 >

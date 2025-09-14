@@ -22,7 +22,7 @@ const AuthRequired = ({ children }: ChildrenInput) => {
     }
   }, [authStatus, router, nextUrl]);
 
-  if (authStatus !== "loading") {
+  if (authStatus === "loading") {
     // Return a centered loading spinner in the middle of the parent
     return (
       <div className="flex items-center justify-center h-100 text-primary">

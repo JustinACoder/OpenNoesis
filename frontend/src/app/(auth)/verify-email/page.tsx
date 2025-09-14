@@ -31,7 +31,7 @@ import { toast } from "sonner";
 export default function VerifyEmailPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const key = searchParams.get("key"); // The verification code/secret
+  const key = searchParams.get("token"); // The verification code/secret
   const [errorMessages, setErrors] = useState<string[]>([]);
 
   const { mutateAsync: resendVerificationEmail, isPending: isResending } =

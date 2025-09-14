@@ -49,7 +49,7 @@ const formSchema = z
 export default function ResetPasswordPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const key = searchParams.get("key");
+  const key = searchParams.get("token");
   const [errorMessages, setErrors] = useState<string[]>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({

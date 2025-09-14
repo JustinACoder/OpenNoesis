@@ -35,11 +35,11 @@ const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
     // Since we are hydrating with server data, this should only happen if the data is not available for some reason
     // Therefore, we show treat this as an error state
     return (
-      <main className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
         <div className="text-gray-400 text-lg">
           A problem occurred while loading the debate data.
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -50,7 +50,7 @@ const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
   });
 
   return (
-    <main className="min-h-[calc(100vh-4rem)]">
+    <div className="min-h-[calc(100vh-4rem)]">
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
@@ -117,7 +117,7 @@ const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
           )}
         </div>
       </div>
-    </main>
+    </div>
   );
 };
 

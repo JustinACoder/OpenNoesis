@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.headless',
     'allauth.socialaccount',
+    'allauth.usersessions', # To manage sessions across multiple devices
     # 'allauth.socialaccount.providers.google',
     'debug_toolbar',
     'django_celery_results',
@@ -194,16 +195,17 @@ ACCOUNT_USERNAME_BLACKLIST = [
     # The 'me' username is used to redirect to the current user's profile
     'me',
 ]
+# USERSESSIONS_TRACK_ACTIVITY = True  # See https://docs.allauth.org/en/dev/usersessions/installation.html if you want to track user sessions
 
 # TODO: Change this to the actual frontend URL in production
 HEADLESS_FRONTEND_URLS = {
-    "account_confirm_email": "https://localhost/account/verify-email/?token={key}",
-    "account_reset_password": "https://localhost/account/password/reset",
-    "account_reset_password_from_key": "https://localhost/account/password/reset/key/{key}",
-    "account_signup": "https://localhost/account/signup",
+    "account_confirm_email": "http://localhost:3000/verify-email/?token={key}",
+    "account_reset_password": "http://localhost:3000/forgot-password",
+    "account_reset_password_from_key": "http://localhost:3000/reset-password/?token={key}",
+    "account_signup": "http://localhost:3000/signup",
     # Fallback in case the state containing the `next` URL is lost and the handshake
     # with the third-party provider fails.
-    "socialaccount_login_error": "https://localhost/account/provider/callback",
+    "socialaccount_login_error": "http://localhost:3000/account/provider/callback",
 }
 
 # Email backend settings
