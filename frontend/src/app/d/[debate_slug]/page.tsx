@@ -13,7 +13,6 @@ import {
   dehydrate,
 } from "@tanstack/react-query";
 import DebateRootClient from "./components/DebateRootClient";
-import { Footer } from "@/components/Footer";
 import NavigationOverlay from "@/components/navigation/NavigationOverlay";
 
 interface DebateDetailPageProps {
