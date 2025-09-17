@@ -7,6 +7,7 @@ import {
   Menu,
   MessageCircle,
   Search,
+  Send,
   Settings,
   User,
 } from "lucide-react";
@@ -109,6 +110,12 @@ const NavigationActions = () => {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
+                <Link href={`/my-invites/`} className="flex items-center">
+                  <Send className="mr-2 h-4 w-4" />
+                  <span>My Invites</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
                 <Link href="/settings/" className="flex items-center">
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
@@ -178,6 +185,14 @@ const NavigationActions = () => {
             {user.is_authenticated ? (
               <div className="border-t pt-4 space-y-2">
                 <Link
+                  href={`/u/${encodeURIComponent(user.username)}`}
+                  className="flex items-center space-x-2 p-2 rounded-lg hover:bg-accent transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <User className="h-5 w-5" />
+                  <span>Profile</span>
+                </Link>
+                <Link
                   href="/notifications"
                   className="flex items-center justify-between p-2 rounded-lg hover:bg-accent transition-colors"
                   onClick={() => setMobileMenuOpen(false)}
@@ -200,12 +215,14 @@ const NavigationActions = () => {
                   <UnreadMessagesBadgeCount simpleSecondary={true} />
                 </Link>
                 <Link
-                  href={`/u/${encodeURIComponent(user.username)}`}
-                  className="flex items-center space-x-2 p-2 rounded-lg hover:bg-accent transition-colors"
+                  href="/my-invites/"
+                  className="flex items-center justify-between p-2 rounded-lg hover:bg-accent transition-colors"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  <User className="h-5 w-5" />
-                  <span>Profile</span>
+                  <div className="flex items-center space-x-2">
+                    <Send className="h-5 w-5" />
+                    <span>My Invites</span>
+                  </div>
                 </Link>
                 <Link
                   href="/settings/"
