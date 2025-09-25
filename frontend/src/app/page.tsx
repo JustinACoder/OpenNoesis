@@ -5,20 +5,34 @@ import {
   debateApiRecentDebates,
   debateApiRandomDebates,
 } from "@/lib/api/debate";
-import { DebateCard } from "@/components/DebateCard";
-import { DebateGrid } from "@/components/DebateGrid";
-import { Footer } from "@/components/Footer";
+import { Suspense } from "react";
 import NavigationOverlay from "@/components/navigation/NavigationOverlay";
+import DebateSection from "@/components/DebateSection";
+import { Loader2 } from "lucide-react";
 
 export default async function HomePage() {
+  console.time("HomePage Get debates");
+
   // Parallel fetching to speed up SSR
   const [trending, popular, controversial, recent, random] = await Promise.all([
-    debateApiTrendingDebates(),
-    debateApiPopularDebates(),
-    debateApiControversialDebates(),
-    debateApiRecentDebates(),
-    debateApiRandomDebates(),
+    debateApiTrendingDebates(undefined, {
+      next: { revalidate: 3600 },
+    }),
+    debateApiPopularDebates(undefined, {
+      next: { revalidate: 3600 },
+    }),
+    debateApiControversialDebates(undefined, {
+      next: { revalidate: 3600 },
+    }),
+    debateApiRecentDebates(undefined, {
+      next: { revalidate: 3600 },
+    }),
+    debateApiRandomDebates(undefined, {
+      next: { revalidate: 3600 },
+    }),
   ]);
+
+  console.timeEnd("HomePage Get debates");
 
   const sections = [
     { title: "Trending Debates", items: trending.items },
@@ -31,14 +45,24 @@ export default async function HomePage() {
   return (
     <NavigationOverlay>
       <div className="container mx-auto px-4 py-8 space-y-12">
+        {/* The popular debates are rendered immediately for SEO */}
+        <section>
+          <h2 className="text-2xl font-semibold mb-6">{sections[0].title}</h2>
+          <DebateSection debates={sections[0].items} />
+        </section>
+
         {sections.map(({ title, items }) => (
           <section key={title}>
             <h2 className="text-2xl font-semibold mb-6">{title}</h2>
-            <DebateGrid>
-              {items.map((debate) => (
-                <DebateCard key={debate.id} {...debate} />
-              ))}
-            </DebateGrid>
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center h-32 w-100">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              }
+            >
+              <DebateSection debates={items} />
+            </Suspense>
           </section>
         ))}
       </div>

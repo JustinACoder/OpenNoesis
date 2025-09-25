@@ -9,10 +9,10 @@ import {
   MutationCache,
   HydrationBoundary,
 } from "@tanstack/react-query";
-import { isAxiosError } from "axios";
 import { toast } from "sonner";
 import { AuthProvider } from "@/providers/authProvider";
 import { DehydratedState } from "@tanstack/query-core";
+import CustomFetchError from "@/lib/customFetchError";
 
 interface ProvidersProps {
   dehydratedState?: DehydratedState;
@@ -26,17 +26,17 @@ export default function Providers({
   const router = useRouter();
   const pathname = usePathname();
 
-  const handleError = (err: unknown) => {
-    if (!isAxiosError(err)) {
+  const handleError = (err: unknown | CustomFetchError) => {
+    if (!err || !(err instanceof CustomFetchError)) {
       toast.error("An unexpected error occurred.");
       console.error("An unexpected error occurred:", err);
       return;
     }
 
     // Redirect to login if the error is an authentication error
-    if (err.response?.status === 401 || err.response?.status === 410) {
+    if (err.status === 401 || err.status === 410) {
       // If we find the meta.is_authenticated=true flag, we won't redirect as it is due to another reason
-      if (err.response.data?.meta?.is_authenticated) {
+      if (err.response?.meta?.is_authenticated) {
         return;
       }
 
