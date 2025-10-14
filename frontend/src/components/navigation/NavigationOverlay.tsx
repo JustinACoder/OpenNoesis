@@ -15,6 +15,7 @@ import NavigationProvider from "@/components/navigation/NavigationProvider";
 import NavigationActions from "@/components/navigation/NavigationActions";
 import links from "./links";
 import { Footer } from "@/components/Footer";
+import ActiveSearchBanner from "@/components/ActiveSearchBanner";
 
 const HeaderLinks = () => {
   return (
@@ -75,6 +76,8 @@ export const NavigationOverlay = async ({
             <NavigationActions />
           </div>
         </header>
+
+        <ActiveSearchBanner />
 
         {/* Render the children components */}
         <div

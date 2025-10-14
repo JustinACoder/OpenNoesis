@@ -26,12 +26,9 @@ export function useWebSocket({
     "disconnected" | "connecting" | "connected" | "disconnecting"
   >(manager.current.getStatus());
 
-  useEffect(() => {
-    // Auto-connect if enabled
-    if (autoConnect) {
-      manager.current.connect();
-    }
+  const [hasAttemptedConnection, setHasAttemptedConnection] = useState(false);
 
+  useEffect(() => {
     // Register handlers
     if (onMessage) {
       if (stream) {
@@ -76,15 +73,21 @@ export function useWebSocket({
       manager.current.subscribe("error", (err) => console.error(err)),
     );
     cleanupFns.current.push(
-      manager.current.subscribe("connecting", () =>
-        setConnectionStatus("connecting"),
-      ),
+      manager.current.subscribe("connecting", () => {
+        setConnectionStatus("connecting");
+        setHasAttemptedConnection(true);
+      }),
     );
     cleanupFns.current.push(
       manager.current.subscribe("disconnecting", () =>
         setConnectionStatus("disconnecting"),
       ),
     );
+
+    // Auto-connect if enabled
+    if (autoConnect) {
+      manager.current.connect();
+    }
 
     // Cleanup function
     return () => {
@@ -113,5 +116,6 @@ export function useWebSocket({
     disconnect,
     send,
     connectionStatus,
+    hasAttemptedConnection,
   };
 }

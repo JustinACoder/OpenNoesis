@@ -43,7 +43,7 @@ class WebSocketManager {
     }
 
     this.isConnecting = true;
-    this.emit("connecting"); // <-- new: notify listeners we're connecting
+    this.emit("connecting");
     this.createConnection();
   }
 
