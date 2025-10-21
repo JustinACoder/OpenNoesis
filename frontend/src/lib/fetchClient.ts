@@ -2,9 +2,10 @@ import CustomFetchError from "@/lib/customFetchError";
 
 const isServer = typeof window === "undefined";
 
-let cookies: typeof import("next/headers").cookies;
-if (isServer) {
-  cookies = await import("next/headers").then((mod) => mod.cookies);
+async function getServerCookieStore() {
+  if (!isServer) throw new Error("cookies() only available on server");
+  const { cookies } = await import("next/headers");
+  return cookies();
 }
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
@@ -27,7 +28,7 @@ async function queryServerForCSRFCookie(): Promise<string | undefined> {
 
 async function getCSRFTokenFromCookie(): Promise<string | undefined> {
   if (isServer) {
-    const cookieStore = await cookies();
+    const cookieStore = await getServerCookieStore();
     return cookieStore.get("csrftoken")?.value;
   } else {
     const raw = document.cookie
@@ -76,7 +77,7 @@ export const customFetch = async <T>(
 
   // SSR: forward cookies from request
   if (isServer) {
-    const cookieStore = await cookies();
+    const cookieStore = await getServerCookieStore();
     const cookieHeader = cookieStore.toString();
     if (cookieHeader) headers.set("Cookie", cookieHeader);
   }
@@ -118,7 +119,7 @@ export const customFetch = async <T>(
   if (isServer) {
     const setCookieHeaders = res.headers.get("set-cookie");
     if (setCookieHeaders) {
-      const cookieStore = await cookies();
+      const cookieStore = await getServerCookieStore();
       const list = setCookieHeaders.split(/,(?=[^;]+=[^;]+)/g);
       for (const raw of list) {
         const { name, value, attrs } = parseSetCookie(raw);
