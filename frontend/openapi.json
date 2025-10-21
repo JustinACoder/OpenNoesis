@@ -1436,17 +1436,17 @@
         ]
       }
     },
-    "/api/pairing/request-passive-pairing": {
+    "/api/pairing/request": {
       "post": {
-        "operationId": "pairing_api_request_passive_pairing",
-        "summary": "Request Passive Pairing",
+        "operationId": "pairing_api_request_pairing",
+        "summary": "Request Pairing",
         "parameters": [],
         "responses": {
           "204": {
             "description": "No Content"
           }
         },
-        "description": "Request passive pairing for the current user.",
+        "description": "Request pairing for the current user.",
         "tags": [
           "Pairing"
         ],
@@ -1460,6 +1460,37 @@
           },
           "required": true
         },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ]
+      }
+    },
+    "/api/pairing/cancel/{pairing_request_id}": {
+      "post": {
+        "operationId": "pairing_api_cancel_pairing",
+        "summary": "Cancel Pairing",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pairing_request_id",
+            "schema": {
+              "title": "Pairing Request Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "description": "Cancel a pairing request for the current user.",
+        "tags": [
+          "Pairing"
+        ],
         "security": [
           {
             "SessionAuth": []
@@ -4729,11 +4760,20 @@
             ],
             "title": "Desired Stance",
             "type": "integer"
+          },
+          "pairing_type": {
+            "enum": [
+              "active",
+              "passive"
+            ],
+            "title": "Pairing Type",
+            "type": "string"
           }
         },
         "required": [
           "debate_id",
-          "desired_stance"
+          "desired_stance",
+          "pairing_type"
         ],
         "title": "PairingRequestInputSchema",
         "type": "object"
@@ -4759,7 +4799,6 @@
             "type": "integer"
           },
           "status": {
-            "default": "idle",
             "maxLength": 25,
             "title": "Status",
             "type": "string"
@@ -4778,6 +4817,7 @@
         "required": [
           "debate",
           "desired_stance",
+          "status",
           "last_keepalive_ping",
           "created_at"
         ],

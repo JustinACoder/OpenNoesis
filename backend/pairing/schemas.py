@@ -9,6 +9,7 @@ from pairing.models import PairingRequest
 class PairingRequestInputSchema(Schema):
     debate_id: int
     desired_stance: Literal[-1, 1]
+    pairing_type: Literal['active', 'passive']
 
 
 class PairingRequestSchema(ModelSchema):

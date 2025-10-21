@@ -16,7 +16,7 @@ GRACE_PERIOD = timedelta(minutes=5)
 
 
 @transaction.atomic
-def create_match(pairing_request, other_pairing_request):
+def create_passive_match(pairing_request, other_pairing_request):
     """
     Creates a PairingMatch between the two pairing requests.
     It also creates the related discussion and the notifications for the participants.
@@ -90,7 +90,7 @@ def try_pairing_passive_requests_in_debate(locked_requests):
             # If there are requests in the queue, we can match with the oldest one (first in the queue)
             oldest_matching_request = matching_queue.popleft()
             try:
-                pairing_match = create_match(request, oldest_matching_request)
+                pairing_match = create_passive_match(request, oldest_matching_request)
             except Exception as e:  # noqa
                 # If the match fails, we need to put the oldest_matching_request back in the queue
                 # TODO: log the error
@@ -154,3 +154,9 @@ def try_pairing_passive_requests():
 
         logger.info(
             f'Paired {2 * len(pairing_matches)} requests in debate {debate_id}. There are now {len(requests) - 2 * len(pairing_matches)} requests left.')
+
+@shared_task
+def complete_active_pairing_and_notify(pairing_match_id: int):
+    pairing_match = PairingMatch.objects.get(id=pairing_match_id)
+    pairing_match.complete_match()
+    pairing_match.notify_active_search_paired()

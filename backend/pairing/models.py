@@ -1,5 +1,9 @@
+from typing import Literal
+
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.contrib.auth import get_user_model
-from django.db.models import F, Q, Subquery, OuterRef
+from django.db.models import Q
 
 from debate.models import Debate, Stance
 from django.db import models
@@ -7,6 +11,7 @@ from datetime import datetime, timedelta
 from django.conf import settings
 from django.utils import timezone
 
+from ProjectOpenDebate.consumers import get_user_group_name
 from discussion.models import Discussion
 from discussion.services import DiscussionService
 
@@ -18,7 +23,7 @@ class PairingRequestManager(models.Manager):
                     Q(last_keepalive_ping__lt=timezone.now() - timedelta(
                         seconds=settings.PAIRING_REQUEST_EXPIRY_SECONDS))
             ),
-            is_completed=(
+            is_matched=(
                 Q(status=PairingRequest.Status.PAIRED) | Q(status=PairingRequest.Status.MATCH_FOUND)
             )
         )
@@ -27,35 +32,13 @@ class PairingRequestManager(models.Manager):
         queryset = self.select_for_update() if for_update else self
         return queryset.filter(
             user=user,
-            status__in=(PairingRequest.Status.ACTIVE, PairingRequest.Status.IDLE, PairingRequest.Status.MATCH_FOUND),
+            status__in=(PairingRequest.Status.ACTIVE, PairingRequest.Status.MATCH_FOUND),
             is_expired=False
         ).first()
-
-    def get_best_match(self, pairing_request, for_update=False):
-        queryset = self.select_for_update() if for_update else self
-
-        # Other user stance subquery
-        other_user_stance = Subquery(
-            Stance.objects.filter(
-                debate=pairing_request.debate,
-                user=OuterRef('user')
-            ).values('stance')[:1]
-        )
-
-        return queryset.annotate(
-            other_user_stance=other_user_stance
-        ).filter(
-            debate=pairing_request.debate,
-            status=pairing_request.status,
-            desired_stance=pairing_request.debate.get_stance(pairing_request.user),
-            other_user_stance=pairing_request.desired_stance,
-            is_expired=False
-        ).exclude(user=pairing_request.user).first()
 
 
 class PairingRequest(models.Model):
     class Status(models.TextChoices):
-        IDLE = 'idle'
         ACTIVE = 'active'
         PASSIVE = 'passive'
         MATCH_FOUND = 'match_found'
@@ -64,11 +47,20 @@ class PairingRequest(models.Model):
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
     debate = models.ForeignKey(Debate, on_delete=models.CASCADE)
     desired_stance = models.IntegerField(choices=[(1, 'FOR'), (-1, 'AGAINST')])
-    status = models.CharField(max_length=25, choices=Status.choices, default=Status.IDLE)
+    status = models.CharField(max_length=25, choices=Status.choices)
     last_keepalive_ping = models.DateTimeField(auto_now_add=True)  # doesn't update on save, must be updated manually
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = PairingRequestManager()
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["debate", "desired_stance", "created_at", "id"],
+                name="idx_pairing_waiting_key",
+                condition=Q(status="active"), # We cant include conditions relative to NOW as these are not supported in indexes in postgres
+            ),
+        ]
 
     @property
     def seconds_elapsed_since_creation(self):
@@ -89,7 +81,53 @@ class PairingRequest(models.Model):
         Switches the status of the PairingRequest to the new_status.
         """
         self.status = new_status
-        self.save()
+        self.save(update_fields=['status'])
+
+    def notify_active_search_status(self, event_type: Literal['start_search', 'match_found']):
+        """
+        Notifies the user that the active search has started.
+        """
+        # Get current channel layer
+        channel_layer = get_channel_layer()
+
+        # Get the user group name
+        user_group_name = get_user_group_name('PairingConsumer', self.user_id)  # noqa
+
+        # Convert the pairing request to JSON
+        from pairing.schemas import PairingRequestSchema
+        pairing_request_data = PairingRequestSchema.model_validate(self).model_dump(mode="json")
+
+        # Send the active search started notification to the user
+        async_to_sync(channel_layer.group_send)(
+            user_group_name,
+            {
+                'status': 'success',
+                'event_type': event_type,
+                'type': 'send.json',
+                'data': pairing_request_data
+            }
+        )
+
+    def notify_active_search_cancelled(self):
+        """
+        Notifies the user that the pairing request has been cancelled.
+        """
+        # Get current channel layer
+        channel_layer = get_channel_layer()
+
+        # Get the user group name
+        user_group_name = get_user_group_name('PairingConsumer', self.user_id)  # noqa
+
+        # Send the pairing request cancelled notification to the user
+        async_to_sync(channel_layer.group_send)(
+            user_group_name,
+            {
+                'status': 'success',
+                'event_type': 'cancel',
+                'type': 'send.json'
+            }
+        )
+
 
     def __str__(self):
         return f'PairingRequest(user={self.user}, debate={self.debate}, status={self.status})'
@@ -161,6 +199,38 @@ class PairingMatch(models.Model):
         self.save()
 
         return discussion
+
+    def notify_active_search_match_found(self):
+        """
+        Notifies both users that a match has been found for their active search.
+        """
+        for pairing_request in [self.pairing_request_1, self.pairing_request_2]:
+            pairing_request.notify_active_search_status(event_type='match_found')
+
+    def notify_active_search_paired(self):
+        """
+        Notifies both users that their match has been completed and they are now paired.
+        """
+        # Get current channel layer
+        channel_layer = get_channel_layer()
+
+        for pairing_request in [self.pairing_request_1, self.pairing_request_2]:
+            # Get the user group name
+            user_group_name = get_user_group_name('PairingConsumer', pairing_request.user_id)  # noqa
+
+            # Send the active search started notification to the user
+            async_to_sync(channel_layer.group_send)(
+                user_group_name,
+                {
+                    'status': 'success',
+                    'event_type': 'paired',
+                    'type': 'send.json',
+                    'data': {
+                        'discussion_id': self.related_discussion.id,
+                    }
+                }
+            )
+
 
     def __str__(self):
         return f'PairingMatch(pairing_request_1={self.pairing_request_1}, pairing_request_2={self.pairing_request_2})'
