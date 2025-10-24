@@ -1,164 +1,79 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
 import { useWebSocket } from "./websocket";
-
-export type PairingWSStatus =
-  | "none" // no active request client-side
-  | "idle" // request created, not actively searching yet
-  | "active" // actively searching
-  | "match_found" // match found, waiting for pairing completion
-  | "paired"; // discussion created
-
-interface RequestPairingPayload {
-  debate_id: number;
-  desired_stance: 1 | -1;
-}
+import { CurrentActivePairingRequest } from "@/lib/models";
 
 interface UsePairingWebSocketOptions {
   autoConnect?: boolean;
-  // Optional: start keepalive pings (default true)
-  enableKeepAlive?: boolean;
-  keepAliveIntervalMs?: number;
+  keepAliveAckTimeoutMs?: number;
   onPaired?: (discussionId: number) => void;
+  onCancelPairing?: () => void;
+  onStartSearch?: (pairingRequest: CurrentActivePairingRequest) => void;
+  onMatchFound?: (pairingRequest: CurrentActivePairingRequest) => void;
+  onKeepAliveError?: () => void;
+  onKeepAliveNoResponse?: () => void;
 }
-
-interface PairingEventBase {
-  event_type: string;
-  status: "success" | "error";
-  data?: any;
-  message?: string;
-}
-
-const STATUS_EVENT_TO_STATE: Record<string, PairingWSStatus | undefined> = {
-  request_pairing: "idle",
-  start_search: "active",
-  match_found: "match_found",
-  paired: "paired",
-  // cancel will revert to none (hidden) or idle if needed; we pick none
-};
 
 export function usePairingWebSocket({
   autoConnect = true,
-  enableKeepAlive = true,
-  keepAliveIntervalMs = 15000,
+  keepAliveAckTimeoutMs = 5000,
   onPaired,
+  onCancelPairing,
+  onStartSearch,
+  onMatchFound,
+  onKeepAliveError,
+  onKeepAliveNoResponse,
 }: UsePairingWebSocketOptions = {}) {
-  const [pairingStatus, setPairingStatus] = useState<PairingWSStatus>("none");
-  const [createdAt, setCreatedAt] = useState<string | null>(null);
-  const [lastEvent, setLastEvent] = useState<PairingEventBase | null>(null);
-
-  // Keepalive timer
-  const keepAliveTimer = useRef<NodeJS.Timeout | null>(null);
+  const hasReceivedKeepAliveAck = useRef(true);
 
   const { send, connectionStatus, hasAttemptedConnection } = useWebSocket({
     stream: "pairing",
     autoConnect,
-    onMessage: (payload: any) => {
-      // Payload already demultiplexed (payload = {status, event_type, ...})
-      const evt: PairingEventBase = payload;
-      setLastEvent(evt);
-
-      if (evt.status === "success" && evt.event_type) {
-        if (evt.event_type === "cancel") {
-          // If current user cancelled (data.from_current_user true) -> reset state
-          if (evt.data?.from_current_user) {
-            setPairingStatus("none");
-            setCreatedAt(null);
-          }
-          // If other user cancelled during a partial flow we also reset
-          else {
-            setPairingStatus("none");
-            setCreatedAt(null);
-          }
-        } else if (evt.event_type === "keepalive_ack") {
-          // No status change
+    onMessage: (payload) => {
+      if (payload.status === "success" && payload.event_type) {
+        if (payload.event_type === "cancel") {
+          onCancelPairing?.();
+        } else if (payload.event_type === "paired") {
+          const discussionId = payload.data?.discussion_id as number;
+          onPaired?.(discussionId);
+        } else if (payload.event_type === "keepalive_ack") {
+          hasReceivedKeepAliveAck.current = true;
+        } else if (payload.event_type === "start_search") {
+          const pairingRequest: CurrentActivePairingRequest = payload.data;
+          onStartSearch?.(pairingRequest);
+        } else if (payload.event_type === "match_found") {
+          const pairingRequest: CurrentActivePairingRequest = payload.data;
+          onMatchFound?.(pairingRequest);
         } else {
-          const mapped = STATUS_EVENT_TO_STATE[evt.event_type];
-          if (mapped) {
-            setPairingStatus(mapped);
-            if (mapped === "idle" && !createdAt) {
-              // timestamp when request created (backend does not send created_at)
-              setCreatedAt(new Date().toISOString());
-            }
-            if (mapped === "paired") {
-              const discussionId = evt.data?.discussion_id;
-              if (discussionId && onPaired) {
-                onPaired(discussionId);
-              }
-            }
-          }
+          console.warn(
+            `Unknown pairing websocket event_type: ${payload.event_type}`,
+          );
         }
       }
 
-      if (evt.status === "error" && evt.event_type === "keepalive_ack") {
-        // keepalive failed (no active request) -> reset state
-        setPairingStatus("none");
-        setCreatedAt(null);
+      if (
+        payload.status === "error" &&
+        payload.event_type === "keepalive_ack"
+      ) {
+        onKeepAliveError?.();
       }
     },
   });
 
-  // Actions
-  const requestPairing = useCallback(
-    (payload: RequestPairingPayload) => {
-      send({
-        event_type: "request_pairing",
-        data: payload,
-      });
-    },
-    [send],
-  );
-
-  const startSearch = useCallback(() => {
-    if (pairingStatus === "idle" || pairingStatus === "active") {
-      send({ event_type: "start_search", data: {} });
-    }
-  }, [send, pairingStatus]);
-
-  const cancelPairing = useCallback(() => {
-    if (pairingStatus !== "none" && pairingStatus !== "paired") {
-      send({ event_type: "cancel", data: {} });
-    }
-  }, [send, pairingStatus]);
-
   const sendKeepAlive = useCallback(() => {
-    if (
-      pairingStatus === "idle" ||
-      pairingStatus === "active" ||
-      pairingStatus === "match_found"
-    ) {
-      send({ event_type: "keepalive", data: {} });
-    }
-  }, [send, pairingStatus]);
+    send({ event_type: "keepalive", data: {} });
 
-  // Auto keepalive
-  useEffect(() => {
-    if (!enableKeepAlive) return;
-    if (
-      pairingStatus === "idle" ||
-      pairingStatus === "active" ||
-      pairingStatus === "match_found"
-    ) {
-      // Immediately send one to refresh server timer
-      sendKeepAlive();
-      keepAliveTimer.current = setInterval(sendKeepAlive, keepAliveIntervalMs);
-    } else {
-      if (keepAliveTimer.current) clearInterval(keepAliveTimer.current);
-      keepAliveTimer.current = null;
-    }
-    return () => {
-      if (keepAliveTimer.current) clearInterval(keepAliveTimer.current);
-    };
-  }, [pairingStatus, enableKeepAlive, keepAliveIntervalMs, sendKeepAlive]);
+    // Setup timeout to check for ack
+    hasReceivedKeepAliveAck.current = false;
+    setTimeout(() => {
+      if (!hasReceivedKeepAliveAck.current) {
+        onKeepAliveNoResponse?.();
+      }
+    }, keepAliveAckTimeoutMs);
+  }, [keepAliveAckTimeoutMs, onKeepAliveNoResponse, send]);
 
   return {
-    pairingStatus,
-    createdAt,
-    lastEvent,
     wsConnectionStatus: connectionStatus,
     hasAttemptedConnection,
-    requestPairing,
-    startSearch,
-    cancelPairing,
     sendKeepAlive,
   };
 }

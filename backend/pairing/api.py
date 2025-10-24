@@ -5,7 +5,7 @@ from ninja.errors import HttpError
 from ninja.security import django_auth
 
 from .models import PairingRequest
-from .schemas import PairingRequestSchema, PairingRequestInputSchema
+from .schemas import PairingRequestInputSchema, CurrentActivePairingRequest
 from .services import create_passive_pairing_request, create_active_pairing_request, cancel_pairing_request
 
 # Initialize Ninja API router
@@ -36,6 +36,6 @@ def cancel_pairing(request, pairing_request_id: int):
         raise HttpError(404, "No cancellable pairing request found.")
     return 204, None
 
-@router.get("/current-active-pairing", response=Optional[PairingRequestSchema])
+@router.get("/current-active-pairing", response=Optional[CurrentActivePairingRequest])
 def get_current_active_pairing(request):
     return PairingRequest.objects.get_current_request(request.user)

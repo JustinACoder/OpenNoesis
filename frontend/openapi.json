@@ -1511,7 +1511,7 @@
                 "schema": {
                   "anyOf": [
                     {
-                      "$ref": "#/components/schemas/PairingRequestSchema"
+                      "$ref": "#/components/schemas/CurrentActivePairingRequest"
                     },
                     {
                       "type": "null"
@@ -4778,10 +4778,18 @@
         "title": "PairingRequestInputSchema",
         "type": "object"
       },
-      "PairingRequestSchema": {
+      "CurrentActivePairingRequest": {
         "properties": {
           "debate": {
             "$ref": "#/components/schemas/DebatePreviewSchema"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "match_found"
+            ],
+            "title": "Status",
+            "type": "string"
           },
           "id": {
             "anyOf": [
@@ -4798,11 +4806,6 @@
             "title": "Desired Stance",
             "type": "integer"
           },
-          "status": {
-            "maxLength": 25,
-            "title": "Status",
-            "type": "string"
-          },
           "last_keepalive_ping": {
             "format": "date-time",
             "title": "Last Keepalive Ping",
@@ -4816,12 +4819,12 @@
         },
         "required": [
           "debate",
-          "desired_stance",
           "status",
+          "desired_stance",
           "last_keepalive_ping",
           "created_at"
         ],
-        "title": "PairingRequestSchema",
+        "title": "CurrentActivePairingRequest",
         "type": "object"
       },
       "CSRFTokenSchema": {

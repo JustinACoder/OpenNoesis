@@ -21,10 +21,18 @@ import {
   Bell,
   AlertTriangle,
   Zap,
+  Loader2,
 } from "lucide-react";
-import { useState } from "react";
-import { DebateFullSchema } from "@/lib/models";
+import {
+  DebateFullSchema,
+  PairingRequestInputSchemaDesiredStance,
+  PairingRequestInputSchemaPairingType,
+} from "@/lib/models";
 import UserStanceInlineIndicator from "@/app/d/[debate_slug]/components/UserStanceInlineIndicator";
+import { toast } from "sonner";
+import { usePairing } from "@/lib/hooks/pairingHook";
+import { useState } from "react";
+import { usePairingApiRequestPairing } from "@/lib/api/pairing";
 
 interface DebateNowDialogProps {
   debate: DebateFullSchema;
@@ -32,36 +40,45 @@ interface DebateNowDialogProps {
 
 const DebateNowDialog = ({ debate }: DebateNowDialogProps) => {
   const userStance = debate.user_stance;
-  const [opponentStance, setOpponentStance] = useState<1 | -1>(
-    userStance === 1 ? -1 : 1, // Default to opposite of user's stance
-  );
-  const [searchType, setSearchType] = useState<"active" | "passive">("active");
+  const [opponentStance, setOpponentStance] =
+    useState<PairingRequestInputSchemaDesiredStance>(
+      userStance === 1 ? -1 : 1, // Default to opposite of user's stance
+    );
+  const [searchType, setSearchType] =
+    useState<PairingRequestInputSchemaPairingType>("active");
   const [isOpen, setIsOpen] = useState(false);
+  const { mutateAsync: startPairing, isPending: isPendingPairing } =
+    usePairingApiRequestPairing();
+  const { status } = usePairing();
 
   // Check if user has set their stance
-  const hasStanceSet = userStance === 1 || userStance === -1;
+  const hasStanceSet = userStance !== undefined;
 
-  const handleStartSearch = () => {
-    if (searchType === "active") {
-      console.log(
-        `Starting active search for opponent with stance: ${opponentStance === 1 ? "for" : "against"}`,
-      );
-      // TODO: Implement active search logic
-    } else {
-      console.log(
-        `Starting passive search for opponent with stance: ${opponentStance === 1 ? "for" : "against"}`,
-      );
-      // TODO: Implement passive search logic
-    }
-    setIsOpen(false);
+  const handleStartSearch = async () => {
+    await startPairing({
+      data: {
+        debate_id: debate.id!,
+        desired_stance: opponentStance,
+        pairing_type: searchType,
+      },
+    })
+      .then(() => {
+        setIsOpen(false);
+      })
+      .catch((error) => {
+        console.error("Error starting pairing:", error);
+        toast.error("Failed to start search. Please try again.");
+      });
   };
 
   const handleOpponentStanceChange = (value: string) => {
     setOpponentStance(value === "for" ? 1 : -1);
   };
 
-  const handleSearchTypeChange = (value: string) => {
-    setSearchType(value as "active" | "passive");
+  const handleSearchTypeChange = (
+    value: PairingRequestInputSchemaPairingType,
+  ) => {
+    setSearchType(value);
   };
 
   return (
@@ -224,7 +241,20 @@ const DebateNowDialog = ({ debate }: DebateNowDialogProps) => {
             <Button variant="outline">Cancel</Button>
           </DialogClose>
           {hasStanceSet && (
-            <Button onClick={handleStartSearch}>Start Search</Button>
+            <Button
+              disabled={
+                isPendingPairing ||
+                status === null ||
+                !["active", "match_found"].includes(status)
+              }
+              onClick={handleStartSearch}
+            >
+              {isPendingPairing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                "Start Search"
+              )}
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>

@@ -87,6 +87,9 @@ class PairingRequest(models.Model):
         """
         Notifies the user that the active search has started.
         """
+        if self.status not in [PairingRequest.Status.ACTIVE, PairingRequest.Status.MATCH_FOUND]:
+            raise ValueError("Cannot notify active search status for a pairing request that is not active or match_found.")
+
         # Get current channel layer
         channel_layer = get_channel_layer()
 
@@ -94,8 +97,8 @@ class PairingRequest(models.Model):
         user_group_name = get_user_group_name('PairingConsumer', self.user_id)  # noqa
 
         # Convert the pairing request to JSON
-        from pairing.schemas import PairingRequestSchema
-        pairing_request_data = PairingRequestSchema.model_validate(self).model_dump(mode="json")
+        from pairing.schemas import CurrentActivePairingRequest
+        pairing_request_data = CurrentActivePairingRequest.model_validate(self).model_dump(mode="json")
 
         # Send the active search started notification to the user
         async_to_sync(channel_layer.group_send)(

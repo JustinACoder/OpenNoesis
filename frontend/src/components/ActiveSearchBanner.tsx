@@ -3,10 +3,10 @@
 import { CheckCircle, Loader } from "lucide-react";
 import styles from "@/styles/pairingBanner.module.css";
 import { Button } from "@/components/ui/button";
-import { usePairingStatus, PairingBannerStatus } from "@/lib/hooks/pairingHook";
+import { usePairing, PairingBannerStatus } from "@/lib/hooks/pairingHook";
+import { usePairingApiCancelPairing } from "@/lib/api/pairing";
 
 const STATUS_CLASSES: Record<PairingBannerStatus, string> = {
-  idle: `${styles.pairingBanner} ${styles.searching}`,
   active: `${styles.pairingBanner} ${styles.searching}`,
   match_found: `${styles.pairingBanner} ${styles.matchFound}`,
   server_error: `${styles.pairingBanner} ${styles.serverError}`,
@@ -18,9 +18,10 @@ const ActiveSearchBanner = () => {
   const {
     status: connectionStatus,
     elapsedSeconds,
-    debateTitle,
-    cancelPairing,
-  } = usePairingStatus();
+    pairingRequest,
+    forceClosePairingBanner,
+  } = usePairing();
+  const { mutateAsync: cancelPairing } = usePairingApiCancelPairing();
 
   if (!connectionStatus) return null;
 
@@ -31,8 +32,26 @@ const ActiveSearchBanner = () => {
     return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
   };
 
-  const cancelPairingHandler = () => {
-    cancelPairing();
+  const cancelPairingHandler = async () => {
+    if (
+      connectionStatus === "server_error" ||
+      connectionStatus === "connection_error"
+    ) {
+      forceClosePairingBanner();
+      return;
+    }
+
+    if (connectionStatus === "match_found") {
+      return; // Cant cancel if match found
+    }
+
+    if (connectionStatus === "active") {
+      try {
+        await cancelPairing({ pairingRequestId: pairingRequest.id! });
+      } catch (error) {
+        console.error("Error cancelling pairing:", error);
+      }
+    }
   };
 
   const bannerStyle = STATUS_CLASSES[connectionStatus];
@@ -42,11 +61,12 @@ const ActiveSearchBanner = () => {
       className={`h-12 w-full flex items-center justify-between px-4 ${bannerStyle}`}
     >
       {/* Searching content */}
-      {(connectionStatus === "active" || connectionStatus === "idle") && (
+      {connectionStatus === "active" && (
         <div className="flex items-center gap-3 searching-content">
           <Loader className="animate-spin w-4 h-4" />
           <span className="m-0 hidden sm:inline">
-            Waiting for a debater on <strong>{debateTitle}</strong>
+            Waiting for a debater on{" "}
+            <strong>{pairingRequest.debate.title}</strong>
           </span>
           <span className="m-0 inline sm:hidden">Searching...</span>
           <span className="elapsed-time">
