@@ -77,7 +77,7 @@ export const NavigationOverlay = async ({
           </div>
         </header>
 
-        <ActiveSearchBanner />
+        {user.is_authenticated && <ActiveSearchBanner />}
 
         {/* Render the children components */}
         <div
