@@ -2,7 +2,7 @@
 
 import { InviteSchema } from "@/lib/models";
 import { useDebatemeApiAcceptInvite } from "@/lib/api/invites";
-import { useAuth } from "@/providers/authProvider";
+import { useAuthState } from "@/providers/authProvider";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -12,7 +12,7 @@ interface InviteActionsProps {
 }
 
 const InviteActions = ({ invite }: InviteActionsProps) => {
-  const { user } = useAuth();
+  const { user } = useAuthState();
   const router = useRouter();
   const {
     mutateAsync: acceptInvite,

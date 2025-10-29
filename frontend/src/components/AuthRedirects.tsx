@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/providers/authProvider";
+import { useAuthState } from "@/providers/authProvider";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LoaderCircle } from "lucide-react";
 import React, { useEffect } from "react";
@@ -10,7 +10,7 @@ interface ChildrenInput {
 }
 
 const AuthRequired = ({ children }: ChildrenInput) => {
-  const { authStatus } = useAuth();
+  const { authStatus } = useAuthState();
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get("next") || "/";
@@ -36,7 +36,7 @@ const AuthRequired = ({ children }: ChildrenInput) => {
 };
 
 const GuestOnly = ({ children }: ChildrenInput) => {
-  const { authStatus } = useAuth();
+  const { authStatus } = useAuthState();
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get("next") || "/";

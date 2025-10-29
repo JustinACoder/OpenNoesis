@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/providers/authProvider";
+import { useAuthState } from "@/providers/authProvider";
 import { CurrentUserResponse } from "@/lib/models";
 import { Badge } from "@/components/ui/badge";
 import UserAvatar from "@/components/UserAvatar";
@@ -29,7 +29,7 @@ const formatName = (user: CurrentUserResponse) => {
 };
 
 const SettingsUserBanner = () => {
-  const { user } = useAuth();
+  const { user } = useAuthState();
 
   if (!user?.is_authenticated) return null; // since we hydrate in the main layout, this should never be seen
 

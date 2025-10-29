@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import WebSocketManager, { WebSocketMessage } from "./websocketManager";
 import { toast } from "sonner";
-import { useAuth } from "@/providers/authProvider";
+import { useAuthState } from "@/providers/authProvider";
 
 interface UseWebSocketOptions {
   stream?: string;
@@ -26,7 +26,7 @@ export function useWebSocket({
     "disconnected" | "connecting" | "connected" | "disconnecting"
   >(manager.current.getStatus());
   const [hasAttemptedConnection, setHasAttemptedConnection] = useState(false);
-  const { authStatus } = useAuth();
+  const { authStatus } = useAuthState();
 
   useEffect(() => {
     if (authStatus !== "authenticated") {

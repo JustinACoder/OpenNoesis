@@ -35,7 +35,7 @@ import {
   usePairingApiGetCurrentActivePairing,
   usePairingApiRequestPairing,
 } from "@/lib/api/pairing";
-import { useAuth } from "@/providers/authProvider";
+import { useAuthState } from "@/providers/authProvider";
 import Link from "next/link";
 
 interface DebateNowDialogProps {
@@ -53,7 +53,7 @@ const DebateNowDialog = ({ debate }: DebateNowDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const { mutateAsync: startPairing, isPending: isPendingPairing } =
     usePairingApiRequestPairing();
-  const { authStatus } = useAuth();
+  const { authStatus } = useAuthState();
   const { data: currentActivePairingRequest } =
     usePairingApiGetCurrentActivePairing({
       query: { enabled: isOpen && authStatus === "authenticated" },

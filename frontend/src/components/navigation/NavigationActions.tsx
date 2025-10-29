@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/sheet";
 import React from "react";
 import { useNavigation } from "@/components/navigation/NavigationProvider";
-import { useAuth } from "@/providers/authProvider";
+import { useAuthState, useAuthActions } from "@/providers/authProvider";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,7 +40,8 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 const NavigationActions = () => {
   const { setMobileSearchOpen, isMobileMenuOpen, setMobileMenuOpen } =
     useNavigation();
-  const { user, logout } = useAuth();
+  const { user } = useAuthState();
+  const { logout } = useAuthActions();
 
   const handleLogout = async () => {
     await logout.mutateAsync({ client: "browser" });

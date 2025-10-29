@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { DiscussionList } from "./DiscussionList";
 import { Loader2, ArrowLeft, AlertCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/providers/authProvider";
+import { useAuthState } from "@/providers/authProvider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface DiscussionPageClientProps {
@@ -16,7 +16,7 @@ export const DiscussionPageClientWrapper = ({
   discussionId,
   children,
 }: DiscussionPageClientProps) => {
-  const { user, isLoading: userLoading, error: userError } = useAuth();
+  const { user, isLoading: userLoading, error: userError } = useAuthState();
   const currentUserId = user?.id;
 
   // Only used on mobile to toggle which panel is visible.

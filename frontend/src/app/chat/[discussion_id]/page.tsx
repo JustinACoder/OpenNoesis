@@ -16,7 +16,7 @@ import {
   useDiscussionWebSocket,
 } from "@/lib/hooks/ws/discussionWebsocket";
 import { PagedMessageSchema } from "@/lib/models";
-import { useAuth } from "@/providers/authProvider";
+import { useAuthState } from "@/providers/authProvider";
 import { useParams } from "next/navigation";
 import { ChatMessageGroups } from "@/app/chat/[discussion_id]/components/ChatMessageGroups";
 
@@ -29,7 +29,7 @@ const ChatConversation = () => {
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const loadOnIntersectionTargetRef = useRef<HTMLDivElement>(null);
-  const { user } = useAuth();
+  const { user } = useAuthState();
   const currentUserId = user?.id;
 
   // We use a ref to prevent circular dependencies in useCallback

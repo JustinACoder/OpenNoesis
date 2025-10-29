@@ -32,7 +32,7 @@ import type {
 import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { useAuth } from "@/providers/authProvider";
+import { useAuthActions } from "@/providers/authProvider";
 import { GuestOnly } from "@/components/AuthRedirects";
 
 const formSchema = z.object({
@@ -46,7 +46,7 @@ const formSchema = z.object({
 });
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login } = useAuthActions();
   const searchParams = useSearchParams();
   const router = useRouter();
   const nextUrl = searchParams.get("next") || "/";

@@ -10,22 +10,25 @@ import { useDeleteAllauthClientV1AuthSession } from "@/lib/api/authentication-cu
 import { usePostAllauthClientV1AuthLogin } from "@/lib/api/authentication-account";
 import type { CurrentUserResponse } from "@/lib/models";
 
-// Define the shape of the context
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
-interface AuthContextType {
+type AuthState = {
   authStatus: AuthStatus;
   user: CurrentUserResponse | undefined;
   isLoading: boolean;
   error: unknown;
+};
+
+type AuthActions = {
   login: ReturnType<typeof usePostAllauthClientV1AuthLogin>;
   logout: ReturnType<typeof useDeleteAllauthClientV1AuthSession>;
   refetchUser: () => void;
   invalidateUser: () => Promise<void>;
-}
+};
 
-// Create the context
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Create the contexts
+const AuthStateContext = createContext<AuthState | undefined>(undefined);
+const AuthActionsContext = createContext<AuthActions | undefined>(undefined);
 
 // The provider component
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -78,35 +81,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
   }, [queryClient]);
 
-  const value: AuthContextType = useMemo(() => {
-    return {
-      authStatus,
-      user,
-      isLoading,
-      error,
+  const state = useMemo<AuthState>(
+    () => ({ authStatus, user, isLoading, error }),
+    [authStatus, user, isLoading, error],
+  );
+  const actions = useMemo<AuthActions>(
+    () => ({
       login: loginMutation,
       logout: logoutMutation,
       refetchUser: refetch,
       invalidateUser,
-    };
-  }, [
-    authStatus,
-    user,
-    isLoading,
-    error,
-    loginMutation,
-    logoutMutation,
-    refetch,
-    invalidateUser,
-  ]);
+    }),
+    [loginMutation, logoutMutation, refetch, invalidateUser],
+  );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthStateContext.Provider value={state}>
+      <AuthActionsContext.Provider value={actions}>
+        {children}
+      </AuthActionsContext.Provider>
+    </AuthStateContext.Provider>
+  );
 };
 
-export const useAuth = (): AuthContextType => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return ctx;
+export const useAuthState = () => {
+  const v = useContext(AuthStateContext);
+  if (!v) throw new Error("useAuthState must be used within AuthProvider");
+  return v;
+};
+
+export const useAuthActions = () => {
+  const v = useContext(AuthActionsContext);
+  if (!v) throw new Error("useAuthActions must be used within AuthProvider");
+  return v;
 };
