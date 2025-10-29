@@ -8,7 +8,7 @@ const UserStanceInlineIndicator = ({ userStance }: UserStanceInline) => {
   const getUserStanceText = () => {
     if (userStance === 1) return "Support";
     if (userStance === -1) return "Oppose";
-    return "Undecided";
+    return "No stance set";
   };
 
   return (
