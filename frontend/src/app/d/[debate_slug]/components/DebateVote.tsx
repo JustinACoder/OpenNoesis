@@ -7,6 +7,8 @@ import {
 import { useDebateApiVoteOnDebate } from "@/lib/api/debate";
 import { useState } from "react";
 import { VoteDirectionEnum } from "@/lib/models";
+import { useAuthState } from "@/providers/authProvider";
+import { useRouter } from "next/navigation";
 
 interface DebateVoteProps
   extends Omit<VoteIndicatorProps, "voteScore" | "userVote" | "onVote"> {
@@ -27,8 +29,19 @@ const DebateVote = ({
   const [optimisticUserVote, setOptimisticUserVote] =
     useState<VoteDirectionEnum>(initialUserVote || 0);
   const { mutateAsync: vote } = useDebateApiVoteOnDebate();
+  const { authStatus } = useAuthState();
+  const router = useRouter();
 
-  const voteHandler = (direction: 1 | -1 | 0) => {
+  const voteHandler = (direction: VoteDirectionEnum) => {
+    if (authStatus === "loading") {
+      // Do nothing while auth status is loading
+      return;
+    } else if (authStatus === "unauthenticated") {
+      // Redirect to login if not authenticated
+      router.push(`/login?next=/d/${debateSlug}`);
+      return;
+    }
+
     // Immediate optimistic UI update
     const currentVote = optimisticUserVote;
     const scoreDelta = direction - currentVote;
@@ -56,6 +69,7 @@ const DebateVote = ({
       voteScore={optimisticVoteScore}
       userVote={optimisticUserVote}
       onVote={voteHandler}
+      disabled={authStatus === "loading"}
     />
   );
 };

@@ -1,7 +1,12 @@
-import { MessageCircle, ArrowUp, ArrowDown } from "lucide-react";
-import { CommentSchema } from "@/lib/models";
+import { MessageCircle } from "lucide-react";
+import { CommentSchema, VoteDirectionEnum } from "@/lib/models";
 import { Box } from "@/components/ui/box";
 import { CommentForm } from "./CommentForm";
+import { VoteIndicator } from "@/components/ui/VoteIndicator";
+import { useAuthState } from "@/providers/authProvider";
+import { useRouter } from "next/navigation";
+import { useDebateApiVoteOnComment } from "@/lib/api/debate";
+import { useState } from "react";
 
 interface DebateCommentsProps {
   comments: CommentSchema[];
@@ -25,15 +30,38 @@ export const DebateComments = ({
 
       <div className="space-y-4">
         {comments.map((comment) => (
-          <CommentItem key={comment.id} comment={comment} />
+          <CommentItem
+            key={comment.id}
+            comment={comment}
+            debateSlug={debateSlug}
+          />
         ))}
       </div>
     </Box>
   );
 };
 
-const CommentItem = ({ comment }: { comment: CommentSchema }) => {
-  const { text, author, date_added, vote_score = 0 } = comment;
+const CommentItem = ({
+  comment,
+  debateSlug,
+}: {
+  comment: CommentSchema;
+  debateSlug: string;
+}) => {
+  const {
+    id,
+    text,
+    author,
+    date_added,
+    vote_score = 0,
+    user_vote = 0,
+  } = comment;
+  const [optimisticVoteScore, setOptimisticVoteScore] = useState(vote_score);
+  const [optimisticUserVote, setOptimisticUserVote] =
+    useState<VoteDirectionEnum>(user_vote || 0);
+  const { authStatus } = useAuthState();
+  const router = useRouter();
+  const { mutateAsync: vote } = useDebateApiVoteOnComment();
 
   const formattedDate = new Date(date_added).toLocaleDateString(undefined, {
     year: "numeric",
@@ -42,6 +70,37 @@ const CommentItem = ({ comment }: { comment: CommentSchema }) => {
     hour: "2-digit",
     minute: "2-digit",
   });
+
+  const voteHandler = (direction: VoteDirectionEnum) => {
+    if (authStatus === "loading") {
+      // Do nothing while auth status is loading
+      return;
+    } else if (authStatus === "unauthenticated") {
+      // Redirect to login if not authenticated
+      router.push(`/login?next=/d/${debateSlug}`);
+      return;
+    }
+
+    // Immediate optimistic UI update
+    const currentVote = optimisticUserVote;
+    const scoreDelta = direction - currentVote;
+
+    setOptimisticVoteScore((prev) => prev + scoreDelta);
+    setOptimisticUserVote(direction);
+
+    // Server update
+    vote({ debateSlug, commentId: id!, data: { direction } })
+      .then(() => {
+        console.log("Vote updated successfully");
+      })
+      .catch((err) => {
+        console.error("Vote update failed:", err);
+
+        // Rollback optimistic update on error
+        setOptimisticVoteScore((prev) => prev - scoreDelta);
+        setOptimisticUserVote(currentVote);
+      });
+  };
 
   return (
     <div className="border border-gray-700 rounded-lg p-4 bg-gray-800/50">
@@ -58,17 +117,13 @@ const CommentItem = ({ comment }: { comment: CommentSchema }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button className="p-1 text-gray-400 hover:text-green-400 transition-colors">
-            <ArrowUp className="w-4 h-4" />
-          </button>
-          <span className="text-sm text-gray-400 min-w-[2rem] text-center">
-            {vote_score}
-          </span>
-          <button className="p-1 text-gray-400 hover:text-red-400 transition-colors">
-            <ArrowDown className="w-4 h-4" />
-          </button>
-        </div>
+        <VoteIndicator
+          voteScore={optimisticVoteScore}
+          userVote={optimisticUserVote}
+          size={"md"}
+          onVote={voteHandler}
+          disabled={authStatus === "loading"}
+        />
       </div>
 
       <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
