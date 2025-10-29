@@ -1,5 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import WebSocketManager, { WebSocketMessage } from "./websocketManager";
+import { toast } from "sonner";
+import { useAuth } from "@/providers/authProvider";
 
 interface UseWebSocketOptions {
   stream?: string;
@@ -20,15 +22,18 @@ export function useWebSocket({
 }: UseWebSocketOptions) {
   const manager = useRef(WebSocketManager.getInstance());
   const cleanupFns = useRef<Array<() => void>>([]);
-
-  // New reactive status state
   const [connectionStatus, setConnectionStatus] = useState<
     "disconnected" | "connecting" | "connected" | "disconnecting"
   >(manager.current.getStatus());
-
   const [hasAttemptedConnection, setHasAttemptedConnection] = useState(false);
+  const { authStatus } = useAuth();
 
   useEffect(() => {
+    if (authStatus !== "authenticated") {
+      console.warn("WebSocket not connecting: user not authenticated");
+      return;
+    }
+
     // Register handlers
     if (onMessage) {
       if (stream) {
@@ -70,7 +75,11 @@ export function useWebSocket({
       ),
     );
     cleanupFns.current.push(
-      manager.current.subscribe("error", (err) => console.error(err)),
+      manager.current.subscribe("error", () =>
+        toast.error(
+          `Oops! There was an error when communicating with the server. If you are experiencing issues, please try refreshing the page.`,
+        ),
+      ),
     );
     cleanupFns.current.push(
       manager.current.subscribe("connecting", () => {
@@ -94,7 +103,15 @@ export function useWebSocket({
       cleanupFns.current.forEach((cleanup) => cleanup());
       cleanupFns.current = [];
     };
-  }, [stream, onMessage, onConnect, onDisconnect, onError, autoConnect]);
+  }, [
+    stream,
+    onMessage,
+    onConnect,
+    onDisconnect,
+    onError,
+    autoConnect,
+    authStatus,
+  ]);
 
   const connect = useCallback(() => {
     manager.current.connect();

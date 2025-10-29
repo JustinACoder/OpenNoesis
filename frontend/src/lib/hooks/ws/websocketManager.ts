@@ -19,7 +19,7 @@ class WebSocketManager {
   private eventSubscribers: Map<string, Set<EventHandler>> = new Map();
   private isConnecting: boolean = false;
   private reconnectAttempts: number = 0;
-  private maxReconnectAttempts: number = 5;
+  private maxReconnectAttempts: number = 3;
   private reconnectDelay: number = 1000;
 
   private constructor() {}
@@ -27,11 +27,14 @@ class WebSocketManager {
   static getInstance(): WebSocketManager {
     if (!WebSocketManager.instance) {
       WebSocketManager.instance = new WebSocketManager();
+      console.log("WebSocketManager instance created");
+    } else {
+      console.log("WebSocketManager instance reused");
     }
     return WebSocketManager.instance;
   }
 
-  connect(): void {
+  connect(ignoreReconnectTimeout: boolean = false): void {
     // If already connected, do nothing
     if (this.ws?.readyState === WebSocket.OPEN) {
       return;
@@ -42,6 +45,15 @@ class WebSocketManager {
       return;
     }
 
+    // If we are currently waiting to reconnect, we can ignore the current request to connect now
+    if (this.reconnectTimeout && !ignoreReconnectTimeout) {
+      console.log(
+        "WebSocket reconnect timeout active, waiting to reconnect...",
+      );
+      return;
+    }
+
+    console.log("WebSocket connecting...");
     this.isConnecting = true;
     this.emit("connecting");
     this.createConnection();
@@ -100,13 +112,19 @@ class WebSocketManager {
         console.error("WebSocket error:", error);
         this.isConnecting = false;
         this.emit("error", error);
-        this.ws?.close();
       };
 
-      this.ws.onclose = () => {
-        console.log("WebSocket disconnected");
+      this.ws.onclose = (closeEvent) => {
+        console.log("WebSocket disconnected: ", closeEvent);
         this.isConnecting = false;
         this.emit("disconnected");
+
+        if (closeEvent.wasClean) {
+          console.log("WebSocket closed cleanly");
+          return; // Do not attempt to reconnect on clean close
+        }
+
+        // It was an unexpected close, attempt to reconnect
         this.attemptReconnect();
       };
     } catch (error) {
@@ -122,8 +140,8 @@ class WebSocketManager {
       return;
     }
 
-    this.reconnectAttempts++;
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
+    this.reconnectAttempts++;
 
     console.log(
       `Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts})`,

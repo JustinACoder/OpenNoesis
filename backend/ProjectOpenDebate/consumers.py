@@ -80,7 +80,7 @@ class CustomBaseConsumer(EventRouterMixin, AsyncJsonWebsocketConsumer):
 
     async def connect(self):
         if not self.scope['user'].is_authenticated:
-            await self.close(reason='You are not authenticated')
+            await self.close() # Will show as error then close with 1006 on client side
             return
 
         await self.accept()
