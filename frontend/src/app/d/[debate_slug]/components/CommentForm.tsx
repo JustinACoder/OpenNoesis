@@ -3,21 +3,21 @@
 import React, { useState } from "react";
 import { AlertCircleIcon, Loader2, Send } from "lucide-react";
 import {
-  useDebateApiCreateComment,
-  getDebateApiGetDebateCommentsQueryKey,
-} from "@/lib/api/debate";
-import {
   CommentInputSchema,
-  CommentSchema,
-  PagedCommentSchema,
+  type CommentSchema,
+  type PagedCommentSchema,
 } from "@/lib/models";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
-import { useOptimisticMutation } from "@/lib/utils";
 import { useAuthState } from "@/providers/authProvider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
+import {
+  getDebateApiGetDebateCommentsQueryKey,
+  useDebateApiCreateComment,
+} from "@/lib/api/debate";
+import { InfiniteData, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 interface CommentFormProps {
   debateSlug: string;
@@ -25,32 +25,65 @@ interface CommentFormProps {
 
 export const CommentForm = ({ debateSlug }: CommentFormProps) => {
   const [content, setContent] = useState("");
-  // TODO: adapt logic with infinite query for comments pagination
-  const { mutate: createComment, isPending } = useOptimisticMutation<
-    PagedCommentSchema,
-    { debateSlug: string; data: CommentInputSchema },
-    CommentSchema
-  >(useDebateApiCreateComment, {
-    queryKey: getDebateApiGetDebateCommentsQueryKey(debateSlug),
-    updateFn: (p) => p, // We don't update the comment list optimistically here
-    shouldInvalidate: true, // We want to refetch the comment page after creating the new one
+  const queryClient = useQueryClient();
+  const { mutate: createComment, isPending } = useDebateApiCreateComment({
+    mutation: {
+      onSuccess: (newComment: CommentSchema) => {
+        // Update the infinite query cache by adding the new comment at the beginning
+        queryClient.setQueryData<InfiniteData<PagedCommentSchema>>(
+          getDebateApiGetDebateCommentsQueryKey(debateSlug),
+          (oldData) => {
+            if (!oldData) {
+              // If no data exists, create initial structure with the new comment
+              return {
+                pages: [
+                  {
+                    items: [newComment],
+                    count: 1,
+                    next_cursor: null,
+                    current_cursor: null,
+                  },
+                ],
+                pageParams: [undefined],
+              };
+            }
+
+            // Add the new comment to the beginning of the first page
+            const firstPage = oldData.pages[0];
+            return {
+              ...oldData,
+              pages: [
+                {
+                  ...firstPage,
+                  items: [newComment, ...firstPage.items],
+                  count: firstPage.count + 1,
+                },
+                ...oldData.pages.slice(1),
+              ],
+            };
+          },
+        );
+
+        // Clear the textarea
+        setContent("");
+      },
+      onError: () => {
+        toast.error("Failed to post comment. Please try again.");
+      },
+    },
   });
+
   const { authStatus } = useAuthState();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim() || isPending) return;
 
-    try {
-      const commentData: CommentInputSchema = {
-        text: content.trim(),
-      };
-      createComment({ debateSlug, data: commentData });
-      setContent("");
-    } catch (error) {
-      console.error("Failed to create comment:", error);
-      toast.error("Failed to post comment. Please try again.");
-    }
+    const commentData: CommentInputSchema = {
+      text: content.trim(),
+    };
+
+    createComment({ debateSlug, data: commentData });
   };
 
   return authStatus === "unauthenticated" ? (

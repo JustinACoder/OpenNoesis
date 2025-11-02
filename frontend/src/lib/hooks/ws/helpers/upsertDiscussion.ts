@@ -8,7 +8,6 @@ import {
   MessageSchema,
   PagedDiscussionSchema,
 } from "@/lib/models";
-import { useAuth } from "@/providers/authProvider";
 
 type DiscussionsInfinite = InfiniteData<PagedDiscussionSchema>;
 

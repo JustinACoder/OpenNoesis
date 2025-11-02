@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
 
 from ProjectOpenDebate.auth import optional_django_auth
+from ProjectOpenDebate.common.utils import CursorPagination
 from .models import Debate
 from .schemas import (
     DebateSchema,
@@ -140,7 +141,7 @@ def set_stance(request, debate_slug: str, stance_data: StanceInputSchema):
 
 
 @router.get("/slug/{slug:debate_slug}/comments", response=List[CommentSchema])
-@paginate(PageNumberPagination, page_size=10)
+@paginate(CursorPagination, cursor_type="date+id", date_field="date_added", ascending=False)
 def get_debate_comments(request, debate_slug: str):
     """Get paginated comments for a debate."""
     user = request.auth

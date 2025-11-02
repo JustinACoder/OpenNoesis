@@ -1,22 +1,59 @@
-import { MessageCircle } from "lucide-react";
-import { CommentSchema, VoteDirectionEnum } from "@/lib/models";
+import { MessageCircle, Loader2, RefreshCw } from "lucide-react";
+import {
+  CommentSchema,
+  type PagedCommentSchema,
+  VoteDirectionEnum,
+} from "@/lib/models";
 import { Box } from "@/components/ui/box";
 import { CommentForm } from "./CommentForm";
 import { VoteIndicator } from "@/components/ui/VoteIndicator";
 import { useAuthState } from "@/providers/authProvider";
 import { useRouter } from "next/navigation";
-import { useDebateApiVoteOnComment } from "@/lib/api/debate";
+import {
+  debateApiGetDebateComments,
+  getDebateApiGetDebateCommentsQueryKey,
+  useDebateApiVoteOnComment,
+} from "@/lib/api/debate";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { useInfiniteQuery } from "@tanstack/react-query";
 
 interface DebateCommentsProps {
-  comments: CommentSchema[];
   debateSlug: string;
 }
 
-export const DebateComments = ({
-  comments,
-  debateSlug,
-}: DebateCommentsProps) => {
+export const DebateComments = ({ debateSlug }: DebateCommentsProps) => {
+  const {
+    data,
+    isLoading,
+    isError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+    isRefetching,
+    dataUpdatedAt,
+  } = useInfiniteQuery<PagedCommentSchema, Error>({
+    queryKey: getDebateApiGetDebateCommentsQueryKey(debateSlug),
+    queryFn: ({ pageParam }) => {
+      const cursor = pageParam as string | null | undefined;
+      return debateApiGetDebateComments(debateSlug, {
+        cursor: cursor,
+        limit: 20,
+      });
+    },
+    initialPageParam: null,
+    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
+    enabled: !!debateSlug,
+  });
+
+  // Flatten all pages into a single array of comments
+  const comments = data?.pages.flatMap((page) => page.items) ?? [];
+
+  const handleRefresh = async () => {
+    await refetch();
+  };
+
   return (
     <Box className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -24,19 +61,78 @@ export const DebateComments = ({
           <MessageCircle className="w-5 h-5" />
           Comments
         </h2>
+        <div className="flex items-center gap-2">
+          {dataUpdatedAt && !isLoading ? (
+            <span className="text-xs text-gray-500">
+              Updated at {new Date(dataUpdatedAt).toLocaleTimeString()}
+            </span>
+          ) : null}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefetching || isLoading}
+            className="text-gray-400 hover:text-white"
+          >
+            <RefreshCw
+              className={`w-4 h-4 ${isRefetching ? "animate-spin" : ""}`}
+            />
+          </Button>
+        </div>
       </div>
 
       <CommentForm debateSlug={debateSlug} />
 
-      <div className="space-y-4">
-        {comments.map((comment) => (
-          <CommentItem
-            key={comment.id}
-            comment={comment}
-            debateSlug={debateSlug}
-          />
-        ))}
-      </div>
+      {isLoading && (
+        <div className="flex justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+        </div>
+      )}
+
+      {isError && (
+        <div className="text-center text-gray-400 py-8">
+          Failed to load comments. Please try again.
+        </div>
+      )}
+
+      {!isLoading && !isError && (
+        <>
+          <div className="space-y-4">
+            {comments.length === 0 ? (
+              <div className="text-center text-gray-400 py-8">
+                No comments yet. Be the first to share your thoughts!
+              </div>
+            ) : (
+              comments.map((comment) => (
+                <CommentItem
+                  key={comment.id}
+                  comment={comment}
+                  debateSlug={debateSlug}
+                />
+              ))
+            )}
+          </div>
+
+          {hasNextPage && (
+            <div className="flex justify-center pt-4">
+              <Button
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                variant="outline"
+              >
+                {isFetchingNextPage ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  "Load More Comments"
+                )}
+              </Button>
+            </div>
+          )}
+        </>
+      )}
     </Box>
   );
 };
@@ -76,7 +172,7 @@ const CommentItem = ({
       // Do nothing while auth status is loading
       return;
     } else if (authStatus === "unauthenticated") {
-      // Redirect to login if not authenticated
+      // Redirect to log in if not authenticated
       router.push(`/login?next=/d/${debateSlug}`);
       return;
     }

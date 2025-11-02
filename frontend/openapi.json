@@ -990,11 +990,28 @@
           },
           {
             "in": "query",
-            "name": "page",
+            "name": "cursor",
             "schema": {
-              "default": 1,
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "maximum": 75,
               "minimum": 1,
-              "title": "Page",
+              "title": "Limit",
               "type": "integer"
             },
             "required": false
@@ -3590,6 +3607,33 @@
         }
       }
     },
+    "/_allauth/app/v1/tokens/refresh": {
+      "get": {
+        "tags": [
+          "Tokens"
+        ],
+        "summary": "Refresh the access token\n",
+        "description": "Used to retrieve a new access token. Depending on `settings.HEADLESS_JWT_ROTATE_REFRESH_TOKEN`,\na new refresh token is returned as well.\n",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/RefreshToken"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/RefreshToken"
+          },
+          "400": {
+            "description": "The refresh token is invalid or expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/_allauth/{client}/v1/account/password/change": {
       "post": {
         "tags": [
@@ -4505,6 +4549,28 @@
             },
             "title": "Items",
             "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "current_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Cursor"
           },
           "count": {
             "title": "Count",
@@ -5768,6 +5834,16 @@
         "type": "string",
         "description": "The phone number.\n",
         "example": "+314159265359"
+      },
+      "AccessToken": {
+        "type": "string",
+        "description": "The access token.\n",
+        "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW"
+      },
+      "RefreshToken": {
+        "type": "string",
+        "description": "The refresh token.\n",
+        "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.QV30"
       },
       "Login": {
         "allOf": [
@@ -7098,6 +7174,23 @@
           }
         }
       },
+      "RefreshToken": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "refresh_token": {
+                  "$ref": "#/components/schemas/RefreshToken"
+                }
+              },
+              "required": [
+                "refresh_token"
+              ]
+            }
+          }
+        }
+      },
       "RequestPassword": {
         "description": "Request password.",
         "required": true,
@@ -7764,6 +7857,39 @@
               "required": [
                 "status",
                 "data"
+              ]
+            }
+          }
+        }
+      },
+      "RefreshToken": {
+        "description": "A new access token (and optionally new refresh token).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "$ref": "#/components/schemas/StatusOK"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "access_token": {
+                      "$ref": "#/components/schemas/AccessToken"
+                    },
+                    "refresh_token": {
+                      "$ref": "#/components/schemas/RefreshToken"
+                    }
+                  },
+                  "required": [
+                    "access_token"
+                  ]
+                }
+              },
+              "required": [
+                "data",
+                "status"
               ]
             }
           }

@@ -63,7 +63,7 @@ class CursorPagination(PaginationBase):
         count: int
 
     def paginate_queryset(self, queryset, pagination: Input, **params):
-        cursor = None if pagination.cursor.strip().lower() in ("undefined", "null", "") else pagination.cursor.strip()
+        cursor = None if not pagination.cursor or pagination.cursor.strip().lower() in ("undefined", "null", "") else pagination.cursor.strip()
         page_size = min(pagination.limit, ninja_settings.PAGINATION_MAX_LIMIT)
 
         total = self._items_count(queryset)

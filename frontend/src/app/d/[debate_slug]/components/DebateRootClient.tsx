@@ -17,7 +17,6 @@ import { DebateComments } from "./DebateComments";
 import { RelatedDebates } from "./RelatedDebates";
 import {
   useDebateApiGetDebate,
-  useDebateApiGetDebateComments,
   useDebateApiGetDebateSuggestions,
 } from "@/lib/api/debate";
 
@@ -28,7 +27,6 @@ interface DebateRootClientProps {
 const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
   // Retrieve the debate data from the cache
   const { data: debate } = useDebateApiGetDebate(debateSlug);
-  const { data: comments } = useDebateApiGetDebateComments(debateSlug);
   const { data: suggestions } = useDebateApiGetDebateSuggestions(debateSlug);
 
   if (!debate) {
@@ -95,16 +93,7 @@ const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
             <JoinTheDebate debate={debate} />
 
             {/* Comments Section */}
-            {comments ? (
-              <DebateComments
-                comments={comments.items}
-                debateSlug={debateSlug} // Pass slug for comment submission
-              />
-            ) : (
-              <div className="text-gray-400">
-                A problem occurred while loading the comments.
-              </div>
-            )}
+            <DebateComments debateSlug={debateSlug} />
           </div>
 
           {/* Sidebar */}

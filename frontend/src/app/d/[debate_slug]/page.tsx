@@ -1,9 +1,7 @@
 import {
   debateApiGetDebate,
   debateApiGetDebateSuggestions,
-  debateApiGetDebateComments,
   getDebateApiGetDebateQueryKey,
-  getDebateApiGetDebateCommentsQueryKey,
   getDebateApiGetDebateSuggestionsQueryKey,
 } from "@/lib/api/debate";
 
@@ -23,22 +21,16 @@ const DebateDetailPage = async ({ params }: DebateDetailPageProps) => {
   const { debate_slug } = await params;
   const queryClient = new QueryClient();
 
-  const [debate, suggestions, comments] = await Promise.all([
+  const [debate, suggestions] = await Promise.all([
     debateApiGetDebate(debate_slug),
     debateApiGetDebateSuggestions(debate_slug),
-    debateApiGetDebateComments(debate_slug),
   ]);
 
   // Populate the cache with server data
-  // This is necessary to ensure the data is available for optimistic updates (e.g., voting)
   queryClient.setQueryData(getDebateApiGetDebateQueryKey(debate_slug), debate);
   queryClient.setQueryData(
     getDebateApiGetDebateSuggestionsQueryKey(debate_slug),
     suggestions,
-  );
-  queryClient.setQueryData(
-    getDebateApiGetDebateCommentsQueryKey(debate_slug),
-    comments,
   );
 
   return (
