@@ -3,10 +3,9 @@ from ProjectOpenDebate.common.base_tests import BaseTestCase
 from django.contrib.auth import get_user_model
 
 from ProjectOpenDebate.common.utils import reverse_lazy_api
-from debate.models import Debate, Comment, Stance
+from debate.models import Debate, Comment, Stance, Vote
 from debate.schemas import VoteDirectionEnum, StanceDirectionEnum, CommentInputSchema, VoteInputSchema, \
     StanceInputSchema
-from voting.models import Vote
 
 from pairing.models import PairingRequest
 
@@ -345,6 +344,6 @@ class StanceEndpointsTest(DebateApiTestBase):
             PairingRequest.objects.filter(
                 user=self.user1,
                 debate=self.debate1,
-                is_completed=False
+                is_matched=False
             ).exists()
         )

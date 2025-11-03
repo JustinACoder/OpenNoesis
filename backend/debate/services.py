@@ -2,9 +2,9 @@ from django.contrib.auth import get_user_model
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 
-from voting.models import Vote
 from pairing.models import PairingRequest
-from .models import Debate, Comment, DebateQuerySet, CommentQuerySet
+from .models import Debate, Comment, Vote
+from .querysets import DebateQuerySet, CommentQuerySet
 from .schemas import VoteDirectionEnum, StanceDirectionEnum
 
 User = get_user_model()
@@ -82,7 +82,7 @@ class StanceService:
         PairingRequest.objects.filter(
             user=user,
             debate=debate,
-            is_completed=False
+            is_matched=False
         ).delete()
 
 class VoteService:

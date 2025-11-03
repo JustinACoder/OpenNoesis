@@ -39,7 +39,6 @@ INSTALLED_APPS = [
     'debug_toolbar',
     'django_celery_results',
     'django_celery_beat',
-    'voting',
     'debate.apps.DebateConfig',
     'users.apps.UsersConfig',
     'discussion.apps.DiscussionConfig',

@@ -147,7 +147,7 @@ export const customFetch = async <T>(
     }
   }
 
-  const jsonContent = await res.json();
+  const jsonContent = await res.json().catch(() => undefined);
   if (!res.ok) {
     throw new CustomFetchError(res.status, jsonContent, res.statusText);
   }

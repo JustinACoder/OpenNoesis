@@ -41,7 +41,7 @@ class DebateFullSchema(ModelSchema):
 
     # Votes
     vote_score: int = 0
-    num_votes: int = 0
+    vote_count: int = 0
     user_vote: VoteDirectionEnum = VoteDirectionEnum.UNSET
 
     # Stance
@@ -80,7 +80,7 @@ class CommentSchema(ModelSchema):
 
     # Votes
     vote_score: int = 0
-    num_votes: int = 0
+    vote_count: int = 0
     user_vote: VoteDirectionEnum = VoteDirectionEnum.UNSET
 
     class Config:

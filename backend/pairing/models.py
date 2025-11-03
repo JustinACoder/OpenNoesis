@@ -5,7 +5,7 @@ from channels.layers import get_channel_layer
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 
-from debate.models import Debate, Stance
+from debate.models import Stance
 from django.db import models
 from datetime import datetime, timedelta
 from django.conf import settings
@@ -45,7 +45,7 @@ class PairingRequest(models.Model):
         PAIRED = 'paired'
 
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
-    debate = models.ForeignKey(Debate, on_delete=models.CASCADE)
+    debate = models.ForeignKey("debate.Debate", on_delete=models.CASCADE)
     desired_stance = models.IntegerField(choices=[(1, 'FOR'), (-1, 'AGAINST')])
     status = models.CharField(max_length=25, choices=Status.choices)
     last_keepalive_ping = models.DateTimeField(auto_now_add=True)  # doesn't update on save, must be updated manually

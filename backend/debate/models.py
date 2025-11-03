@@ -1,24 +1,115 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.fields import GenericRelation
+from django.contrib.contenttypes.fields import GenericRelation, GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.postgres.search import SearchVector, SearchVectorField, SearchQuery, SearchRank
+from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.db import models
-from django.db.models import Count, Case, When, Q, OuterRef, Subquery, Sum, Exists, IntegerField
 from django.template.defaultfilters import slugify
-from django.db.models import F, Value, StdDev
-from django.db.models.functions import Coalesce, Log, Greatest, Now, Cast
-from django.contrib.postgres.indexes import GinIndex
-from voting.models import Vote
-from datetime import timedelta
-from debate.enums import StanceDirectionEnum
+from django.contrib.postgres.indexes import GinIndex, BTreeIndex
+from django.utils.timezone import now
 
 User = get_user_model()
 
 
-class DebateManager(models.Manager):
-    def get_queryset(self):
-        return DebateQuerySet(self.model, using=self._db)
+class Stance(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    debate = models.ForeignKey("Debate", on_delete=models.CASCADE)
+    stance = models.SmallIntegerField(choices=[(1, 'FOR'), (-1, 'AGAINST')])
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'debate')  # A user can only have one stance on a debate
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            # Covers the per-debate aggregate with a filter on stance:
+            BTreeIndex(
+                fields=['debate', 'stance'],
+                name='stance_debate_stance_idx',
+                include=['id'],  # lets COUNT(id) use index-only in many cases
+            ),
+        ]
+
+    def __str__(self):
+        return f"Stance of {self.user} on \"{self.debate.title}\""
+
+
+class VoteManager(models.Manager):
+    def record_vote(self, obj, user, vote):
+        """
+        Record a user's vote on a given object. Only allows a given user
+        to vote once, though that vote may be changed.
+
+        A zero vote indicates that any existing vote should be removed.
+        """
+        if vote not in (+1, 0, -1):
+            raise ValueError("Invalid vote (must be +1/0/-1)")
+        ctype = ContentType.objects.get_for_model(obj)
+        try:
+            v = self.get(user=user, content_type=ctype, object_id=obj._get_pk_val())
+            if vote == 0:
+                v.delete()
+            else:
+                v.vote = vote
+                v.save()
+        except models.ObjectDoesNotExist:
+            # that must mean that the vote doesnt yet exist
+            if vote == 0:
+                return  # nothing to do, since no vote exists
+            self.create(
+                user=user,
+                content_type=ctype,
+                object_id=obj._get_pk_val(),
+                vote=vote,
+            )
+
+
+SCORES = (
+    (+1, "+1"),
+    (-1, "-1"),
+)
+
+
+class Vote(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveBigIntegerField()
+    object = GenericForeignKey("content_type", "object_id")
+    vote = models.SmallIntegerField(choices=SCORES)
+    time_stamp = models.DateTimeField(editable=False, default=now)
+
+    objects = VoteManager()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['content_type', 'object_id', 'user'],
+                name='unique_user_vote_per_object',
+            ),
+        ]
+        indexes = [
+            BTreeIndex(
+                fields=['content_type', 'object_id'],
+                name='votes_ct_obj_idx',
+                include=['vote', 'id'],
+            ),
+            BTreeIndex(
+                fields=['content_type', 'object_id', 'user'],
+                name='votes_ct_obj_user_idx',
+                include=['vote', 'id'],
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.user}: {self.vote} on {self.object}"
+
+    def is_upvote(self):
+        return self.vote == 1
+
+    def is_downvote(self):
+        return self.vote == -1
+
+
+from debate.managers import DebateManager, CommentManager
 
 
 class Debate(models.Model):
@@ -90,11 +181,6 @@ class Debate(models.Model):
         return f"\"{self.title}\" by {self.author}"
 
 
-class CommentManager(models.Manager):
-    def get_queryset(self):
-        return CommentQuerySet(self.model, using=self._db)
-
-
 class Comment(models.Model):
     debate = models.ForeignKey(Debate, on_delete=models.CASCADE)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -107,184 +193,3 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"Comment by {self.author} on \"{self.debate.title}\""
-
-
-class Stance(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    debate = models.ForeignKey(Debate, on_delete=models.CASCADE)
-    stance = models.IntegerField(choices=[(1, 'FOR'), (-1, 'AGAINST')])
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ('user', 'debate')  # A user can only have one stance on a debate
-        indexes = [
-            models.Index(fields=['user', '-created_at']),
-            models.Index(fields=['user', 'debate'])
-        ]
-
-    def __str__(self):
-        return f"Stance of {self.user} on \"{self.debate.title}\""
-
-
-# Must be imported after the Debate model to avoid circular imports
-from pairing.models import PairingRequest
-
-
-class DebateQuerySet(models.QuerySet):
-    def with_votes(self, user: User):
-        queryset = self.annotate(
-            vote_score=Coalesce(Sum(F('vote__vote')), 0),
-            vote_count=Count('vote')
-        )
-
-        # If the user is authenticated, add the user's vote to the queryset
-        # Otherwise, set the value to null
-        if user.is_authenticated:
-            debate_content_type = ContentType.objects.get_for_model(Debate)
-            queryset = queryset.annotate(
-                user_vote=Coalesce(
-                    Subquery(
-                        Vote.objects.filter(
-                            object_id=Cast(OuterRef('pk'), output_field=models.TextField()),
-                            user=user,
-                            content_type=debate_content_type
-                        ).values('vote')[:1]
-                    ),
-                    Value(0)
-                )
-            )
-        else:
-            queryset = queryset.annotate(user_vote=Value(0))
-
-        return queryset
-
-    def with_stance(self, user: User):
-        # TODO: We use distinct for simplicity but subqueries with indees could be more scalable
-        # We have to use distinct=True because joining both votes and stances caused each stance row to be duplicated for every matching vote, inflating the COUNT results.
-        queryset = self.annotate(
-            num_for=Count(
-                'stance',
-                filter=Q(stance__stance=StanceDirectionEnum.FOR.value),
-                distinct=True,
-            ),
-            num_against=Count(
-                'stance',
-                filter=Q(stance__stance=StanceDirectionEnum.AGAINST.value),
-                distinct=True,
-            ),
-        )
-
-        if user.is_anonymous:
-            return queryset.annotate(user_stance=Value(0))
-        else:
-            return queryset.annotate(
-                user_stance=Coalesce(
-                    Subquery(
-                        Stance.objects.filter(debate=OuterRef('pk'), user=user).values('stance')[:1]
-                    ),
-                    Value(0, output_field=IntegerField())
-                )
-            )
-
-    def with_user_requests(self, user: User):
-        if user.is_anonymous:
-            return self.annotate(
-                has_requested_for=Value(False, output_field=models.BooleanField()),
-                has_requested_against=Value(False, output_field=models.BooleanField()),
-            )
-        else:
-            subquery_user_requests = PairingRequest.objects.filter(
-                debate=OuterRef('pk'),
-                user=user,
-                status=PairingRequest.Status.PASSIVE
-            )
-
-            return self.annotate(
-                has_requested_for=Exists(subquery_user_requests.filter(desired_stance=1)),
-                has_requested_against=Exists(subquery_user_requests.filter(desired_stance=-1)),
-            )
-
-    def get_popular(self):
-        return self.annotate(_ord_num_votes=Count('vote')).order_by('-_ord_num_votes')
-
-    def get_recent(self):
-        return self.order_by('-date')
-
-    def get_trending(self):
-        """
-        We will keep it simple for now and order by the ratio of votes between now and the maximum between -48 hours
-        and the debate's creation date. Then, we multiply by the log2 of the number of votes to give more weight to debates
-        with more votes.
-        """
-        # Get the maximum between -48 hours and the debate's creation date
-        past_date = Greatest(F('date'), Now() - timedelta(hours=48))
-
-        # Get the number of votes between the past date and now
-        num_votes_since = Count('vote', filter=Q(vote__time_stamp__gte=past_date))
-
-        # Number of votes in total
-        num_votes_total = Count('vote')
-
-        # Calculate the percentage of votes in the period (+1 to avoid division by zero)
-        percentage_votes_in_period = num_votes_since / (num_votes_total + 1)
-
-        # Multiply by the log2 of the number of votes (+1 to avoid log(0))
-        score = percentage_votes_in_period * Log(2, num_votes_total + 1)
-
-        return self.annotate(_ord_score=score).order_by('-_ord_score')
-
-    def get_controversial(self):
-        """
-        To determine the controversy of a debate, we will calculate the standard deviation of the stances.
-        The lower the standard deviation, the more controversial the debate is since it means that the stances are
-        more evenly distributed.
-        """
-        stddev = StdDev(Cast('stance__stance', models.IntegerField()))
-
-        return self.annotate(_ord_stance_stddev=stddev).order_by('_ord_stance_stddev')
-
-    def get_random(self):
-        return self.order_by('?')
-
-    def search(self, query: str):
-        search_vector = (
-                SearchVector('title', weight='A') +
-                SearchVector('description', weight='C')
-        )
-        search_query = SearchQuery(query)
-
-        return self.annotate(
-            _ord_rank=SearchRank(search_vector, search_query)
-        ).filter(_ord_rank__gt=0.1).order_by('-_ord_rank')
-
-
-class CommentQuerySet(models.QuerySet):
-    def with_votes(self, user: User):
-        queryset = self.annotate(
-            vote_score=Coalesce(Sum(F('vote__vote')), 0),
-            vote_count=Count('vote')
-        )
-
-        # If the user is authenticated, add the user's vote to the queryset
-        # Otherwise, set the value to null
-        if user.is_authenticated:
-            comment_content_type = ContentType.objects.get_for_model(Comment)
-            queryset = queryset.annotate(
-                user_vote=Coalesce(
-                    Subquery(
-                        Vote.objects.filter(
-                            content_type=comment_content_type,
-                            object_id=Cast(OuterRef('pk'), output_field=models.TextField()),
-                            user=user
-                        ).values('vote')[:1]
-                    ),
-                    Value(0)
-                )
-            )
-        else:
-            queryset = queryset.annotate(user_vote=Value(0))
-
-        return queryset
-
-    def get_popular(self):
-        return self.annotate(_ord_num_votes=Count('vote')).order_by('-_ord_num_votes')
