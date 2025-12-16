@@ -27,8 +27,9 @@ import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { usePostAllauthClientV1AccountPasswordChange } from "@/lib/api/account-password";
-import type { ErrorResponse, AuthenticationResponse } from "@/lib/models";
 import { AuthRequired } from "@/components/AuthRedirects";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 const formSchema = z
   .object({
@@ -47,9 +48,10 @@ const formSchema = z
 
 export default function ChangePasswordPage() {
   const [errorMessages, setErrors] = useState<string[]>([]);
+  const router = useRouter();
 
   const {
-    mutateAsync: changePassword,
+    mutate: changePassword,
     isPending,
     isSuccess,
   } = usePostAllauthClientV1AccountPasswordChange();
@@ -66,38 +68,44 @@ export default function ChangePasswordPage() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     setErrors([]);
 
-    changePassword({
-      client: "browser",
-      data: {
-        current_password: values.currentPassword,
-        new_password: values.newPassword,
+    changePassword(
+      {
+        client: "browser",
+        data: {
+          current_password: values.currentPassword,
+          new_password: values.newPassword,
+        },
       },
-    })
-      .then(() => {
-        console.log("Password change successful");
-        form.reset(); // Reset the form on success
-      })
-      .catch((error: ErrorResponse | AuthenticationResponse) => {
-        const status = error.status;
+      {
+        onError: (error) => {
+          const status = error.status;
 
-        if (status === 400) {
-          const errorResponse = error as ErrorResponse;
-          const extractedErrorMessages = errorResponse.errors?.map(
-            (e) => e.message,
-          );
-          setErrors(
-            extractedErrorMessages || [
-              "Invalid request. Please check your input.",
-            ],
-          );
-        } else if (status === 401) {
-          setErrors(["You are not authorized to perform this action."]);
-        } else {
-          setErrors(["An unexpected error occurred. Please try again later."]);
-        }
-
-        console.error("Password change failed:", error);
-      });
+          if (status === 400) {
+            const extractedErrorMessages = error.errors?.map((e) => e.message);
+            setErrors(
+              extractedErrorMessages || [
+                "Invalid request. Please check your input.",
+              ],
+            );
+          } else if (status === 401) {
+            // AuthenticationResponse, in this case, 401 means the user is not logged in or session expired
+            // Technically, it could also be because email isnt verified, but in that case, we just redirect to login anyway
+            toast.error(
+              "Your are not logged in or session has expired. Please log in again.",
+            );
+            router.push("/login");
+          } else {
+            setErrors([
+              "An unexpected error occurred. Please try again later.",
+            ]);
+          }
+        },
+        onSuccess: () => {
+          console.log("Password change successful");
+          form.reset(); // Reset the form on success
+        },
+      },
+    );
   }
 
   if (isSuccess) {

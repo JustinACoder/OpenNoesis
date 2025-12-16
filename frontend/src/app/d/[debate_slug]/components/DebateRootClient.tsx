@@ -27,7 +27,20 @@ interface DebateRootClientProps {
 const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
   // Retrieve the debate data from the cache
   const { data: debate } = useDebateApiGetDebate(debateSlug);
-  const { data: suggestions } = useDebateApiGetDebateSuggestions(debateSlug);
+  const { data: suggestions } = useDebateApiGetDebateSuggestions(
+    debateSlug,
+    undefined,
+    {
+      query: {
+        staleTime: Infinity,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        refetchOnMount: false,
+        refetchInterval: false,
+        gcTime: 1000 * 60 * 60, // 1 hour
+      },
+    },
+  );
 
   if (!debate) {
     // Since we are hydrating with server data, this should only happen if the data is not available for some reason

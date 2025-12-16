@@ -1,5 +1,3 @@
-import CustomFetchError from "@/lib/customFetchError";
-
 const isServer = typeof window === "undefined";
 
 async function getServerCookieStore() {
@@ -149,9 +147,18 @@ export const customFetch = async <T>(
 
   const jsonContent = await res.json().catch(() => undefined);
   if (!res.ok) {
-    throw new CustomFetchError(res.status, jsonContent, res.statusText);
+    //throw new CustomFetchError(res.status, jsonContent, res.statusText);
+    throw jsonContent; // Throw the JSON error response directly
   }
 
   // Return only the JSON body
   return jsonContent as T;
 };
+
+// export type ErrorType<Error> =
+//   | ErrorResponse
+//   | UnauthenticatedResponse
+//   | ForbiddenResponse
+//   | ConflictResponse
+//   | SessionGoneResponse
+//   | TooManyRequestsResponse;

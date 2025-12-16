@@ -27,14 +27,8 @@ import { GuestOnly } from "@/components/AuthRedirects";
 import { usePostAllauthClientV1AuthSignup } from "@/lib/api/authentication-account";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import {
-  AuthenticationResponse,
-  ConflictResponse,
-  ErrorResponse,
-  ForbiddenResponse,
-} from "@/lib/models";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const formSchema = z
   .object({
@@ -58,6 +52,9 @@ const formSchema = z
   });
 
 export default function SignUpPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const nextUrl = searchParams.get("next") || "/";
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -68,34 +65,24 @@ export default function SignUpPage() {
       terms: false,
     },
   });
-  const { mutateAsync: signup, isPending } = usePostAllauthClientV1AuthSignup();
+  const { mutate: signup, isPending } = usePostAllauthClientV1AuthSignup();
   const [errorMessages, setErrors] = useState<string[]>([]);
-  const router = useRouter();
 
   const [hasSignedUp, setHasSignedUp] = useState(false);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     setErrors([]);
-    signup({
-      client: "browser",
-      data: {
-        username: values.username,
-        email: values.email,
-        password: values.password,
+    signup(
+      {
+        client: "browser",
+        data: {
+          username: values.username,
+          email: values.email,
+          password: values.password,
+        },
       },
-    })
-      .then(() => {
-        setHasSignedUp(true);
-        router.push("/verify-email");
-      })
-      .catch(
-        (
-          err:
-            | ErrorResponse
-            | AuthenticationResponse
-            | ForbiddenResponse
-            | ConflictResponse,
-        ) => {
+      {
+        onError: (err) => {
           if (err.status === 400) {
             setErrors(
               err.errors?.map((error) => error.message) || [
@@ -103,7 +90,18 @@ export default function SignUpPage() {
               ],
             );
           } else if (err.status === 401) {
-            setErrors(["Not authenticated error. Please try again later."]);
+            // AuthenticationResponse, this can happen if we have successfully signed up but need another step
+            // In this case, it should always be about pending email verification
+            // TODO: if we ever implement other flows (like MFA), handle them here as well
+            const doesPendingEmailVerifExists = err.data.flows?.some(
+              (f) => f.id === "verify_email" && f.is_pending === true,
+            );
+            if (doesPendingEmailVerifExists) {
+              router.push("/verify-email");
+            } else {
+              setErrors(["An unexpected authentication error occurred."]);
+              console.error("Signup failed:", err);
+            }
           } else if (err.status === 403) {
             setErrors([
               "Signup is closed at the moment. Please try again later.",
@@ -117,10 +115,13 @@ export default function SignUpPage() {
               "An unexpected error occurred. Please try again later.",
             ]);
           }
-
-          console.error("Signup error:", err);
         },
-      );
+        onSuccess: () => {
+          setHasSignedUp(true);
+          router.push(nextUrl);
+        },
+      },
+    );
   }
 
   return (

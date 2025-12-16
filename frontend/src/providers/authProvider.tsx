@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useMemo } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { QueryClient, useQueryClient } from "@tanstack/react-query";
 import {
   useProjectOpenDebateApiGetCurrentUserObject,
   getProjectOpenDebateApiGetCurrentUserObjectQueryKey,
@@ -19,16 +19,29 @@ type AuthState = {
   error: unknown;
 };
 
-type AuthActions = {
-  login: ReturnType<typeof usePostAllauthClientV1AuthLogin>;
-  logout: ReturnType<typeof useDeleteAllauthClientV1AuthSession>;
-  refetchUser: () => void;
-  invalidateUser: () => Promise<void>;
-};
+type AuthActions = ReturnType<typeof useLoginLogoutActions>;
 
 // Create the contexts
 const AuthStateContext = createContext<AuthState | undefined>(undefined);
 const AuthActionsContext = createContext<AuthActions | undefined>(undefined);
+
+const useLoginLogoutActions = (queryClient: QueryClient) => {
+  const loginMutation = usePostAllauthClientV1AuthLogin();
+
+  const logoutMutation = useDeleteAllauthClientV1AuthSession();
+
+  const invalidateUser = useCallback(async () => {
+    await queryClient.invalidateQueries({
+      queryKey: getProjectOpenDebateApiGetCurrentUserObjectQueryKey(),
+    });
+  }, [queryClient]);
+
+  return {
+    login: loginMutation,
+    logout: logoutMutation,
+    invalidateUser,
+  };
+};
 
 // The provider component
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -39,7 +52,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     data: user,
     isLoading,
     error,
-    refetch,
   } = useProjectOpenDebateApiGetCurrentUserObject({
     query: {
       staleTime: 1000 * 60 * 5, // 5 minutes
@@ -55,44 +67,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return "unauthenticated";
   }, [isLoading, error, user]);
 
-  const loginMutation = usePostAllauthClientV1AuthLogin({
-    mutation: {
-      onSuccess: async (data) => {
-        console.log("Login successful:", data);
-        await refetch();
-      },
-    },
-  });
-
-  const logoutMutation = useDeleteAllauthClientV1AuthSession({
-    mutation: {
-      onError: async (error) => {
-        // Logout returns 401 on success as the session is deleted
-        // It's a weird pattern, but anyway, we handle it here by refetching the user
-        console.log("Logout successful:", error);
-        await refetch();
-      },
-    },
-  });
-
-  const invalidateUser = useCallback(async () => {
-    await queryClient.invalidateQueries({
-      queryKey: getProjectOpenDebateApiGetCurrentUserObjectQueryKey(),
-    });
-  }, [queryClient]);
+  const {
+    login: loginMutation,
+    logout: logoutMutation,
+    invalidateUser,
+  } = useLoginLogoutActions(queryClient);
 
   const state = useMemo<AuthState>(
     () => ({ authStatus, user, isLoading, error }),
     [authStatus, user, isLoading, error],
   );
-  const actions = useMemo<AuthActions>(
+  const actions = useMemo(
     () => ({
       login: loginMutation,
       logout: logoutMutation,
-      refetchUser: refetch,
       invalidateUser,
     }),
-    [loginMutation, logoutMutation, refetch, invalidateUser],
+    [loginMutation, logoutMutation, invalidateUser],
   );
 
   return (

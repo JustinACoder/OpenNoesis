@@ -15,12 +15,6 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import type {
-  ConflictResponse,
-  ErrorResponse,
-  TooManyRequestsResponse,
-  UnauthenticatedResponse,
-} from "@/lib/models";
 import { AuthRequired } from "@/components/AuthRedirects";
 import {
   usePostAllauthClientV1AuthEmailVerify,
@@ -34,7 +28,7 @@ export default function VerifyEmailPage() {
   const key = searchParams.get("token"); // The verification code/secret
   const [errorMessages, setErrors] = useState<string[]>([]);
 
-  const { mutateAsync: resendVerificationEmail, isPending: isResending } =
+  const { mutate: resendVerificationEmail, isPending: isResending } =
     usePostAllauthClientV1AuthEmailVerifyResend();
   const {
     mutateAsync: verifyEmail,
@@ -45,32 +39,28 @@ export default function VerifyEmailPage() {
   // If there's a verification code in the URL, attempt to verify automatically
   useEffect(() => {
     if (key && !isVerifying && !isVerified) {
-      verifyEmail({
-        client: "browser",
-        data: {
-          key: key,
+      verifyEmail(
+        {
+          client: "browser",
+          data: {
+            key: key,
+          },
         },
-      })
-        .then(() => {
-          console.log("Email verification successful");
-        })
-        .catch(
-          (
-            error: ErrorResponse | UnauthenticatedResponse | ConflictResponse,
-          ) => {
+        {
+          onError: (error) => {
             const status = error.status;
 
             if (status === 400) {
-              const errorResponse = error as ErrorResponse;
-              const extractedErrorMessages = errorResponse.errors?.map(
+              const extractedErrorMessages = error.errors?.map(
                 (e) => e.message,
               );
               setErrors(
                 extractedErrorMessages || ["Invalid verification code."],
               );
             } else if (status === 401) {
-              setErrors(["You need to be logged in to verify your email."]);
-              router.push("/login?next=/verify-email");
+              // This doesnt mean failure, it means the verification was successful but the user is not authenticated
+              // In this case, we want to redirect to login
+              router.push("/login");
             } else if (status === 409) {
               setErrors(["There isn't any pending verification flow."]);
             } else {
@@ -78,41 +68,44 @@ export default function VerifyEmailPage() {
                 "An unexpected error occurred. Please try again later.",
               ]);
             }
-
-            console.error("Email verification failed:", error);
           },
-        );
+        },
+      ).then(() => {
+        console.log("Email verification successful");
+      });
     }
   }, [key, isVerifying, isVerified, verifyEmail, router]);
 
   function handleResendEmail() {
     setErrors([]);
 
-    resendVerificationEmail({
-      client: "browser",
-    })
-      .then(() => {
-        toast.success(
-          "Verification email sent successfully! Please check your inbox.",
-        );
-      })
-      .catch((error: ConflictResponse | TooManyRequestsResponse) => {
-        const status = error.status;
+    resendVerificationEmail(
+      {
+        client: "browser",
+      },
+      {
+        onError: (error) => {
+          const status = error.status;
 
-        if (status === 409) {
-          setErrors(["There isn't any pending verification flow."]);
-        } else if (status === 429) {
-          setErrors([
-            "Too many requests. Please wait a few minutes before trying again.",
-          ]);
-        } else {
-          setErrors([
-            "An unexpected error occurred while resending the verification email. Please try again later.",
-          ]);
-        }
-
-        console.error("Resend verification email failed:", error);
-      });
+          if (status === 409) {
+            setErrors(["There isn't any pending verification flow."]);
+          } else if (status === 429) {
+            setErrors([
+              "Too many requests. Please wait a few minutes before trying again.",
+            ]);
+          } else {
+            setErrors([
+              "An unexpected error occurred while resending the verification email. Please try again later.",
+            ]);
+          }
+        },
+        onSuccess: () => {
+          toast.success(
+            "Verification email sent successfully! Please check your inbox.",
+          );
+        },
+      },
+    );
   }
 
   // If we're in the process of verifying with a code

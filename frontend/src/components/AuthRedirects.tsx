@@ -48,14 +48,14 @@ const GuestOnly = ({ children }: ChildrenInput) => {
     }
   }, [authStatus, router, nextUrl]);
 
-  if (authStatus !== "unauthenticated") {
-    // Return a centered loading spinner in the middle of the parent
-    return (
-      <div className="flex items-center justify-center h-100 text-primary">
-        <LoaderCircle className="size-10 animate-spin" />
-      </div>
-    );
-  }
+  // if (authStatus !== "unauthenticated") {
+  //   // Return a centered loading spinner in the middle of the parent
+  //   return (
+  //     <div className="flex items-center justify-center h-100 text-primary">
+  //       <LoaderCircle className="size-10 animate-spin" />
+  //     </div>
+  //   );
+  // }
 
   // If unauthenticated, render the children
   return children;

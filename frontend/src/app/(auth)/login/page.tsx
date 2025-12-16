@@ -23,17 +23,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useSearchParams, useRouter } from "next/navigation";
-import type {
-  AuthenticationResponse,
-  ConflictResponse,
-  ErrorResponse,
-} from "@/lib/models";
 import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useAuthActions } from "@/providers/authProvider";
 import { GuestOnly } from "@/components/AuthRedirects";
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   email: z.string().email({
@@ -46,10 +41,8 @@ const formSchema = z.object({
 });
 
 export default function LoginPage() {
-  const { login } = useAuthActions();
-  const searchParams = useSearchParams();
+  const { login, invalidateUser } = useAuthActions();
   const router = useRouter();
-  const nextUrl = searchParams.get("next") || "/";
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -65,32 +58,38 @@ export default function LoginPage() {
   // Since it tracks the last mutation state and not whether it was successful for the current page load
   const [hasLoggedIn, setHasLoggedIn] = useState(false);
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  function onSubmit(values: z.infer<typeof formSchema>) {
     setErrors([]);
-    login
-      .mutateAsync({
+    login.mutate(
+      {
         client: "browser",
         data: {
           email: values.email,
           password: values.password,
         },
-      })
-      .then(() => {
-        setHasLoggedIn(true);
-        router.push(nextUrl);
-      })
-      .catch(
-        (error: ErrorResponse | AuthenticationResponse | ConflictResponse) => {
+      },
+      {
+        onError: (error) => {
           const status = error.status;
 
           if (status === 401) {
-            // AuthenticationResponse, we assume this means invalid credentials
-            setErrors(["Invalid email or password. Please try again."]);
+            // AuthenticationResponse, this can happen if we have successfully logged in but need another step
+            // In this case, it should always be about pending email verification
+            // TODO: if we ever implement other flows (like MFA), handle them here as well
+            const doesPendingEmailVerifExists = error.data.flows?.some(
+              (f) => f.id === "verify_email" && f.is_pending === true,
+            );
+            if (doesPendingEmailVerifExists) {
+              router.push("/verify-email");
+            } else {
+              setErrors(["An unexpected authentication error occurred."]);
+              console.error("Login failed:", error);
+            }
           } else if (status === 409) {
             // ConflictResponse, what does that mean?
             setErrors(["A conflict occurred. Please try again later."]);
           } else if (status === 400) {
-            error = error as ErrorResponse;
+            // ErrorResponse, this usually means validation errors
             const extractedErrorMessages = error.errors?.map((e) => e.message);
             setErrors(
               extractedErrorMessages || [
@@ -103,10 +102,14 @@ export default function LoginPage() {
               "An unexpected error occurred. Please try again later.",
             ]);
           }
-
-          console.error("Login failed:", error);
         },
-      );
+        onSuccess: async (data) => {
+          console.log("Login successful:", data);
+          setHasLoggedIn(true);
+          await invalidateUser();
+        },
+      },
+    );
   }
 
   return (

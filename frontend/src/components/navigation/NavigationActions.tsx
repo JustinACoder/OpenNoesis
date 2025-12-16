@@ -41,10 +41,20 @@ const NavigationActions = () => {
   const { setMobileSearchOpen, isMobileMenuOpen, setMobileMenuOpen } =
     useNavigation();
   const { user } = useAuthState();
-  const { logout } = useAuthActions();
+  const { logout, invalidateUser } = useAuthActions();
 
-  const handleLogout = async () => {
-    await logout.mutateAsync({ client: "browser" });
+  const handleLogout = () => {
+    logout.mutate(
+      { client: "browser" },
+      {
+        onError: async (error) => {
+          // Logout returns 401 on success as the session is deleted
+          // It's a weird pattern, but anyway, we handle it here by refetching the user
+          console.log("Logout successful:", error);
+          await invalidateUser();
+        },
+      },
+    );
   };
 
   if (!user) return null; // dont show anything while loading user object

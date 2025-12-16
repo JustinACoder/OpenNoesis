@@ -41,7 +41,7 @@ export const DebateCard = (props: DebateCardProps) => {
   };
 
   const hasStanceSet = (stance?: StanceDirectionEnum) => {
-    return stance !== undefined && stance !== 0;
+    return stance === 1 || stance === -1;
   };
 
   return (

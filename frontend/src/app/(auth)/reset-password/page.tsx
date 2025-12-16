@@ -27,12 +27,6 @@ import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, CheckCircle } from "lucide-react";
 import { usePostAllauthClientV1AuthPasswordReset } from "@/lib/api/authentication-password-reset";
-import type {
-  ErrorResponse,
-  AuthenticationResponse,
-  ConflictResponse,
-} from "@/lib/models";
-import { AuthRequired } from "@/components/AuthRedirects";
 
 const formSchema = z
   .object({
@@ -51,6 +45,7 @@ export default function ResetPasswordPage() {
   const router = useRouter();
   const key = searchParams.get("token");
   const [errorMessages, setErrors] = useState<string[]>([]);
+  const [isSuccess, setIsSuccess] = useState<boolean>(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -59,11 +54,8 @@ export default function ResetPasswordPage() {
       confirmPassword: "",
     },
   });
-  const {
-    mutateAsync: resetPassword,
-    isPending,
-    isSuccess,
-  } = usePostAllauthClientV1AuthPasswordReset();
+  const { mutate: resetPassword, isPending } =
+    usePostAllauthClientV1AuthPasswordReset();
 
   if (!key) {
     router.push("/");
@@ -72,33 +64,30 @@ export default function ResetPasswordPage() {
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     setErrors([]);
+    setIsSuccess(false);
 
-    resetPassword({
-      client: "browser",
-      data: {
-        key: key!, // Non-null assertion since we check for key above
-        password: values.password,
+    resetPassword(
+      {
+        client: "browser",
+        data: {
+          key: key!, // Non-null assertion since we check for key above
+          password: values.password,
+        },
       },
-    })
-      .then(() => {
-        console.log("Password reset successful");
-      })
-      .catch(
-        (error: ErrorResponse | AuthenticationResponse | ConflictResponse) => {
+      {
+        onError: (error) => {
           const status = error.status;
 
           if (status === 400) {
-            const errorResponse = error as ErrorResponse;
-            const extractedErrorMessages = errorResponse.errors?.map(
-              (e) => e.message,
-            );
+            const extractedErrorMessages = error.errors?.map((e) => e.message);
             setErrors(
               extractedErrorMessages || [
                 "Invalid request. Please check your input.",
               ],
             );
           } else if (status === 401) {
-            setErrors(["You are not authorized to perform this action."]);
+            // AuthenticationResponse, this simply means the user needs to log in again
+            setIsSuccess(true);
           } else if (status === 409) {
             setErrors([
               "There isn't any pending password reset request for this key. Please request a new password reset.",
@@ -108,10 +97,17 @@ export default function ResetPasswordPage() {
               "An unexpected error occurred. Please try again later.",
             ]);
           }
-
-          console.error("Password reset failed:", error);
         },
-      );
+        onSuccess: () => {
+          // technically, this shouldnt happen with our current settings since after reseting the password,
+          // we expect a 401 to indicate the user needs to log in again
+          console.warn(
+            "Password reset successful, but no further action taken.",
+          );
+          setIsSuccess(true);
+        },
+      },
+    );
   }
 
   if (isSuccess) {

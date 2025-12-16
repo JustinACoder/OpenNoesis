@@ -27,7 +27,6 @@ import { usePostAllauthClientV1AuthPasswordRequest } from "@/lib/api/authenticat
 import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import type { ErrorResponse, AuthenticationResponse } from "@/lib/models";
 
 const formSchema = z.object({
   email: z.string().email({
@@ -39,7 +38,7 @@ export default function ForgotPasswordPage() {
   const [errorMessages, setErrors] = useState<string[]>([]);
 
   const {
-    mutateAsync: requestPasswordReset,
+    mutate: requestPasswordReset,
     isPending,
     isSuccess,
   } = usePostAllauthClientV1AuthPasswordRequest();
@@ -54,36 +53,39 @@ export default function ForgotPasswordPage() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     setErrors([]);
 
-    requestPasswordReset({
-      client: "browser",
-      data: {
-        email: values.email,
+    requestPasswordReset(
+      {
+        client: "browser",
+        data: {
+          email: values.email,
+        },
       },
-    })
-      .then(() => {
-        console.log("Password reset request successful");
-      })
-      .catch((error: ErrorResponse | AuthenticationResponse) => {
-        const status = error.status;
+      {
+        onError: (error) => {
+          const status = error.status;
 
-        if (status === 400) {
-          const errorResponse = error as ErrorResponse;
-          const extractedErrorMessages = errorResponse.errors?.map(
-            (e) => e.message,
-          );
-          setErrors(
-            extractedErrorMessages || [
-              "Invalid request. Please check your input.",
-            ],
-          );
-        } else if (status === 401) {
-          setErrors(["You are not authorized to perform this action."]);
-        } else {
-          setErrors(["An unexpected error occurred. Please try again later."]);
-        }
-
-        console.error("Password reset request failed:", error);
-      });
+          if (status === 400) {
+            const extractedErrorMessages = error.errors?.map((e) => e.message);
+            setErrors(
+              extractedErrorMessages || [
+                "Invalid request. Please check your input.",
+              ],
+            );
+          } else if (status === 401) {
+            // This doesnt mean failure, it simply indicates the next step of the flow
+            // In our case, ACCOUNT_PASSWORD_RESET_BY_CODE_ENABLED = False, so we should not expect this
+            // Therefore, we will treat it as an unexpected error
+            setErrors([
+              "An unexpected authentication error occurred. Please try again later.",
+            ]);
+          } else {
+            setErrors([
+              "An unexpected error occurred. Please try again later.",
+            ]);
+          }
+        },
+      },
+    );
   }
 
   if (isSuccess) {
