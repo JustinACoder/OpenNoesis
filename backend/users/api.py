@@ -21,6 +21,13 @@ def get_public_user_profile(request, user_id: int):
     """
     return get_object_or_404(User, id=user_id)
 
+@router.get("/by-username/{str:username}", response=PublicUserSchema, auth=optional_django_auth)
+def get_public_user_profile_by_username(request, username: str):
+    """
+    Get user details by username.
+    """
+    return get_object_or_404(User, username=username)
+
 @router.get("/me", response=PrivateUserSchema)
 def get_private_user_profile(request):
     """
@@ -47,4 +54,3 @@ def update_private_user_profile(request, payload: PatchDict[ProfileEditInputSche
     user_profile.save()
 
     return 204, None
-

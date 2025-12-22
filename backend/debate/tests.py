@@ -3,10 +3,9 @@ from ProjectOpenDebate.common.base_tests import BaseTestCase
 from django.contrib.auth import get_user_model
 
 from ProjectOpenDebate.common.utils import reverse_lazy_api
-from debate.models import Debate, Comment, Stance
+from debate.models import Debate, Comment, Stance, Vote
 from debate.schemas import VoteDirectionEnum, StanceDirectionEnum, CommentInputSchema, VoteInputSchema, \
     StanceInputSchema
-from voting.models import Vote
 
 from pairing.models import PairingRequest
 
@@ -128,18 +127,18 @@ class DebateListingEndpointsTest(DebateApiTestBase):
 
 class DebateDetailEndpointsTest(DebateApiTestBase):
     def test_get_debate_detail(self):
-        response = self.client.get(reverse_lazy_api("get_debate", debate_id=self.debate1.id))
+        response = self.client.get(reverse_lazy_api("get_debate", debate_slug=self.debate1.slug))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["title"], self.debate1.title)
         self.assertEqual(response.json()["description"], self.debate1.description)
 
     def test_get_nonexistent_debate_detail(self):
-        response = self.client.get(reverse_lazy_api("get_debate", debate_id=999999))  # Non-existent ID
+        response = self.client.get(reverse_lazy_api("get_debate", debate_slug="abc-random-slug-09093242"))  # Non-existent ID
         self.assertEqual(response.status_code, 404)
 
     def test_debate_details_with_authenticated_user(self):
         client = self.authenticate_user1()
-        response = client.get(reverse_lazy_api("get_debate", debate_id=self.debate1.id))
+        response = client.get(reverse_lazy_api("get_debate", debate_slug=self.debate1.slug))
         self.assertEqual(response.status_code, 200)
 
     def test_get_debates_with_user_stance(self):
@@ -158,14 +157,21 @@ class DebateDetailEndpointsTest(DebateApiTestBase):
         self.assertEqual(response.json()["items"][0]["title"], self.debate1.title)
 
     def test_get_debate_suggestions(self):
-        response = self.client.get(reverse_lazy_api("get_debate_suggestions", debate_id=self.debate1.id))
+        response = self.client.get(reverse_lazy_api("get_debate_suggestions", debate_slug=self.debate1.slug))
         self.assertEqual(response.status_code, 200)
         self.assertIn("items", response.json())
 
 
 class CommentEndpointsTest(DebateApiTestBase):
     def test_get_debate_comments(self):
-        response = self.client.get(reverse_lazy_api("get_debate_comments", debate_id=self.debate1.id))
+        response = self.client.get(reverse_lazy_api("get_debate_comments", debate_slug=self.debate1.slug))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("items", response.json())
+        self.assertEqual(len(response.json()["items"]), 2)
+
+    def test_get_debate_comments_authenticated(self):
+        client = self.authenticate_user1()
+        response = client.get(reverse_lazy_api("get_debate_comments", debate_slug=self.debate1.slug))
         self.assertEqual(response.status_code, 200)
         self.assertIn("items", response.json())
         self.assertEqual(len(response.json()["items"]), 2)
@@ -175,7 +181,7 @@ class CommentEndpointsTest(DebateApiTestBase):
         text = "This is a new test comment"
         comment_data = CommentInputSchema(text=text).dict()
         response = client.post(
-            reverse_lazy_api("create_comment", debate_id=self.debate1.id),
+            reverse_lazy_api("create_comment", debate_slug=self.debate1.slug),
             data=comment_data,
             content_type='application/json'
         )
@@ -187,7 +193,7 @@ class CommentEndpointsTest(DebateApiTestBase):
     def test_create_comment_unauthenticated(self):
         text = "This comment should not be created"
         comment_data = CommentInputSchema(text=text).dict()
-        response = self.client.post(reverse_lazy_api("create_comment", debate_id=self.debate1.id), data=comment_data,
+        response = self.client.post(reverse_lazy_api("create_comment", debate_slug=self.debate1.slug), data=comment_data,
                                     content_type='application/json')
 
         self.assertEqual(response.status_code, 401)  # Should require authentication
@@ -196,7 +202,7 @@ class CommentEndpointsTest(DebateApiTestBase):
         client = self.authenticate_user1()
         text = "This comment should not be created"
         comment_data = CommentInputSchema(text=text).dict()
-        response = client.post(reverse_lazy_api("create_comment", debate_id=999999), data=comment_data,
+        response = client.post(reverse_lazy_api("create_comment", debate_slug="abc-def-0981209182"), data=comment_data,
                                content_type='application/json')
 
         self.assertEqual(response.status_code, 404)  # Debate does not exist
@@ -208,7 +214,7 @@ class VotingEndpointsTest(DebateApiTestBase):
 
         # Test upvote
         vote_data = VoteInputSchema(direction=VoteDirectionEnum.UP).dict()
-        response = client.patch(reverse_lazy_api("vote_on_debate", debate_id=self.debate2.id), data=vote_data,
+        response = client.patch(reverse_lazy_api("vote_on_debate", debate_slug=self.debate2.slug), data=vote_data,
                                 content_type='application/json')
         self.assertEqual(response.status_code, 204)
 
@@ -222,7 +228,7 @@ class VotingEndpointsTest(DebateApiTestBase):
 
         # Test downvote
         vote_data = VoteInputSchema(direction=VoteDirectionEnum.DOWN).dict()
-        response = client.patch(reverse_lazy_api("vote_on_debate", debate_id=self.debate2.id), data=vote_data,
+        response = client.patch(reverse_lazy_api("vote_on_debate", debate_slug=self.debate2.slug), data=vote_data,
                                 content_type='application/json')
         self.assertEqual(response.status_code, 204)
 
@@ -232,7 +238,7 @@ class VotingEndpointsTest(DebateApiTestBase):
 
     def test_vote_on_debate_unauthenticated(self):
         vote_data = VoteInputSchema(direction=VoteDirectionEnum.UP).dict()
-        response = self.client.patch(reverse_lazy_api("vote_on_debate", debate_id=self.debate1.id), data=vote_data,
+        response = self.client.patch(reverse_lazy_api("vote_on_debate", debate_slug=self.debate1.slug), data=vote_data,
                                      content_type='application/json')
         self.assertEqual(response.status_code, 401)  # Should require authentication
 
@@ -241,7 +247,7 @@ class VotingEndpointsTest(DebateApiTestBase):
 
         vote_data = VoteInputSchema(direction=VoteDirectionEnum.UP).dict()
         response = client.patch(
-            reverse_lazy_api("vote_on_comment", debate_id=self.debate1.id, comment_id=self.comment1.id),
+            reverse_lazy_api("vote_on_comment", debate_slug=self.debate1.slug, comment_id=self.comment1.id),
             data=vote_data,
             content_type='application/json'
         )
@@ -257,7 +263,7 @@ class VotingEndpointsTest(DebateApiTestBase):
     def test_vote_on_comment_unauthenticated(self):
         vote_data = VoteInputSchema(direction=VoteDirectionEnum.UP).dict()
         response = self.client.patch(
-            reverse_lazy_api("vote_on_comment", debate_id=self.debate1.id, comment_id=self.comment1.id),
+            reverse_lazy_api("vote_on_comment", debate_slug=self.debate1.slug, comment_id=self.comment1.id),
             data=vote_data,
             content_type='application/json'
         )
@@ -270,7 +276,7 @@ class StanceEndpointsTest(DebateApiTestBase):
 
         stance_data = StanceInputSchema(stance=StanceDirectionEnum.FOR).dict()
         response = client.patch(
-            reverse_lazy_api("set_stance", debate_id=self.debate2.id),
+            reverse_lazy_api("set_stance", debate_slug=self.debate2.slug),
             data=stance_data,
             content_type='application/json'
         )
@@ -283,7 +289,7 @@ class StanceEndpointsTest(DebateApiTestBase):
         # Test changing stance
         stance_data = StanceInputSchema(stance=StanceDirectionEnum.AGAINST).dict()
         response = client.patch(
-            reverse_lazy_api("set_stance", debate_id=self.debate2.id),
+            reverse_lazy_api("set_stance", debate_slug=self.debate2.slug),
             data=stance_data,
             content_type='application/json'
         )
@@ -296,7 +302,7 @@ class StanceEndpointsTest(DebateApiTestBase):
         # Test removing stance
         stance_data = StanceInputSchema(stance=StanceDirectionEnum.UNSET).dict()
         response = client.patch(
-            reverse_lazy_api("set_stance", debate_id=self.debate2.id),
+            reverse_lazy_api("set_stance", debate_slug=self.debate2.slug),
             data=stance_data,
             content_type='application/json'
         )
@@ -308,7 +314,7 @@ class StanceEndpointsTest(DebateApiTestBase):
     def test_set_stance_unauthenticated(self):
         stance_data = StanceInputSchema(stance=StanceDirectionEnum.FOR).dict()
         response = self.client.patch(
-            reverse_lazy_api("set_stance", debate_id=self.debate1.id),
+            reverse_lazy_api("set_stance", debate_slug=self.debate1.slug),
             data=stance_data,
             content_type='application/json'
         )
@@ -326,7 +332,7 @@ class StanceEndpointsTest(DebateApiTestBase):
         client = self.authenticate_user1()
         stance_data = StanceInputSchema(stance=StanceDirectionEnum.FOR).dict()
         response = client.patch(
-            reverse_lazy_api("set_stance", debate_id=self.debate1.id),
+            reverse_lazy_api("set_stance", debate_slug=self.debate1.slug),
             data=stance_data,
             content_type='application/json'
         )
@@ -338,6 +344,6 @@ class StanceEndpointsTest(DebateApiTestBase):
             PairingRequest.objects.filter(
                 user=self.user1,
                 debate=self.debate1,
-                is_completed=False
+                is_matched=False
             ).exists()
         )

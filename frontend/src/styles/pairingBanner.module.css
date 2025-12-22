@@ -1,0 +1,42 @@
+.pairingBanner {
+    background-size: 200% !important;
+    background-position-x: 0;
+}
+
+.searching {
+    background: linear-gradient(106deg, var(--color-primary1, #0d6efd) 30%, rgba(9, 170, 232, 1) 45%, rgba(160, 200, 220, 1) 50%, rgba(88, 206, 245, 1) 54%, var(--color-primary1, #0d6efd) 70%);
+    animation: shimmer 2s infinite cubic-bezier(0.3, 1.32, 0.65, -0.61);
+}
+
+.matchFound {
+    background: linear-gradient(106deg, var(--color-success, #198754) 30%, #1db56f 45%, #0ce982 50%, #1db56f 54%, var(--color-success, #198754) 70%);
+    animation: shimmer 2s infinite linear;
+}
+
+.serverError {
+    background: linear-gradient(106deg, var(--color-danger, #dc3545) 30%, #ff4d4d 45%, #ff6666 50%, #ff4d4d 54%, var(--color-danger, #dc3545) 70%);
+    animation: shimmer 5s infinite linear;
+}
+
+/*.connectionError {*/
+/*    background: linear-gradient(106deg, var(--color-warning, #ffc107) 30%, #ffcc00 45%, #ffdb4d 50%, #ffcc00 54%, var(--color-warning, #ffc107) 70%);*/
+/*    animation: shimmer 5s infinite linear;*/
+/*}*/
+
+.connectionError {
+  background: linear-gradient(
+    106deg,
+    var(--color-disabled-dark, #7a7a7a) 30%,
+    #9a9a9a 45%,
+    #b5b5b5 50%,
+    #9a9a9a 54%,
+    var(--color-disabled-dark, #7a7a7a) 70%
+  );
+  animation: shimmer 5s infinite linear;
+}
+
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}

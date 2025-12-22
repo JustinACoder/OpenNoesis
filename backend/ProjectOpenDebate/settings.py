@@ -14,7 +14,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env("DEBUG", default="dev") == "dev"
+ENV = env("ENV", default="dev")
+DEBUG = ENV == "dev"
+print("Running in", ENV, "mode")
 
 ALLOWED_HOSTS = []  # TODO: Add allowed hosts such as the domain name of the website
 
@@ -32,11 +34,11 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.headless',
     'allauth.socialaccount',
+    'allauth.usersessions', # To manage sessions across multiple devices
     # 'allauth.socialaccount.providers.google',
     'debug_toolbar',
     'django_celery_results',
     'django_celery_beat',
-    'voting',
     'debate.apps.DebateConfig',
     'users.apps.UsersConfig',
     'discussion.apps.DiscussionConfig',
@@ -58,6 +60,19 @@ MIDDLEWARE = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
     'allauth.account.middleware.AccountMiddleware',
 ]
+if ENV == "dev":
+    # Add to 'corsheaders' if we are in dev (to allow cors requests from the frontend running on different port)
+    INSTALLED_APPS.append('corsheaders')
+    MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')  # Ensure CORS middleware is first
+    CORS_ALLOWED_ORIGINS = [
+        'http://localhost:3000',  # React frontend running on port 3000
+    ]
+    CORS_ALLOW_CREDENTIALS = True
+
+    # Allow CSRF for local development
+    CSRF_TRUSTED_ORIGINS = [
+        'http://localhost:3000',
+    ]
 
 ROOT_URLCONF = 'ProjectOpenDebate.urls'
 
@@ -170,16 +185,26 @@ ACCOUNT_CHANGE_EMAIL = True
 ACCOUNT_EMAIL_UNKNOWN_ACCOUNTS = False
 ACCOUNT_USERNAME_VALIDATORS = 'users.validators.username_validators'
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 7  # One week
+ACCOUNT_USERNAME_BLACKLIST = [
+    # Common usernames that should not be allowed
+    'admin', 'administrator', 'root', 'system', 'support', 'help', 'info',
+    'contact', 'webmaster', 'test', 'demo', 'guest', 'user', 'users',
+    'moderator', 'moderators',
+
+    # The 'me' username is used to redirect to the current user's profile
+    'me',
+]
+# USERSESSIONS_TRACK_ACTIVITY = True  # See https://docs.allauth.org/en/dev/usersessions/installation.html if you want to track user sessions
 
 # TODO: Change this to the actual frontend URL in production
 HEADLESS_FRONTEND_URLS = {
-    "account_confirm_email": "https://localhost/account/verify-email/?token={key}",
-    "account_reset_password": "https://localhost/account/password/reset",
-    "account_reset_password_from_key": "https://localhost/account/password/reset/key/{key}",
-    "account_signup": "https://localhost/account/signup",
+    "account_confirm_email": "http://localhost:3000/verify-email/?token={key}",
+    "account_reset_password": "http://localhost:3000/forgot-password",
+    "account_reset_password_from_key": "http://localhost:3000/reset-password/?token={key}",
+    "account_signup": "http://localhost:3000/signup",
     # Fallback in case the state containing the `next` URL is lost and the handshake
     # with the third-party provider fails.
-    "socialaccount_login_error": "https://localhost/account/provider/callback",
+    "socialaccount_login_error": "http://localhost:3000/account/provider/callback",
 }
 
 # Email backend settings
@@ -207,3 +232,5 @@ CELERY_BEAT_SCHEDULE = {
 # Ninja API settings
 API_VERSION = "1.0.0"
 API_TITLE = "ProjectOpenDebateAPI"
+NINJA_PAGINATION_PER_PAGE = 20
+NINJA_PAGINATION_MAX_LIMIT = 75

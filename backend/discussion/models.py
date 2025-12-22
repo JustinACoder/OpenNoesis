@@ -2,10 +2,8 @@ from datetime import datetime
 
 from django.conf import settings
 from django.db import models
-from django.template.loader import render_to_string
 
 from ProjectOpenDebate.consumers import get_user_group_name
-from debate.models import Debate
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
@@ -27,7 +25,7 @@ def get_previous_message(read_checkpoint):
 
 
 class Discussion(models.Model):
-    debate = models.ForeignKey(Debate, on_delete=models.CASCADE)
+    debate = models.ForeignKey("debate.Debate", on_delete=models.CASCADE)
     participant1 = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                                      related_name='p1_discussion_set')
     participant2 = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,

@@ -1,22 +1,9 @@
 from ninja import ModelSchema
 from typing import Optional
 from ninja import Schema, Field
-from enum import IntEnum
-
+from debate.enums import VoteDirectionEnum, StanceDirectionEnum
 from debate.models import Debate, Comment, Stance
 from users.schemas import UserPreviewSchema
-
-
-class VoteDirectionEnum(IntEnum):
-    DOWN = -1
-    UNSET = 0
-    UP = 1
-
-
-class StanceDirectionEnum(IntEnum):
-    FOR = 1
-    UNSET = 0
-    AGAINST = -1
 
 
 ## These were previously used but are now replaced by flattened fields in DebateSchema and CommentSchema
@@ -46,12 +33,15 @@ class VoteInputSchema(Schema):
 class StanceInputSchema(Schema):
     stance: StanceDirectionEnum
 
+class DebateWithStanceInputSchema(Schema):
+    user_id: int = Field(None, description="User ID to retrieve debates for, if not provided, retrieves for the authenticated user")
+
 class DebateFullSchema(ModelSchema):
     author: Optional[UserPreviewSchema] = None  # Can be None if the debate was created by the system
 
     # Votes
     vote_score: int = 0
-    num_votes: int = 0
+    vote_count: int = 0
     user_vote: VoteDirectionEnum = VoteDirectionEnum.UNSET
 
     # Stance
@@ -71,6 +61,7 @@ class DebateFullSchema(ModelSchema):
 class DebateSchema(DebateFullSchema):
     description: str = Field(exclude=True)
     description_preview: str
+    target_user_stance: StanceDirectionEnum = Field(None, description="Stance of the user targeted by the search, if applicable. This is different from user_stance which is the stance of the connected user on the debate.")
 
     @staticmethod
     def resolve_description_preview(debate: Debate) -> str:
@@ -89,7 +80,7 @@ class CommentSchema(ModelSchema):
 
     # Votes
     vote_score: int = 0
-    num_votes: int = 0
+    vote_count: int = 0
     user_vote: VoteDirectionEnum = VoteDirectionEnum.UNSET
 
     class Config:

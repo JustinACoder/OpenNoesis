@@ -11,7 +11,7 @@ from notifications.services import NotificationService
 router = Router(auth=django_auth)
 
 @router.get("", response=List[NotificationSchema])
-@paginate(PageNumberPagination, page_size=15)
+@paginate(PageNumberPagination, page_size=10)
 def get_notifications(request, only_unread: bool = False):
     """
     Get paginated notifications for the current user.
