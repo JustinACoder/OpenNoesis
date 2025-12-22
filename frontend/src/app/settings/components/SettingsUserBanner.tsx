@@ -1,10 +1,12 @@
 "use client";
 
-import { useAuthState } from "@/providers/authProvider";
 import { CurrentUserResponse } from "@/lib/models";
 import { Badge } from "@/components/ui/badge";
 import UserAvatar from "@/components/UserAvatar";
 import { Box } from "@/components/ui/box";
+import { AuthRequired } from "@/components/AuthRedirects";
+import { useProjectOpenDebateApiGetCurrentUserObject } from "@/lib/api/general";
+import { Alert } from "@/components/ui/alert";
 
 const toTitleCase = (str: string | null | undefined) => {
   if (!str) {
@@ -29,43 +31,51 @@ const formatName = (user: CurrentUserResponse) => {
 };
 
 const SettingsUserBanner = () => {
-  const { user } = useAuthState();
+  const { data: user } = useProjectOpenDebateApiGetCurrentUserObject();
 
-  if (!user?.is_authenticated) return null; // since we hydrate in the main layout, this should never be seen
+  if (!user) {
+    return <Alert variant="destructive">Error loading user information.</Alert>;
+  }
 
   return (
-    <Box className={"p-4"}>
-      <div className="flex items-center space-x-4">
-        <UserAvatar user={user} size="xlarge" />
-        <div>
-          <h2 className="text-xl font-semibold text-white">
-            {formatName(user) || (
-              <span className="text-gray-400 italic">No name set</span>
-            )}
-          </h2>
-          <p className="text-gray-400">{user.username}</p>
-          <div className="flex items-center mt-2">
-            <Badge
-              variant={
-                user.is_superuser
-                  ? "destructive"
+    <AuthRequired>
+      <Box className={"p-4"}>
+        <div className="flex items-center space-x-4">
+          <UserAvatar user={user} size="xlarge" />
+          <div>
+            <h2 className="text-xl font-semibold text-white">
+              {formatName(user) || (
+                <span className="text-gray-400 italic">No name set</span>
+              )}
+            </h2>
+            <p className="text-gray-400">{user.username}</p>
+            <div className="flex items-center mt-2">
+              <Badge
+                variant={
+                  user.is_superuser
+                    ? "destructive"
+                    : user.is_staff
+                      ? "default"
+                      : "secondary"
+                }
+                className="me-2"
+              >
+                {user.is_superuser
+                  ? "Admin"
                   : user.is_staff
-                    ? "default"
-                    : "secondary"
-              }
-              className="me-2"
-            >
-              {user.is_superuser ? "Admin" : user.is_staff ? "Staff" : "Member"}
-            </Badge>
-            {user.date_joined && (
-              <span className="text-sm text-gray-400">
-                Member since {new Date(user.date_joined).toLocaleDateString()}
-              </span>
-            )}
+                    ? "Staff"
+                    : "Member"}
+              </Badge>
+              {user.date_joined && (
+                <span className="text-sm text-gray-400">
+                  Member since {new Date(user.date_joined).toLocaleDateString()}
+                </span>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </Box>
+      </Box>
+    </AuthRequired>
   );
 };
 

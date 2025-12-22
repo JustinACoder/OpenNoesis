@@ -2,15 +2,16 @@
 
 import { useAuthState } from "@/providers/authProvider";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LoaderCircle } from "lucide-react";
+import { AlertCircleIcon, LoaderCircle } from "lucide-react";
 import React, { useEffect } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface ChildrenInput {
   children: React.ReactNode;
 }
 
 const AuthRequired = ({ children }: ChildrenInput) => {
-  const { authStatus } = useAuthState();
+  const { authStatus, error } = useAuthState();
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get("next") || "/";
@@ -27,6 +28,21 @@ const AuthRequired = ({ children }: ChildrenInput) => {
     return (
       <div className="flex items-center justify-center h-100 text-primary">
         <LoaderCircle className="size-10 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-full flex items-center justify-center p-4">
+        <Alert variant="destructive" className="max-w-2xl">
+          <AlertCircleIcon />
+          <AlertTitle>Error loading user information</AlertTitle>
+          <AlertDescription>
+            An unexpected error occurred while fetching user data. Please try
+            refreshing the page or contact support if the issue persists.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }

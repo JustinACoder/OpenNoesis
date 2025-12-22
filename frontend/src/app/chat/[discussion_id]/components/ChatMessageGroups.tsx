@@ -20,7 +20,7 @@ export type MessageSchema = {
 
 type ChatMessageGroupsProps = {
   messages: MessageSchema[];
-  currentUserId?: number | null;
+  currentUserId: number;
   /** Minutes between messages to consider same group. Default: 15 */
   gapMinutes?: number;
   /** date-fns locale (e.g., frCA) */

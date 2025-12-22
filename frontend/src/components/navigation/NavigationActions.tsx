@@ -40,7 +40,7 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 const NavigationActions = () => {
   const { setMobileSearchOpen, isMobileMenuOpen, setMobileMenuOpen } =
     useNavigation();
-  const { user } = useAuthState();
+  const { authStatus, user } = useAuthState();
   const { logout, invalidateUser } = useAuthActions();
 
   const handleLogout = () => {
@@ -57,7 +57,7 @@ const NavigationActions = () => {
     );
   };
 
-  if (!user) return null; // dont show anything while loading user object
+  if (authStatus == "loading") return null; // dont show anything while loading user object
 
   return (
     <div className="flex items-center space-x-2">
@@ -72,7 +72,7 @@ const NavigationActions = () => {
         <span className="sr-only">Search</span>
       </Button>
 
-      {user.is_authenticated ? (
+      {authStatus == "authenticated" ? (
         <div className="hidden md:flex items-center space-x-4">
           {/* Notifications */}
           <Button variant="ghost" size="icon" className="relative" asChild>
@@ -170,7 +170,7 @@ const NavigationActions = () => {
           </VisuallyHidden>
           <div className="flex flex-col space-y-4 mt-4">
             {/* Show user info if authenticated */}
-            {user.is_authenticated && (
+            {authStatus == "authenticated" && (
               <div className="flex items-center space-x-3 pb-4 border-b">
                 <UserAvatar user={user} size="large" />
                 <div>
@@ -193,7 +193,7 @@ const NavigationActions = () => {
               </Link>
             ))}
 
-            {user.is_authenticated ? (
+            {authStatus == "authenticated" ? (
               <div className="border-t pt-4 space-y-2">
                 <Link
                   href={`/u/${encodeURIComponent(user.username)}`}

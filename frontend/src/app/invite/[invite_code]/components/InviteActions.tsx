@@ -12,7 +12,7 @@ interface InviteActionsProps {
 }
 
 const InviteActions = ({ invite }: InviteActionsProps) => {
-  const { user } = useAuthState();
+  const { user, authStatus } = useAuthState();
   const router = useRouter();
   const {
     mutateAsync: acceptInvite,
@@ -23,7 +23,7 @@ const InviteActions = ({ invite }: InviteActionsProps) => {
   const handleActionClick = async () => {
     if (isPending || isSuccess) return; // Prevent multiple submissions
 
-    if (!user?.is_authenticated) {
+    if (authStatus == "unauthenticated") {
       router.push(`/login?next=/invite/${invite.code}`);
       return;
     }
@@ -37,7 +37,7 @@ const InviteActions = ({ invite }: InviteActionsProps) => {
     }
   };
 
-  if (user?.is_authenticated && user.id === invite.creator.id) {
+  if (authStatus == "authenticated" && user.id === invite.creator.id) {
     return (
       <Button variant="secondary" disabled={true} className="h-16">
         You can&#39;t accept your own invite
@@ -45,20 +45,21 @@ const InviteActions = ({ invite }: InviteActionsProps) => {
     );
   }
 
-  const variant = !user?.is_authenticated
-    ? "secondary"
-    : isPending
-      ? "outline"
-      : "default";
+  const variant =
+    authStatus == "unauthenticated"
+      ? "secondary"
+      : isPending
+        ? "outline"
+        : "default";
 
   return (
     <Button
       variant={variant}
-      disabled={isPending || isSuccess}
+      disabled={isPending || isSuccess || authStatus == "loading"}
       onClick={handleActionClick}
       className="h-16"
     >
-      {user?.is_authenticated
+      {authStatus == "authenticated"
         ? isPending
           ? "Accepting..."
           : isSuccess

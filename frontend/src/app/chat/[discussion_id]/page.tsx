@@ -30,7 +30,7 @@ const ChatConversation = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const loadOnIntersectionTargetRef = useRef<HTMLDivElement>(null);
   const { user } = useAuthState();
-  const currentUserId = user?.id;
+  const currentUserId = user?.id!; // Assumed to be defined since user is authenticated (from parent AuthRequired)
 
   // We use a ref to prevent circular dependencies in useCallback
   // for onNewMessage since it is passed to the WS hook but itself calls
@@ -187,11 +187,8 @@ const ChatConversation = () => {
     }
   }, [discussion?.id, discussion?.is_unread, markMessagesAsRead]);
 
-  // In theory, currentUserId should never be null here because we already loaded and waited for the auth in the client
-  // wrapper component in the layout. But in case, we do an early return of a spinner.
-  // Otherwise, it is also possible that the discussion info or the messages are loading
-  // Either way, we show a loading spinner at this point.
-  if (discussionLoading || messagesLoading || !currentUserId) {
+  // It is possible that the discussion info or the messages are loading
+  if (discussionLoading || messagesLoading) {
     return (
       <div className={"h-full flex items-center justify-center flex-1"}>
         <Loader2 className="h-8 w-8 animate-spin" />

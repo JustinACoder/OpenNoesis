@@ -9,17 +9,16 @@ import UserAvatar from "@/components/UserAvatar";
 import { formatDistanceToNow } from "date-fns";
 import { MessageCircle, Loader2, AlertCircle } from "lucide-react";
 import Link from "next/link";
+import { useAuthState } from "@/providers/authProvider";
 
 interface DiscussionListProps {
   selectedDiscussionId?: number;
   onDiscussionSelect: () => void;
-  currentUserId?: number | null;
 }
 
 export const DiscussionList = ({
   selectedDiscussionId,
   onDiscussionSelect,
-  currentUserId,
 }: DiscussionListProps) => {
   const {
     data,
@@ -39,6 +38,8 @@ export const DiscussionList = ({
     },
     initialPageParam: null,
   });
+  const { user } = useAuthState();
+  const currentUserId = user!.id!; // Assumed to be defined since user is authenticated (from parent AuthRequired)
 
   const handleScroll = useCallback(
     (e: React.UIEvent<HTMLDivElement>) => {
