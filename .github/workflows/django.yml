@@ -42,13 +42,13 @@ jobs:
       ENV: test
 
       # Point Django to the *service containers*
-      DB_HOST: postgres
+      DB_HOST: "127.0.0.1"
       DB_PORT: "5432"
       DB_NAME: test_db
       DB_USER: test_user
       DB_PASSWORD: test_password
 
-      REDIS_HOST: redis
+      REDIS_HOST: "127.0.0.1"
       REDIS_PORT: "6379"
       REDIS_DB: "0"
       # Redis in CI usually doesn't need a password
