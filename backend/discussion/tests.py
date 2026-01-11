@@ -407,25 +407,26 @@ class PaginationTest(DiscussionApiTestBase):
     def test_message_pagination(self):
         client = self.authenticate_user1()
 
-        # Test first page (default page size is 30)
+        # Test first page (default page size is 20)
         response = client.get(reverse_lazy_api("get_discussion_messages", discussion_id=self.discussion1.id))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.json()["items"]), 30)
+        self.assertEqual(len(response.json()["items"]), 20)
 
         # Test second page
+        cursor = response.json().get("next_cursor")
         response = client.get(
             reverse_lazy_api("get_discussion_messages", discussion_id=self.discussion1.id),
-            {"page": 2}
+            {"cursor": cursor}
         )
         self.assertEqual(response.status_code, 200)
-        # Should have 8 messages (35 + 3 original messages - 30 from first page)
-        self.assertEqual(len(response.json()["items"]), 8)
+        # Should have 18 messages (35 + 3 original messages - 20 from first page)
+        self.assertEqual(len(response.json()["items"]), 18)
 
     def test_discussions_pagination(self):
         # Create additional discussions for testing pagination
         user4 = User.objects.create_user(username='testuser4', email='user4@example.com', password='password123')
 
-        for i in range(15):  # Create 15 additional discussions
+        for i in range(20):  # Create 20 additional discussions
             discussion = Discussion.objects.create(
                 debate=self.debate1,
                 participant1=self.user2,
@@ -440,14 +441,15 @@ class PaginationTest(DiscussionApiTestBase):
                 text=f"Test message for pagination discussion {i}"
             )
 
-        # Test pagination for user2 who should have 17 discussions (2 original + 15 new)
+        # Test pagination for user2 who should have 22 discussions (2 original + 20 new)
         client = self.authenticate_user2()
         response = client.get(reverse_lazy_api("get_discussions"))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.json()["items"]), 15)  # Default page size is 15
+        self.assertEqual(len(response.json()["items"]), 20)  # Default page size is 20
 
         # Test second page
-        response = client.get(reverse_lazy_api("get_discussions"), {"page": 2})
+        cursor = response.json().get("next_cursor")
+        response = client.get(reverse_lazy_api("get_discussions"), {"cursor": cursor})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()["items"]), 2)  # Should have 2 discussions on second page
 

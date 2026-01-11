@@ -41,4 +41,5 @@ jobs:
         pip install -r backend/requirements.txt
     - name: Run Tests
       run: |
-        python backend/manage.py test --settings=ProjectOpenDebate.test_settings --keepdb
+        cd backend
+        python manage.py test --settings=ProjectOpenDebate.test_settings

@@ -336,16 +336,22 @@ class NotificationPaginationTest(NotificationApiTestBase):
     def test_notification_pagination(self):
         client = self.authenticate_user1()
         
-        # Test first page (default page size is 15)
+        # Test first page (default page size is 10)
         response = client.get(reverse_lazy_api("get_notifications"))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.json()["items"]), 15)
+        self.assertEqual(len(response.json()["items"]), 10)
         
         # Test second page
         response = client.get(reverse_lazy_api("get_notifications"), {"page": 2})
         self.assertEqual(response.status_code, 200)
-        # Should have 7 notifications (20 + 2 original user1 notifications - 15 from first page)
-        self.assertEqual(len(response.json()["items"]), 7)
+        # Should have 12 notifications (20 + 2 original user1 notifications - 10 from first page) but limited to 10
+        self.assertEqual(len(response.json()["items"]), 10)
+
+        # Test third page
+        response = client.get(reverse_lazy_api("get_notifications"), {"page": 3})
+        self.assertEqual(response.status_code, 200)
+        # Should have 2 notifications left
+        self.assertEqual(len(response.json()["items"]), 2)
 
 
 class NotificationManagerTest(NotificationApiTestBase):
