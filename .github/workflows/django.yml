@@ -41,7 +41,7 @@ jobs:
           - 6379:6379
 
     env:
-      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      SECRET_KEY: "this-does-not-matter-in-tests"
       ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
       ENV: test
 
