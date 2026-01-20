@@ -2,11 +2,12 @@ export interface WebSocketMessage {
   status: "success" | "error";
   event_type?: string;
   message?: string;
-  data?: any;
-  [key: string]: any;
+  data?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  [key: string]: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
 type MessageHandler = (payload: WebSocketMessage) => void;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type EventHandler = (...args: any[]) => void;
 
 class WebSocketManager {
@@ -169,6 +170,7 @@ class WebSocketManager {
     this.reconnectAttempts = 0;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   send(data: any, stream?: string): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
       let message;
@@ -241,6 +243,7 @@ class WebSocketManager {
   }
 
   // Emit custom events
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   emit(event: string, ...args: any[]): void {
     const handlers = this.eventSubscribers.get(event);
     if (handlers) {

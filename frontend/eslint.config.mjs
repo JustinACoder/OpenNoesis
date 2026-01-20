@@ -19,6 +19,14 @@ const eslintConfig = [
       "@typescript-eslint/no-explicit-any": "warn",
     },
   },
+
+  // Turn off "unused eslint-disable" warnings in generated / model files
+  {
+    files: ["src/lib/models/**/*.{ts,tsx}"],
+    linterOptions: {
+      reportUnusedDisableDirectives: "off",
+    },
+  },
 ];
 
 export default eslintConfig;

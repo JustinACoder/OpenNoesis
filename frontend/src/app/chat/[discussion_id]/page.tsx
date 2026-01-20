@@ -30,7 +30,9 @@ const ChatConversation = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const loadOnIntersectionTargetRef = useRef<HTMLDivElement>(null);
   const { user } = useAuthState();
-  const currentUserId = user?.id!; // Assumed to be defined since user is authenticated (from parent AuthRequired)
+  if (!user)
+    throw new Error("User must be authenticated to view ChatConversation");
+  const currentUserId = user.id!; // Assumed to be defined since user is authenticated (from parent AuthRequired)
 
   // We use a ref to prevent circular dependencies in useCallback
   // for onNewMessage since it is passed to the WS hook but itself calls

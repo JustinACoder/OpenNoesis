@@ -11,16 +11,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Mail, CheckCircle } from "lucide-react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { usePostAllauthClientV1AuthEmailVerify } from "@/lib/api/authentication-account";
+import { getUrlParam } from "@/lib/utils";
 
 export default function VerifyEmailPage() {
-  const searchParams = useSearchParams();
   const router = useRouter();
-  const key = searchParams.get("token"); // The verification code/secret
   const [errorMessages, setErrors] = useState<string[]>([]);
 
   // const { mutate: resendVerificationEmail, isPending: isResending } =
@@ -33,6 +32,8 @@ export default function VerifyEmailPage() {
 
   // If there's a verification code in the URL, attempt to verify automatically
   useEffect(() => {
+    const key = getUrlParam("token");
+
     if (key && !isVerifying && !isVerified) {
       verifyEmail(
         {
@@ -69,7 +70,7 @@ export default function VerifyEmailPage() {
         console.log("Email verification successful");
       });
     }
-  }, [key, isVerifying, isVerified, verifyEmail, router]);
+  }, [isVerifying, isVerified, verifyEmail, router]);
 
   // function handleResendEmail() {
   //   setErrors([]);
@@ -104,7 +105,7 @@ export default function VerifyEmailPage() {
   // }
 
   // If we're in the process of verifying with a code
-  if (key && isVerifying) {
+  if (isVerifying) {
     return (
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
@@ -195,8 +196,9 @@ export default function VerifyEmailPage() {
             Click the link in the email to verify your account.
           </p>
           <p className="text-sm text-muted-foreground">
-            Didn't receive the email? Check your spam folder. If that still
-            doesn't work, try logging in again to resend the verification email.
+            Didn&#39;t receive the email? Check your spam folder. If that still
+            doesn&#39;t work, try logging in again to resend the verification
+            email.
           </p>
         </div>
       </CardContent>

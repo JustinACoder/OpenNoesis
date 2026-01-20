@@ -111,7 +111,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         error,
       };
     }
-  }, [authStatus, error]);
+  }, [authStatus, error, isEmailPendingVerification, sessionData]);
   const actions = useMemo(
     () => ({
       login: loginMutation,

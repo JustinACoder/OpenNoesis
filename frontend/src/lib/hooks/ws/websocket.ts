@@ -122,6 +122,7 @@ export function useWebSocket({
   }, []);
 
   const send = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (data: any) => {
       manager.current.send(data, stream);
     },

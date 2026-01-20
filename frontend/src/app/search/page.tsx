@@ -1,4 +1,3 @@
-import { Footer } from "@/components/Footer";
 import NavigationOverlay from "@/components/navigation/NavigationOverlay";
 import SearchClient from "@/app/search/components/SearchClient";
 

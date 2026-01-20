@@ -1,10 +1,11 @@
 "use client";
 
 import { useAuthState } from "@/providers/authProvider";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { AlertCircleIcon, LoaderCircle } from "lucide-react";
 import React, { useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { getUrlParam } from "@/lib/utils";
 
 interface ChildrenInput {
   children: React.ReactNode;
@@ -13,15 +14,14 @@ interface ChildrenInput {
 const AuthRequired = ({ children }: ChildrenInput) => {
   const { authStatus, error } = useAuthState();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const nextUrl = searchParams.get("next") || "/";
 
   useEffect(() => {
     // If the user is authenticated, we can redirect them to the next URL
     if (authStatus === "unauthenticated") {
+      const nextUrl = getUrlParam("next") || "/";
       router.push(`/login?next=${encodeURIComponent(nextUrl)}`);
     }
-  }, [authStatus, router, nextUrl]);
+  }, [authStatus, router]);
 
   if (authStatus === "loading") {
     // Return a centered loading spinner in the middle of the parent
@@ -54,15 +54,14 @@ const AuthRequired = ({ children }: ChildrenInput) => {
 const GuestOnly = ({ children }: ChildrenInput) => {
   const { authStatus } = useAuthState();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const nextUrl = searchParams.get("next") || "/";
 
   useEffect(() => {
     // If the user is authenticated, redirect them to the next URL
     if (authStatus === "authenticated") {
+      const nextUrl = getUrlParam("next") || "/";
       router.push(nextUrl);
     }
-  }, [authStatus, router, nextUrl]);
+  }, [authStatus, router]);
 
   // if (authStatus !== "unauthenticated") {
   //   // Return a centered loading spinner in the middle of the parent
