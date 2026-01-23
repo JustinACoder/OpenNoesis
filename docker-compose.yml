@@ -1,11 +1,6 @@
-version: "3.8"
-
 services:
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    image: debate-backend:latest
+    image: ghcr.io/justinacoder/debate-backend:latest
     container_name: debate-backend
     restart: unless-stopped
     extra_hosts:
@@ -27,7 +22,7 @@ services:
       start_period: 40s
 
   celery-worker:
-    image: debate-backend:latest
+    image: ghcr.io/justinacoder/debate-backend:latest
     container_name: debate-celery-worker
     restart: unless-stopped
     extra_hosts:
@@ -46,7 +41,7 @@ services:
       start_period: 30s
 
   celery-beat:
-    image: debate-backend:latest
+    image: ghcr.io/justinacoder/debate-backend:latest
     container_name: debate-celery-beat
     restart: unless-stopped
     extra_hosts:
@@ -59,9 +54,7 @@ services:
     command: ["celery", "-A", "ProjectOpenDebate", "beat", "-l", "info"]
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: ghcr.io/justinacoder/debate-frontend:latest
     container_name: debate-frontend
     restart: unless-stopped
     env_file:
