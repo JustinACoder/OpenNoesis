@@ -23,7 +23,7 @@ if SECRET_KEY == default_unsafe_secret:
     if ENV == "prod":
         raise ValueError("In production, you must set a secure SECRET_KEY environment variable.")
 
-ALLOWED_HOSTS = []  # TODO: Add allowed hosts such as the domain name of the website
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=[]) + ['localhost', '127.0.0.1', '[::1]']
 
 INSTALLED_APPS = [
     'daphne',
