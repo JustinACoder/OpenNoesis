@@ -1617,6 +1617,33 @@
         ]
       }
     },
+    "/api/health": {
+      "get": {
+        "operationId": "ProjectOpenDebate_api_health_check",
+        "summary": "Health Check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "description": "Health check endpoint to verify the application is running correctly.\nChecks database connectivity.",
+        "tags": [
+          "General"
+        ]
+      }
+    },
     "/_allauth/{client}/v1/config": {
       "get": {
         "summary": "Get configuration",
@@ -3608,7 +3635,7 @@
       }
     },
     "/_allauth/app/v1/tokens/refresh": {
-      "get": {
+      "post": {
         "tags": [
           "Tokens"
         ],
@@ -4221,9 +4248,9 @@
             "title": "Vote Score",
             "type": "integer"
           },
-          "num_votes": {
+          "vote_count": {
             "default": 0,
-            "title": "Num Votes",
+            "title": "Vote Count",
             "type": "integer"
           },
           "user_vote": {
@@ -4371,9 +4398,9 @@
             "title": "Vote Score",
             "type": "integer"
           },
-          "num_votes": {
+          "vote_count": {
             "default": 0,
-            "title": "Num Votes",
+            "title": "Vote Count",
             "type": "integer"
           },
           "user_vote": {
@@ -4474,9 +4501,9 @@
             "title": "Vote Score",
             "type": "integer"
           },
-          "num_votes": {
+          "vote_count": {
             "default": 0,
-            "title": "Num Votes",
+            "title": "Vote Count",
             "type": "integer"
           },
           "user_vote": {
@@ -7781,20 +7808,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "data": {
-                  "$ref": "#/components/schemas/ReauthenticationResponse"
-                },
-                "status": {
-                  "type": "integer",
-                  "example": 200
-                }
-              },
-              "required": [
-                "data",
-                "status"
-              ]
+              "$ref": "#/components/schemas/ReauthenticationResponse"
             },
             "examples": {
               "reauthentication_required": {

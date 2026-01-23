@@ -10,13 +10,18 @@ env = environ.Env()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env("SECRET_KEY")
-
 # SECURITY WARNING: don't run with debug turned on in production!
 ENV = env("ENV", default="dev")
 DEBUG = ENV == "dev"
 print("Running in", ENV, "mode")
+
+# SECURITY WARNING: keep the secret key used in production secret!
+default_unsafe_secret = 'unsafe-secret-key'
+SECRET_KEY = env("SECRET_KEY", default=default_unsafe_secret)
+if SECRET_KEY == default_unsafe_secret:
+    print("WARNING: Using unsafe default secret key.")
+    if ENV == "prod":
+        raise ValueError("In production, you must set a secure SECRET_KEY environment variable.")
 
 ALLOWED_HOSTS = []  # TODO: Add allowed hosts such as the domain name of the website
 
@@ -60,7 +65,20 @@ MIDDLEWARE = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
     'allauth.account.middleware.AccountMiddleware',
 ]
-if ENV == "dev":
+
+if ENV == "prod":
+    # Production CORS configuration
+    CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
+    CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+
+    # Security settings for production
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+else:
     # Add to 'corsheaders' if we are in dev (to allow cors requests from the frontend running on different port)
     INSTALLED_APPS.append('corsheaders')
     MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')  # Ensure CORS middleware is first
@@ -103,37 +121,34 @@ WSGI_APPLICATION = 'ProjectOpenDebate.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env("DB_NAME"),
-        'USER': env("DB_USER"),
-        'PASSWORD': env("DB_PASSWORD"),
-        'HOST': env("DB_HOST"),
-        'PORT': env("DB_PORT"),
+        'NAME': env("DB_NAME", default="debate_db"),
+        'USER': env("DB_USER", default="debate_user"),
+        'PASSWORD': env("DB_PASSWORD", default="debate_password"),
+        'HOST': env("DB_HOST", default="localhost"),
+        'PORT': env("DB_PORT", default="5432"),
         'TEST': {
-            'NAME': 'debate_test', # Cannot be deleted, needs --keepdb
+            'NAME': 'debate_test',
         }
     }
 }
 
 # Channel layer definitions
+redis_host = env('REDIS_HOST', default='localhost')
+redis_port = env('REDIS_PORT', default='6379')
+redis_db = env('REDIS_DB', default='0')
+redis_password = env('REDIS_PASSWORD', default='')
+redis_url = f"redis://:{redis_password}@{redis_host}:{redis_port}/{redis_db}"
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [f"redis://:{env('REDIS_PASSWORD')}@{env('REDIS_HOST')}:{env('REDIS_PORT')}/{env('REDIS_DB')}"]
+            "hosts": [redis_url],
         }
     }
 }
 
-# If we are testing, we want to use the in-memory channel layer
-if DEBUG:
-    CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels.layers.InMemoryChannelLayer",
-        }
-    }
-
 # Celery settings
-CELERY_BROKER_URL = f"redis://:{env('REDIS_PASSWORD')}@{env('REDIS_HOST')}:{env('REDIS_PORT')}/{env('REDIS_DB')}"
+CELERY_BROKER_URL = redis_url
 CELERY_RESULT_BACKEND = 'django-db'  # Should we store in redis instead?
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
@@ -196,19 +211,29 @@ ACCOUNT_USERNAME_BLACKLIST = [
 ]
 # USERSESSIONS_TRACK_ACTIVITY = True  # See https://docs.allauth.org/en/dev/usersessions/installation.html if you want to track user sessions
 
-# TODO: Change this to the actual frontend URL in production
+# Frontend URLs
+FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
 HEADLESS_FRONTEND_URLS = {
-    "account_confirm_email": "http://localhost:3000/verify-email/?token={key}",
-    "account_reset_password": "http://localhost:3000/forgot-password",
-    "account_reset_password_from_key": "http://localhost:3000/reset-password/?token={key}",
-    "account_signup": "http://localhost:3000/signup",
+    "account_confirm_email": f"{FRONTEND_URL}/verify-email/?token={{key}}",
+    "account_reset_password": f"{FRONTEND_URL}/forgot-password",
+    "account_reset_password_from_key": f"{FRONTEND_URL}/reset-password/?token={{key}}",
+    "account_signup": f"{FRONTEND_URL}/signup",
     # Fallback in case the state containing the `next` URL is lost and the handshake
     # with the third-party provider fails.
-    "socialaccount_login_error": "http://localhost:3000/account/provider/callback",
+    "socialaccount_login_error": f"{FRONTEND_URL}/account/provider/callback",
 }
 
 # Email backend settings
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"  # TODO: Change to real email backend in production
+if ENV == "prod":
+    EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
+    EMAIL_HOST = env("EMAIL_HOST", default="smtp.gmail.com")
+    EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+    EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+    EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+    EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
 EMAIL_SUBJECT_PREFIX = '[DebateArena] '
 DEFAULT_FROM_EMAIL = 'noreply@debatearena.com'
 
@@ -228,6 +253,16 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(minute="0"),
     },
 }
+CELERYD_PREFETCH_MULTIPLIER = 1  # Default is 4, but 1 is recommended with long running tasks
+## Late ACK
+# If true, tasks are acknowledged after execution, not before. This can be useful in the case the worker suddenly
+# crashes or stops while executing a task, as the task will be retried (if it hasn't exceeded max retries).
+# However, when this is true, tasks may be executed more than once. In our case, with our current tasks, we care that
+# tasks are not run more than once, so we set this to False. If the worker crashes, the task will be lost, but
+# with the current tasks, this is acceptable as they are periodic tasks that will run again later anyway and catch
+# any unprocessed items. To be safer though, we will put a grace period of 5 minutes on the worker so that it has time to
+# finish processing tasks before being killed in case of deployment or shutdown.
+CELERY_TASK_ACKS_LATE = False
 
 # Ninja API settings
 API_VERSION = "1.0.0"

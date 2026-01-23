@@ -1,0 +1,78 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: debate-backend:latest
+    container_name: debate-backend
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - ./backend/.env.prod
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/staticfiles:/app/staticfiles
+    networks:
+      - debate-network
+    command: ["daphne", "-b", "0.0.0.0", "-p", "8000", "ProjectOpenDebate.asgi:application"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  celery-worker:
+    image: debate-backend:latest
+    container_name: debate-celery-worker
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - ./backend/.env.prod
+    networks:
+      - debate-network
+    stop_grace_period: 10m
+    command: ["celery", "-A", "ProjectOpenDebate", "worker", "-l", "info"]
+    healthcheck:
+      test: ["CMD", "celery", "-A", "ProjectOpenDebate", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  celery-beat:
+    image: debate-backend:latest
+    container_name: debate-celery-beat
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - ./backend/.env.prod
+    networks:
+      - debate-network
+    stop_grace_period: 10m
+    command: ["celery", "-A", "ProjectOpenDebate", "beat", "-l", "info"]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: debate-frontend
+    restart: unless-stopped
+    env_file:
+      - ./frontend/.env.prod
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "3000:3000"
+    networks:
+      - debate-network
+
+networks:
+  debate-network:
+    driver: bridge

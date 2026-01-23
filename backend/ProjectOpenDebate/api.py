@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.middleware.csrf import get_token
 from ninja import Router, Schema, ModelSchema
+from django.db import connection
 
 # Initialize Ninja API
 router = Router()
@@ -41,3 +42,16 @@ def get_current_user_object(request):
     Get the current user object no matter if authenticated or not.
     """
     return request.user
+
+@router.get("health", response={200: None, 503: str})
+def health_check(request):
+    """
+    Health check endpoint to verify the application is running correctly.
+    Checks database connectivity.
+    """
+    try:
+        # Check database connection
+        connection.ensure_connection()
+        return 200, None
+    except Exception as e:
+        return 503, str(e)
