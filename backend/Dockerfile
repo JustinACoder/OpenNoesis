@@ -36,9 +36,6 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Copy application code
 COPY . .
 
-# Build-time static collection
-RUN python manage.py collectstatic --noinput
-
 # Create a non-root user and switch to it
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser

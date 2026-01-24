@@ -169,6 +169,11 @@ run_migrations() {
   ok "Migrations completed."
 }
 
+collect_static() {
+  warn "Collecting static files..."
+  docker compose run --rm backend python manage.py collectstatic --noinput || warn "collectstatic failed (continuing)"
+}
+
 start_app_services() {
   warn "Starting app services..."
   docker compose up -d backend celery-worker celery-beat frontend
@@ -262,6 +267,9 @@ main() {
 
   # Apply schema first, while app is down
   run_migrations
+
+  # Collect static files
+  collect_static
 
   # Start everything
   start_app_services
