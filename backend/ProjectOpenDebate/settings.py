@@ -119,17 +119,17 @@ WSGI_APPLICATION = 'ProjectOpenDebate.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-db_password = env("DB_PASSWORD", default="debate_password")
+db_password = env("POSTGRES_PASSWORD", default="debate_password")
 if db_password == "debate_password":
     print("WARNING: Using default database password. This is unsafe for production.")
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env("DB_NAME", default="debate_db"),
-        'USER': env("DB_USER", default="debate_user"),
+        'NAME': env("POSTGRES_DB", default="debate_db"),
+        'USER': env("POSTGRES_USER", default="debate_user"),
         'PASSWORD': db_password,
-        'HOST': env("DB_HOST", default="127.0.0.1"),
-        'PORT': env("DB_PORT", default="5432"),
+        'HOST': env("POSTGRES_HOST", default="127.0.0.1"),
+        'PORT': env("POSTGRES_PORT", default="5432"),
         'TEST': {
             'NAME': 'debate_test',
         }
