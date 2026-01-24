@@ -164,14 +164,14 @@ pull_images() {
 }
 
 run_migrations() {
-  warn "Running migrations (one-off container)..."
-  docker compose run --rm backend python manage.py migrate --noinput
+  warn "Running migrations (in running backend container)..."
+  docker exec "$BACKEND_CONTAINER" python manage.py migrate --noinput
   ok "Migrations completed."
 }
 
 collect_static() {
-  warn "Collecting static files..."
-  docker compose run --rm backend python manage.py collectstatic --noinput || warn "collectstatic failed (continuing)"
+  warn "Collecting static files (in running backend container)..."
+  docker exec "$BACKEND_CONTAINER" python manage.py collectstatic --noinput || warn "collectstatic failed (continuing)"
 }
 
 start_app_services() {
@@ -265,14 +265,17 @@ main() {
   # Stop app services (db/redis stay)
   stop_app_services
 
-  # Apply schema first, while app is down
-  run_migrations
+  # Start backend first (so we can exec migrate/collectstatic in it)
+  warn "Starting backend container (only)..."
+  docker compose up -d backend
 
-  # Collect static files
+  # Apply schema + collect static inside the running backend container
+  run_migrations
   collect_static
 
-  # Start everything
-  start_app_services
+  # Start the rest
+  warn "Starting remaining app services..."
+  docker compose up -d celery-worker celery-beat frontend
 
   # Smoke tests (includes nginx->backend)
   smoke_tests
