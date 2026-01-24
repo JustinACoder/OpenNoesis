@@ -78,6 +78,7 @@ if ENV == "prod":
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 else:
     # Add to 'corsheaders' if we are in dev (to allow cors requests from the frontend running on different port)
     INSTALLED_APPS.append('corsheaders')
@@ -118,13 +119,16 @@ WSGI_APPLICATION = 'ProjectOpenDebate.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
+db_password = env("DB_PASSWORD", default="debate_password")
+if db_password == "debate_password":
+    print("WARNING: Using default database password. This is unsafe for production.")
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': env("DB_NAME", default="debate_db"),
         'USER': env("DB_USER", default="debate_user"),
-        'PASSWORD': env("DB_PASSWORD", default="debate_password"),
-        'HOST': env("DB_HOST", default="localhost"),
+        'PASSWORD': db_password,
+        'HOST': env("DB_HOST", default="127.0.0.1"),
         'PORT': env("DB_PORT", default="5432"),
         'TEST': {
             'NAME': 'debate_test',
@@ -133,7 +137,7 @@ DATABASES = {
 }
 
 # Channel layer definitions
-redis_host = env('REDIS_HOST', default='localhost')
+redis_host = env('REDIS_HOST', default='127.0.0.1')
 redis_port = env('REDIS_PORT', default='6379')
 redis_db = env('REDIS_DB', default='0')
 redis_password = env('REDIS_PASSWORD', default='')
@@ -234,12 +238,12 @@ if ENV == "prod":
 else:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
-EMAIL_SUBJECT_PREFIX = '[DebateArena] '
-DEFAULT_FROM_EMAIL = 'noreply@debatearena.com'
+EMAIL_SUBJECT_PREFIX = '[OpenNoesis] '
+DEFAULT_FROM_EMAIL = 'noreply@opennoesis.com'
 
 # Admins
 ADMINS = [
-    ('Admin', env("ADMIN_EMAIL", default="admin@gmail.com"))
+    ('Admin', env("ADMIN_EMAIL", default="admin@opennoesis.com"))
 ]
 
 # Pairing settings

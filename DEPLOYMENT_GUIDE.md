@@ -1,18 +1,19 @@
 # Production Deployment Guide
 
-Complete guide for deploying the Debate Arena platform on a VPS using Docker with automated CI/CD.
+Complete guide for deploying the Debate Arena platform on a VPS using Docker with GitHub Actions CI/CD.
 
 ## Table of Contents
 1. [Overview](#overview)
 2. [Prerequisites](#prerequisites)
 3. [Initial VPS Setup](#initial-vps-setup)
-4. [Configure Services](#configure-services)
+4. [GitHub Container Registry Setup](#github-container-registry-setup)
 5. [Environment Configuration](#environment-configuration)
 6. [Nginx & SSL Setup](#nginx--ssl-setup)
 7. [First Deployment](#first-deployment)
-8. [Deployment Scripts](#deployment-scripts)
-9. [Daily Operations](#daily-operations)
-10. [Troubleshooting](#troubleshooting)
+8. [CI/CD Pipeline](#cicd-pipeline)
+9. [Deployment Scripts](#deployment-scripts)
+10. [Daily Operations](#daily-operations)
+11. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -21,35 +22,50 @@ Complete guide for deploying the Debate Arena platform on a VPS using Docker wit
 ### Architecture
 
 **Docker Containers (via docker-compose.yml):**
+- `debate-db` - PostgreSQL 16 database
+- `debate-redis` - Redis 7 cache & message broker
 - `debate-backend` - Django + Daphne ASGI server (port 8000)
 - `debate-frontend` - Next.js standalone server (port 3000)
 - `debate-celery-worker` - Background task processor
 - `debate-celery-beat` - Periodic task scheduler
 
-**System Services:**
-- PostgreSQL - Database (standalone on host)
-- Redis - Cache & message broker (standalone on host)
+**External Services:**
 - Nginx - Reverse proxy with SSL termination
-
-**Deployment Features:**
-- Multi-stage Docker builds for optimized images
-- Health checks on all containers
-- Automatic rollback on deployment failure
-- Maintenance mode during deployments
-- State tracking (git commit + migration state)
+- GitHub Container Registry (GHCR) - Docker image registry
 
 ### Deployment Strategy
 
-**Maintenance Mode Deployment:**
-1. Enable maintenance page via nginx
-2. Save current state (commit hash + migrations)
-3. Stop containers → Pull code → Build → Start containers
-4. Wait for health checks to pass
-5. Run migrations & smoke tests
-6. Disable maintenance mode
-7. If any step fails → automatic rollback to saved state
+**CI/CD with GitHub Actions:**
+1. **Build Phase** (GitHub Runner):
+   - Run tests (backend + frontend)
+   - Build Docker images with multi-stage builds
+   - Tag images with git commit SHA (short) + "latest"
+   - Push images to GitHub Container Registry (GHCR)
 
-**Downtime:** ~2-3 minutes during deployment
+2. **Deploy Phase** (VPS):
+   - Enable maintenance mode (nginx shows maintenance page)
+   - Save current deployment state (image tags)
+   - Pull new images from GHCR
+   - Stop application containers (keep db/redis running)
+   - Create database backup (pg_dump)
+   - Start new containers and wait for health checks
+   - Run database migrations
+   - Perform smoke tests
+   - Disable maintenance mode
+   - **If any step fails:** Automatic rollback to previous images + restore database
+
+**Deployment Features:**
+- Image versioning with git commit SHA
+- Database backup before migrations
+- Health checks for all containers
+- Automatic rollback on failure
+- Maintenance mode during deployment (~2-3 minutes downtime)
+- Database/Redis data persisted in Docker volumes
+
+**Rollback Strategy:**
+- **Container fails to start/unhealthy:** Restore previous images
+- **Migration fails:** Restore database from pg_dump + restore previous images
+- Previous database backup is automatically restored during rollback
 
 ---
 
@@ -57,14 +73,15 @@ Complete guide for deploying the Debate Arena platform on a VPS using Docker wit
 
 - **VPS**: Ubuntu 22.04+ with root access
 - **Domain**: DNS pointing to VPS IP
-- **Resources**: Minimum 2 GB RAM, 2 CPU cores, 20 GB storage
-- **Repository**: GitHub repo with SSH access
+- **Resources**: Minimum 2 GB RAM, 2 CPU cores, 30 GB storage
+- **GitHub**: Repository with GitHub Actions enabled
+- **GitHub Packages**: Access to push to ghcr.io (included with GitHub account)
 
 ---
 
 ## Initial VPS Setup
 
-### 1. Install Required Software
+### 1. Update System & Install Docker
 
 ```bash
 # Update system
@@ -75,8 +92,11 @@ curl -fsSL https://get.docker.com | sh
 systemctl enable docker
 systemctl start docker
 
+# Install Docker Compose (if not included)
+apt-get install -y docker-compose-plugin
+
 # Install other dependencies
-apt-get install -y nginx postgresql postgresql-contrib redis-server git curl
+apt-get install -y nginx git curl
 ```
 
 ### 2. Create Project Directory
@@ -86,7 +106,7 @@ mkdir -p /opt/opennoesis
 cd /opt/opennoesis
 ```
 
-### 3. Create Non-Root User (Optional but Recommended)
+### 3. Create Non-Root User (Recommended)
 
 ```bash
 adduser deploy
@@ -96,45 +116,39 @@ usermod -aG sudo,docker deploy
 
 ---
 
-## Configure Services
+## GitHub Container Registry Setup
 
-### PostgreSQL Setup
+### 1. Create Personal Access Token (PAT)
+
+1. Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+2. Generate new token with these scopes:
+   - `read:packages` (for pulling images on VPS)
+   - `write:packages` (for pushing images from GitHub Actions - automatic)
+   - `repo` (for accessing private repositories if needed)
+3. Save the token securely
+
+### 2. Configure GHCR on VPS
 
 ```bash
-# Switch to postgres user
-sudo -u postgres psql
+# Login to GHCR on VPS
+echo "YOUR_GITHUB_PAT" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
 
-# Create database and user
-CREATE DATABASE debate_prod;
-CREATE USER debate_user WITH PASSWORD 'your-secure-password';
-ALTER ROLE debate_user SET client_encoding TO 'utf8';
-ALTER ROLE debate_user SET default_transaction_isolation TO 'read committed';
-ALTER ROLE debate_user SET timezone TO 'UTC';
-GRANT ALL PRIVILEGES ON DATABASE debate_prod TO debate_user;
-\q
-
-# Allow Docker containers to access PostgreSQL
-sudo nano /etc/postgresql/14/main/pg_hba.conf
-# Add this line:
-host    debate_prod     debate_user     172.16.0.0/12   md5
-
-# Restart PostgreSQL
-sudo systemctl restart postgresql
+# Verify login
+docker pull ghcr.io/YOUR_USERNAME/debate-backend:latest 2>&1 | grep -q "pull access denied" && echo "Login failed" || echo "Login successful"
 ```
 
-### Redis Setup
+### 3. Update docker-compose.yml with your username
 
-```bash
-# Set Redis password
-sudo nano /etc/redis/redis.conf
-# Find and uncomment: requirepass your-redis-password
+Edit `/opt/opennoesis/docker-compose.yml` and replace `justinacoder` with your GitHub username:
 
-# Restart Redis
-sudo systemctl restart redis-server
+```yaml
+backend:
+  image: ${DOCKER_IMAGE:-ghcr.io/YOUR_USERNAME/debate-backend:latest}
+  # ...
 
-# Test connection
-redis-cli -a your-redis-password ping
-# Should return: PONG
+frontend:
+  image: ${DOCKER_IMAGE_FRONTEND:-ghcr.io/YOUR_USERNAME/debate-frontend:latest}
+  # ...
 ```
 
 ---
@@ -145,8 +159,8 @@ redis-cli -a your-redis-password ping
 
 ```bash
 cd /opt/opennoesis
-git clone git@github.com:yourusername/ProjectOpenDebate.git .
-# Or: git clone https://github.com/yourusername/ProjectOpenDebate.git .
+git clone https://github.com/YOUR_USERNAME/ProjectOpenDebate.git .
+# Or use SSH: git clone git@github.com:YOUR_USERNAME/ProjectOpenDebate.git .
 ```
 
 ### 2. Backend Environment
@@ -160,22 +174,15 @@ nano .env.prod
 **Required Variables:**
 ```bash
 # Django Settings
-SECRET_KEY=your-super-secret-key-here-change-this
+SECRET_KEY=generate-a-secure-random-key-here-50-chars-minimum
 ENV=prod
 ADMIN_EMAIL=admin@yourdomain.com
 
-# Database (PostgreSQL on host)
-DB_HOST=172.17.0.1  # Docker bridge gateway
-DB_PORT=5432
-DB_NAME=debate_prod
-DB_USER=debate_user
-DB_PASSWORD=your-db-password
+# Database Configuration (PostgreSQL in Docker)
+DB_PASSWORD=secure-database-password-here
 
-# Redis (on host)
-REDIS_HOST=172.17.0.1
-REDIS_PORT=6379
-REDIS_DB=0
-REDIS_PASSWORD=your-redis-password
+# Redis Configuration (Redis in Docker)
+REDIS_PASSWORD=secure-redis-password-here
 
 # Email Configuration
 EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
@@ -183,7 +190,7 @@ EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USE_TLS=True
 EMAIL_HOST_USER=your-email@gmail.com
-EMAIL_HOST_PASSWORD=your-app-password
+EMAIL_HOST_PASSWORD=your-gmail-app-password
 
 # Frontend URL
 FRONTEND_URL=https://yourdomain.com
@@ -193,6 +200,8 @@ DJANGO_ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
 CORS_ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
 CSRF_TRUSTED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
 ```
+
+**Note:** DB_HOST, DB_PORT, DB_NAME, DB_USER, REDIS_HOST, etc. are configured in Django settings to use Docker service names (`debate-db`, `debate-redis`).
 
 ### 3. Frontend Environment
 
@@ -205,6 +214,19 @@ nano .env.prod
 **Required Variables:**
 ```bash
 NEXT_PUBLIC_API_URL=https://yourdomain.com/api
+```
+
+### 4. Create .env for Docker Compose
+
+```bash
+cd /opt/opennoesis
+nano .env
+```
+
+Add these variables (used by docker-compose.yml):
+```bash
+DB_PASSWORD=same-as-backend-env-db-password
+REDIS_PASSWORD=same-as-backend-env-redis-password
 ```
 
 ---
@@ -235,7 +257,14 @@ sudo nginx -t
 # Install Certbot
 sudo apt-get install -y certbot python3-certbot-nginx
 
-# Obtain certificate (temporarily disable HTTPS in nginx first)
+# Comment out SSL lines in nginx config temporarily
+sudo nano /etc/nginx/sites-available/opennoesis
+# Comment out the ssl_certificate lines
+
+# Reload nginx
+sudo systemctl reload nginx
+
+# Obtain certificate
 sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
 
 # Certbot will auto-configure nginx for HTTPS
@@ -256,24 +285,60 @@ sudo cp /opt/opennoesis/maintenance.html /opt/opennoesis/
 
 ## First Deployment
 
-### 1. Build Docker Images
+### 1. Start Database and Redis
 
 ```bash
 cd /opt/opennoesis
-docker compose build
+docker compose up -d db redis
+
+# Wait for services to be ready
+sleep 10
+
+# Verify they're running
+docker ps
+docker compose logs db
+docker compose logs redis
 ```
 
-### 2. Start Services
+### 2. Pull Initial Images
 
+Since GitHub Actions hasn't run yet, you'll need to build the initial images locally or wait for the first push to master:
+
+**Option A: Build locally (for initial setup)**
 ```bash
-docker compose up -d
+cd /opt/opennoesis
+
+# Build backend
+docker build -t ghcr.io/YOUR_USERNAME/debate-backend:latest ./backend
+
+# Build frontend
+docker build -t ghcr.io/YOUR_USERNAME/debate-frontend:latest ./frontend
+
+# Push to GHCR (optional, if you want to use GHCR from start)
+docker push ghcr.io/YOUR_USERNAME/debate-backend:latest
+docker push ghcr.io/YOUR_USERNAME/debate-frontend:latest
 ```
 
-### 3. Run Migrations
+**Option B: Use local images temporarily**
+```bash
+# Temporarily modify docker-compose.yml to build locally
+# Then deploy, then push to GitHub to trigger CI/CD
+```
+
+### 3. Deploy
 
 ```bash
-docker exec debate-backend python manage.py migrate
-docker exec debate-backend python manage.py collectstatic --noinput
+cd /opt/opennoesis
+
+# Set image tags
+export DOCKER_IMAGE=ghcr.io/YOUR_USERNAME/debate-backend:latest
+export DOCKER_IMAGE_FRONTEND=ghcr.io/YOUR_USERNAME/debate-frontend:latest
+
+# Make scripts executable
+chmod +x deploy.sh rollback.sh maintenance.sh quick-ref.sh
+
+# Run deployment
+./deploy.sh
 ```
 
 ### 4. Create Superuser
@@ -288,46 +353,117 @@ docker exec -it debate-backend python manage.py createsuperuser
 # Check container status
 docker ps
 
-# Check health
-./health-check.sh
-
 # Test endpoints
 curl http://localhost:8000/api/health/
 curl http://localhost:3000/
+
+# Visit your domain
+https://yourdomain.com
 ```
 
 ---
 
-## Deployment Scripts
+## CI/CD Pipeline
 
-All deployment scripts are in the project root:
+### 1. Configure GitHub Secrets
+
+Go to your GitHub repository → Settings → Secrets and variables → Actions → New repository secret
+
+Add these secrets:
+- `VPS_SSH_KEY` - Your VPS SSH private key
+- `VPS_KNOWN_HOSTS` - Output of `ssh-keyscan YOUR_VPS_IP`
+- `VPS_HOST` - Your VPS IP address
+- `VPS_USER` - SSH user (e.g., `root` or `deploy`)
+
+**Generate SSH key on VPS (if not exists):**
+```bash
+# On your local machine
+ssh-keygen -t ed25519 -C "github-actions-deploy"
+# Save to a file, e.g., ~/.ssh/github_actions
+
+# Copy public key to VPS
+ssh-copy-id -i ~/.ssh/github_actions.pub USER@VPS_IP
+
+# Get the private key content for GitHub secret
+cat ~/.ssh/github_actions
+
+# Get known_hosts for GitHub secret
+ssh-keyscan YOUR_VPS_IP
+```
+
+### 2. Update Workflow File
+
+Edit `.github/workflows/deploy.yml` and replace `${{ github.repository_owner }}` sections with your username if needed, or leave as is for automatic detection.
+
+### 3. Trigger Deployment
+
+```bash
+# Make a change and push to master
+git add .
+git commit -m "Trigger deployment"
+git push origin master
+```
+
+GitHub Actions will:
+1. Run backend tests
+2. Run frontend linting and build
+3. Build Docker images (multi-stage, cached)
+4. Push images to GHCR with SHA tag + latest tag
+5. SSH to VPS and run `deploy.sh` with the new image tag
+
+### 4. Monitor Deployment
+
+- Watch GitHub Actions: `https://github.com/YOUR_USERNAME/ProjectOpenDebate/actions`
+- Check VPS logs: `ssh USER@VPS_IP "cd /opt/opennoesis && docker compose logs -f"`
+
+---
+
+## Deployment Scripts
 
 ### deploy.sh
 
 **Purpose:** Main deployment script with automatic rollback on failure
 
 **What it does:**
-1. Enables maintenance mode (shows maintenance.html)
-2. Saves current state (git commit + migration state)
-3. Stops containers → Pulls latest code from GitHub
-4. Builds new Docker images
-5. Starts containers and waits for health checks (max 120s)
-6. Runs database migrations
-7. Performs smoke tests (backend & frontend)
-8. Disables maintenance mode
-9. Cleans up old images
-10. **If any step fails:** Automatically rolls back to saved state
+1. Enables maintenance mode (nginx shows maintenance.html)
+2. Saves current deployment state (current image tags)
+3. Pulls new images from GHCR (tag passed via environment variable)
+4. Stops application containers (keeps db/redis running)
+5. Creates database backup (pg_dump to /opt/opennoesis/backups/)
+6. Starts new containers and waits for health checks (max 120s)
+7. Runs database migrations
+8. Performs smoke tests (backend & frontend health endpoints)
+9. Disables maintenance mode
+10. Cleans up old images and backups (keeps last 10 backups)
+11. **If any step fails:** Automatic rollback (restore images + database)
 
 **Usage:**
 ```bash
-cd /opt/opennoesis
+# Triggered by GitHub Actions with specific image tag
+DOCKER_IMAGE=ghcr.io/user/debate-backend:abc1234 \
+DOCKER_IMAGE_FRONTEND=ghcr.io/user/debate-frontend:abc1234 \
+./deploy.sh
+
+# Or use latest
+DOCKER_IMAGE=ghcr.io/user/debate-backend:latest \
+DOCKER_IMAGE_FRONTEND=ghcr.io/user/debate-frontend:latest \
 ./deploy.sh
 ```
 
-**Requirements:**
-- Git remote configured (origin/master)
-- Nginx config with maintenance mode markers
-- Docker Compose running
+**State File (`.deploy_state`):**
+```
+BACKEND_IMAGE=ghcr.io/user/debate-backend:abc1234
+FRONTEND_IMAGE=ghcr.io/user/debate-frontend:abc1234
+DB_BACKUP=/opt/opennoesis/backups/pre_deploy_20260123_143022.sql
+```
+
+**Rollback Triggers:**
+- Failed to pull images → abort
+- Database backup failed → abort
+- Failed to start containers → rollback
+- Health checks timeout → rollback
+- Migrations failed → restore database + rollback images
+- Smoke tests failed → restore database + rollback images
 
 ---
 
@@ -338,11 +474,11 @@ cd /opt/opennoesis
 **What it does:**
 1. Enables maintenance mode
 2. Reads saved state from `.deploy_state`
-3. Stops containers → Checks out previous git commit
-4. Rebuilds and restarts containers
-5. Waits for health checks (max 120s)
-6. Restores migration state if available
-7. Performs smoke test
+3. Stops current containers
+4. Restores database from backup (if exists)
+5. Pulls and starts previous images
+6. Waits for health checks (max 120s)
+7. Performs smoke tests
 8. Disables maintenance mode
 
 **Usage:**
@@ -351,11 +487,12 @@ cd /opt/opennoesis
 ./rollback.sh
 ```
 
-**State File (`.deploy_state`):**
-```
-COMMIT=abc123def456...
-MIGRATION=app_name.0042_migration_name
-```
+**When to use:**
+- If you discover issues after a successful deployment
+- To revert to last known good state
+- After failed deployment (if automatic rollback didn't work)
+
+**Note:** Can only rollback to the immediately previous deployment (the one saved in `.deploy_state`)
 
 ---
 
@@ -377,63 +514,14 @@ MIGRATION=app_name.0042_migration_name
 
 **How it works:**
 - Edits `/etc/nginx/sites-available/opennoesis`
-- Toggles comments on maintenance mode block
+- Toggles comments on maintenance mode block (between markers)
 - Reloads nginx configuration
 
----
-
-### health-check.sh
-
-**Purpose:** Verify all services are running correctly
-
-**What it checks:**
-- PostgreSQL status
-- Redis status
-- Nginx status
-- Docker container status
-- Disk usage
-- Memory usage
-- Backend API health endpoint (http://localhost:8000/api/health/)
-- Frontend health (http://localhost:3000/)
-
-**Usage:**
-```bash
-./health-check.sh
-```
-
-**Output:**
-```
-PostgreSQL: ✓ Running
-Redis: ✓ Running
-Nginx: ✓ Running
-
-Docker Containers:
-debate-backend      Up 2 hours (healthy)
-debate-frontend     Up 2 hours (healthy)
-...
-
-Backend API: ✓ Healthy
-Frontend: ✓ Healthy
-```
-
----
-
-### test-builds.sh
-
-**Purpose:** Test Docker builds before deploying
-
-**What it does:**
-1. Builds backend Docker image (tagged as test)
-2. Builds frontend Docker image (tagged as test)
-3. Reports success/failure
-4. Cleans up test images
-
-**Usage:**
-```bash
-./test-builds.sh
-```
-
-**Use case:** Run before `deploy.sh` to verify builds work
+**Use cases:**
+- Manual maintenance window
+- Database maintenance
+- Testing deployment scripts
+- Emergency disable of application
 
 ---
 
@@ -443,9 +531,8 @@ Frontend: ✓ Healthy
 
 **Commands:**
 ```bash
-./quick-ref.sh deploy          # Deploy latest version
+./quick-ref.sh deploy          # Deploy (not typically used, CI/CD handles this)
 ./quick-ref.sh rollback        # Rollback to previous
-./quick-ref.sh health          # Check system health
 ./quick-ref.sh logs [service]  # View logs
 ./quick-ref.sh status          # Show deployment status
 ./quick-ref.sh migrate         # Run migrations manually
@@ -469,6 +556,11 @@ docker compose logs -f backend
 docker compose logs -f frontend
 docker compose logs -f celery-worker
 docker compose logs -f celery-beat
+docker compose logs -f db
+docker compose logs -f redis
+
+# Last 100 lines
+docker compose logs --tail=100 backend
 ```
 
 ### Restart Services
@@ -480,6 +572,10 @@ docker compose restart
 # Specific service
 docker compose restart backend
 docker compose restart celery-worker
+
+# Restart with downtime (stop then up)
+docker compose down backend
+docker compose up -d backend
 ```
 
 ### Run Django Management Commands
@@ -491,21 +587,49 @@ docker exec -it debate-backend python manage.py shell
 # Create superuser
 docker exec -it debate-backend python manage.py createsuperuser
 
-# Run migrations
+# Run migrations manually
 docker exec debate-backend python manage.py migrate
+
+# Show migrations
+docker exec debate-backend python manage.py showmigrations
 
 # Collect static files
 docker exec debate-backend python manage.py collectstatic --noinput
+
+# Run custom management commands
+docker exec debate-backend python manage.py YOUR_COMMAND
 ```
 
-### Database Backup
+### Database Operations
 
 ```bash
 # Create backup
-docker exec debate-backend python manage.py dumpdata > backup_$(date +%Y%m%d).json
+docker exec debate-db pg_dump -U debate_prod_user debate_prod > /opt/opennoesis/backups/manual_backup_$(date +%Y%m%d).sql
 
-# Or use PostgreSQL directly
-sudo -u postgres pg_dump debate_prod > /opt/opennoesis/backups/db_$(date +%Y%m%d).sql
+# Restore from backup
+cat /opt/opennoesis/backups/backup.sql | docker exec -i debate-db psql -U debate_prod_user -d debate_prod
+
+# Access database shell
+docker exec -it debate-db psql -U debate_prod_user -d debate_prod
+
+# Check database size
+docker exec debate-db psql -U debate_prod_user -d debate_prod -c "SELECT pg_size_pretty(pg_database_size('debate_prod'));"
+```
+
+### Redis Operations
+
+```bash
+# Access Redis CLI (without password)
+docker exec -it debate-redis redis-cli
+
+# With password
+docker exec -it debate-redis redis-cli -a YOUR_REDIS_PASSWORD
+
+# Check memory usage
+docker exec debate-redis redis-cli -a YOUR_PASSWORD INFO memory
+
+# Flush cache (careful!)
+docker exec debate-redis redis-cli -a YOUR_PASSWORD FLUSHALL
 ```
 
 ### Monitor Resources
@@ -514,17 +638,66 @@ sudo -u postgres pg_dump debate_prod > /opt/opennoesis/backups/db_$(date +%Y%m%d
 # Docker stats
 docker stats
 
-# System resources
-htop
-
 # Disk usage
 df -h
-du -sh /opt/opennoesis/*
+docker system df
+
+# Check volumes
+docker volume ls
+docker volume inspect opennoesis_pgdata
+docker volume inspect opennoesis_redisdata
+
+# System resources
+htop
+free -h
+```
+
+### Pull Latest Images
+
+```bash
+cd /opt/opennoesis
+
+# Pull specific version
+export DOCKER_IMAGE=ghcr.io/YOUR_USERNAME/debate-backend:abc1234
+export DOCKER_IMAGE_FRONTEND=ghcr.io/YOUR_USERNAME/debate-frontend:abc1234
+
+docker compose pull
+
+# Or pull latest
+export DOCKER_IMAGE=ghcr.io/YOUR_USERNAME/debate-backend:latest
+export DOCKER_IMAGE_FRONTEND=ghcr.io/YOUR_USERNAME/debate-frontend:latest
+
+docker compose pull
 ```
 
 ---
 
 ## Troubleshooting
+
+### Deployment Failed
+
+**Check GitHub Actions logs:**
+```bash
+# Visit: https://github.com/YOUR_USERNAME/ProjectOpenDebate/actions
+```
+
+**Check VPS deployment logs:**
+```bash
+ssh USER@VPS_IP
+cd /opt/opennoesis
+docker compose logs -f
+
+# Check if maintenance mode is still active
+./maintenance.sh status
+
+# If stuck in maintenance, disable manually
+./maintenance.sh disable
+```
+
+**Rollback manually:**
+```bash
+./rollback.sh
+```
 
 ### Container Won't Start
 
@@ -533,40 +706,75 @@ du -sh /opt/opennoesis/*
 docker compose logs backend
 docker compose logs frontend
 
-# Check health
-docker inspect --format='{{.State.Health.Status}}' debate-backend
+# Check health status
+docker inspect debate-backend --format='{{.State.Health.Status}}'
+docker inspect debate-backend --format='{{range .State.Health.Log}}{{.Output}}{{end}}'
 
-# Rebuild
-docker compose down
-docker compose build --no-cache
-docker compose up -d
+# Try restarting
+docker compose restart backend
+
+# Try rebuilding (if using local build)
+docker compose down backend
+docker compose up -d backend
 ```
 
 ### Database Connection Issues
 
 ```bash
-# Check PostgreSQL is running
-sudo systemctl status postgresql
+# Check database is running
+docker ps | grep debate-db
 
-# Test connection from container
-docker exec -it debate-backend psql -h 172.17.0.1 -U debate_user -d debate_prod
+# Check database logs
+docker compose logs db
 
-# Check pg_hba.conf allows Docker network
-sudo nano /etc/postgresql/14/main/pg_hba.conf
-# Should have: host debate_prod debate_user 172.16.0.0/12 md5
+# Test connection from backend
+docker exec -it debate-backend python manage.py dbshell
+
+# Check environment variables
+docker exec debate-backend env | grep DB_
+
+# Restart database (careful, may cause downtime)
+docker compose restart db
 ```
 
 ### Redis Connection Issues
 
 ```bash
 # Check Redis is running
-sudo systemctl status redis-server
+docker ps | grep debate-redis
 
-# Test connection from host
-redis-cli -a your-password ping
+# Check Redis logs
+docker compose logs redis
 
-# Test from container
-docker exec -it debate-backend redis-cli -h 172.17.0.1 -a your-password ping
+# Test connection
+docker exec debate-redis redis-cli -a YOUR_PASSWORD ping
+
+# Test from backend
+docker exec -it debate-backend python manage.py shell
+# >>> from django.core.cache import cache
+# >>> cache.set('test', 'value')
+# >>> cache.get('test')
+```
+
+### Health Checks Failing
+
+```bash
+# Check backend health endpoint
+curl http://localhost:8000/api/health/
+
+# Check frontend
+curl http://localhost:3000/
+
+# Check container logs
+docker logs debate-backend --tail=50
+docker logs debate-frontend --tail=50
+
+# Check container health
+docker inspect debate-backend | grep -A 20 Health
+docker inspect debate-frontend | grep -A 20 Health
+
+# Disable health check temporarily (edit docker-compose.yml)
+# Remove healthcheck: section and restart
 ```
 
 ### Nginx Issues
@@ -581,74 +789,116 @@ sudo tail -f /var/log/nginx/opennoesis-access.log
 
 # Reload configuration
 sudo systemctl reload nginx
-```
 
-### Deployment Failed, Stuck in Maintenance Mode
+# Restart nginx
+sudo systemctl restart nginx
 
-```bash
-# Check what went wrong
-docker compose logs
-
-# Manual rollback
-./rollback.sh
-
-# Or manually disable maintenance
-./maintenance.sh disable
-```
-
-### Health Checks Failing
-
-```bash
-# Check backend health endpoint
-curl http://localhost:8000/api/health/
-
-# Check container logs
-docker logs debate-backend
-docker logs debate-frontend
-
-# Inspect health check status
-docker inspect debate-backend | grep -A 20 Health
+# Check if maintenance mode is stuck
+cat /etc/nginx/sites-available/opennoesis | grep MAINTENANCE_MODE
 ```
 
 ### Out of Disk Space
 
 ```bash
-# Clean Docker resources
-docker system prune -a -f
-
 # Check disk usage
 df -h
 du -sh /var/lib/docker/*
+du -sh /opt/opennoesis/*
 
-# Clean old logs
-sudo find /var/log -type f -name "*.log" -mtime +30 -delete
+# Clean Docker resources
+docker system prune -a -f
+
+# Clean old backups (keeps last 10)
+cd /opt/opennoesis/backups
+ls -t pre_deploy_*.sql | tail -n +11 | xargs rm -f
+
+# Clean old images
+docker image prune -a -f
+
+# Clean logs
+sudo journalctl --vacuum-time=7d
 ```
 
-### Celery Tasks Not Running
+### Migration Failed
 
+**If deployment failed and rolled back:**
 ```bash
-# Check worker is running
-docker ps | grep celery
+# Check what happened
+docker compose logs backend | grep migration
 
-# Check worker logs
-docker logs debate-celery-worker
+# Check database state
+docker exec debate-backend python manage.py showmigrations
 
-# Inspect Celery
-docker exec debate-celery-worker celery -A ProjectOpenDebate inspect active
-docker exec debate-celery-worker celery -A ProjectOpenDebate inspect stats
+# If needed, manually rollback was already done by deploy.sh
+```
+
+**If you need to manually fix migrations:**
+```bash
+# Enable maintenance mode
+./maintenance.sh enable
+
+# Create database backup
+docker exec debate-db pg_dump -U debate_prod_user debate_prod > /opt/opennoesis/backups/before_fix.sql
+
+# Run migrations with --fake if needed (careful!)
+docker exec debate-backend python manage.py migrate app_name migration_name --fake
+
+# Or rollback specific migration
+docker exec debate-backend python manage.py migrate app_name previous_migration_name
+
+# Disable maintenance mode
+./maintenance.sh disable
 ```
 
 ### SSL Certificate Issues
 
 ```bash
-# Renew certificate manually
-sudo certbot renew --nginx
-
 # Check certificate expiration
 sudo certbot certificates
 
+# Renew certificate manually
+sudo certbot renew --nginx
+
 # Test auto-renewal
 sudo certbot renew --dry-run
+
+# If renewal fails, check nginx config
+sudo nginx -t
+
+# Check certbot logs
+sudo tail -f /var/log/letsencrypt/letsencrypt.log
+```
+
+### GitHub Actions Failed to Push Images
+
+**Check GHCR permissions:**
+```bash
+# Ensure repository has package access
+# GitHub → Repository → Settings → Actions → General
+# Workflow permissions: Read and write permissions
+```
+
+**Test GHCR login locally:**
+```bash
+echo "YOUR_GITHUB_PAT" | docker login ghcr.io -u YOUR_USERNAME --password-stdin
+docker pull ghcr.io/YOUR_USERNAME/debate-backend:latest
+```
+
+### Can't Pull Images on VPS
+
+```bash
+# Re-login to GHCR
+echo "YOUR_GITHUB_PAT" | docker login ghcr.io -u YOUR_USERNAME --password-stdin
+
+# Check image exists
+docker manifest inspect ghcr.io/YOUR_USERNAME/debate-backend:latest
+
+# Try pulling manually
+docker pull ghcr.io/YOUR_USERNAME/debate-backend:latest
+
+# Check if package is public or private
+# GitHub → Your profile → Packages → debate-backend → Package settings
+# Make package public if needed
 ```
 
 ---
@@ -657,49 +907,64 @@ sudo certbot renew --dry-run
 
 ### docker-compose.yml
 
-Orchestrates 4 services:
+**Services:**
 
-**backend:**
-- Built from `backend/Dockerfile`
-- Runs Daphne ASGI server on port 8000
-- Uses `backend/.env.prod` for configuration
-- Health check: `curl http://localhost:8000/api/health/`
-- Volume: staticfiles directory
+**db:**
+- Image: `postgres:16-alpine`
+- Environment: Uses `DB_PASSWORD` from .env file
+- Volume: `pgdata` for persistent data, `./backups` for dumps
+- Ports: 5432 exposed to host
+- Health check: `pg_isready`
 
-**celery-worker:**
-- Uses same image as backend
-- Runs Celery worker process
-- 10-minute graceful shutdown timeout
-- Health check: `celery inspect ping`
+**redis:**
+- Image: `redis:7-alpine`
+- Command: Includes password from `REDIS_PASSWORD` env var
+- Volume: `redisdata` for persistent data
+- Ports: 6379 exposed to host
+- Health check: `redis-cli ping`
 
-**celery-beat:**
-- Uses same image as backend
-- Runs Celery beat scheduler
-- 10-minute graceful shutdown timeout
+**backend, celery-worker, celery-beat:**
+- Image: Uses `DOCKER_IMAGE` env var or defaults to latest
+- Depends on: db and redis (waits for healthy state)
+- Env file: `backend/.env.prod`
+- Health checks on backend and worker
 
 **frontend:**
-- Built from `frontend/Dockerfile`
-- Runs Next.js standalone server on port 3000
-- Uses `frontend/.env.prod` for configuration
-- Health check: `wget http://localhost:3000/`
+- Image: Uses `DOCKER_IMAGE_FRONTEND` env var or defaults to latest
+- Env file: `frontend/.env.prod`
+- Ports: 3000 exposed to host
+- Health check: `wget` to localhost:3000
 
-**Network:**
-- All services connected via `debate-network` bridge
+**Volumes:**
+- `pgdata` - PostgreSQL data (persistent)
+- `redisdata` - Redis data (persistent)
+
+**Image Tag Handling:**
+```bash
+# Default (if DOCKER_IMAGE not set)
+ghcr.io/justinacoder/debate-backend:latest
+
+# With environment variable (set by deploy.sh)
+DOCKER_IMAGE=ghcr.io/justinacoder/debate-backend:abc1234
+
+# Docker compose uses the env var
+docker compose up -d
+```
 
 ### backend/Dockerfile
 
 Multi-stage build:
 
 **Stage 1 (builder):**
-- Base: python:3.12-slim
+- Base: `python:3.12-slim`
 - Installs build dependencies (gcc, postgresql-client)
 - Creates virtualenv in `/opt/venv`
 - Installs Python packages from requirements.txt
 
 **Stage 2 (runtime):**
-- Base: python:3.12-slim
+- Base: `python:3.12-slim`
 - Copies virtualenv from builder
-- Installs runtime dependencies only
+- Installs runtime dependencies only (postgresql-client, curl)
 - Copies application code
 - Runs `collectstatic` during build
 - Creates non-root user (appuser)
@@ -711,18 +976,18 @@ Multi-stage build:
 Multi-stage build:
 
 **Stage 1 (builder):**
-- Base: node:20-alpine
+- Base: `node:20-alpine`
 - Installs dependencies with `npm ci`
-- Generates Orval API client from openapi.json
-- Builds Next.js application
+- Generates Orval API client from `openapi.json`
+- Builds Next.js in standalone mode
 
 **Stage 2 (runner):**
-- Base: node:20-alpine
+- Base: `node:20-alpine`
 - Installs wget for health checks
 - Copies built assets (public, .next/standalone, .next/static)
 - Creates non-root user (nextjs)
 - Exposes port 3000
-- Healthcheck: `wget --spider http://localhost:3000/`
+- Health check: `wget --spider http://localhost:3000/`
 - CMD: `node server.js`
 
 ### nginx.conf
@@ -758,50 +1023,43 @@ Multi-stage build:
 
 ---
 
-## Quick Migration Checklist
+## Architecture Differences from Original
 
-When deploying code with database changes:
+**What changed:**
 
-1. **Before deployment:**
-   - ✅ Test migrations locally
-   - ✅ Backup database: `pg_dump debate_prod > backup.sql`
-   - ✅ Review migration files for issues
+1. **Database & Redis:** Now in Docker containers instead of system-level services
+   - Easier setup (no manual PostgreSQL/Redis configuration)
+   - Data persisted in Docker volumes
+   - Containers connected via Docker network
 
-2. **During deployment:**
-   - Automatic via `deploy.sh` (migrations run after health checks)
-   - Rollback available if migrations fail
+2. **Image Building:** Done in GitHub Actions instead of on VPS
+   - Faster deployments (no building on VPS)
+   - Consistent builds across environments
+   - Build caching for faster CI/CD
+   - VPS only pulls and runs pre-built images
 
-3. **After deployment:**
-   - ✅ Verify migrations: `docker exec debate-backend python manage.py showmigrations`
-   - ✅ Test application functionality
-   - ✅ Monitor logs for errors
+3. **Image Registry:** GitHub Container Registry (GHCR) instead of local images
+   - Images tagged with git commit SHA
+   - Easy rollback to any previous version
+   - Images available from anywhere
 
-4. **If migrations fail:**
-   - `./rollback.sh` will restore previous state
-   - Or manually: `docker exec debate-backend python manage.py migrate <app_name> <migration_number>`
+4. **Rollback Strategy:** Database dump instead of migration reversal
+   - Works for all migrations (including one-way migrations)
+   - Complete state restoration
+   - Backup created before migrations
 
----
+5. **Deployment Flow:** Pull-based instead of build-based
+   - VPS doesn't need source code changes
+   - Just pulls new images and restarts
+   - Simpler VPS setup
 
-## Security Best Practices
+**What stayed the same:**
 
-1. **Environment variables:** Never commit `.env.prod` files
-2. **Database passwords:** Use strong, unique passwords
-3. **SSH keys:** Use SSH keys instead of passwords for GitHub
-4. **Firewall:** Enable UFW and allow only necessary ports
-   ```bash
-   ufw allow 22/tcp   # SSH
-   ufw allow 80/tcp   # HTTP
-   ufw allow 443/tcp  # HTTPS
-   ufw enable
-   ```
-5. **Regular updates:** Keep system and Docker updated
-   ```bash
-   apt-get update && apt-get upgrade -y
-   docker system prune -af --volumes  # Careful with this!
-   ```
-6. **Monitoring:** Set up log monitoring and alerts
-7. **Backups:** Automate database backups
-8. **Non-root user:** Run deployment as non-root user when possible
+- Maintenance mode during deployment
+- Automatic rollback on failure
+- Health checks and smoke tests
+- Nginx reverse proxy setup
+- SSL with Let's Encrypt
 
 ---
 
@@ -809,17 +1067,21 @@ When deploying code with database changes:
 
 **To deploy latest code:**
 ```bash
-cd /opt/opennoesis && ./deploy.sh
+# Just push to master
+git push origin master
+
+# GitHub Actions will:
+# 1. Run tests
+# 2. Build images
+# 3. Push to GHCR
+# 4. Deploy to VPS
 ```
 
 **To rollback:**
 ```bash
-cd /opt/opennoesis && ./rollback.sh
-```
-
-**To check health:**
-```bash
-./health-check.sh
+ssh USER@VPS_IP
+cd /opt/opennoesis
+./rollback.sh
 ```
 
 **To view logs:**
@@ -827,12 +1089,15 @@ cd /opt/opennoesis && ./rollback.sh
 docker compose logs -f [service-name]
 ```
 
-**Deployment time:** ~2-3 minutes with maintenance mode
-**Automatic rollback:** Yes, on any failure
-**Zero-downtime:** No (maintenance mode shown during deployment)
-**Database migrations:** Automatic during deployment
+**Deployment time:** ~2-3 minutes with maintenance mode (most time is in GitHub Actions build)
+
+**Automatic rollback:** Yes, on any failure (container start, health checks, migrations, smoke tests)
+
+**Database persistence:** Yes, data stored in Docker volumes
+
+**Image versioning:** Git commit SHA (short) + latest tag
 
 ---
 
-**Need help?** Check logs with `docker compose logs` or open an issue on GitHub.
+**Need help?** Check logs with `docker compose logs` or review GitHub Actions output.
 

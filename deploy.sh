@@ -1,209 +1,282 @@
 #!/bin/bash
-# Simplified Deployment Script with Maintenance Mode
-set -e
+# Deploy with maintenance mode + pre-migration DB backup + rollback
+#
+# Assumptions:
+# - Run on the VPS as root (or via sudo).
+# - docker-compose.yml is in /opt/opennoesis (PROJECT_DIR).
+# - docker-compose.yml uses APP_TAG for BOTH images, e.g.:
+#     backend:  image: ghcr.io/justinacoder/debate-backend:${APP_TAG}
+#     frontend: image: ghcr.io/justinacoder/debate-frontend:${APP_TAG}
+#
+# Usage:
+#   APP_TAG=2026-01-24_01 ./deploy.sh
+#
+set -Eeuo pipefail
 
-# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-# Configuration
 PROJECT_DIR="/opt/opennoesis"
 BACKUP_DIR="$PROJECT_DIR/backups"
-COMPOSE_FILE="$PROJECT_DIR/docker-compose.yml"
 STATE_FILE="$PROJECT_DIR/.deploy_state"
 
-echo -e "${YELLOW}Starting deployment...${NC}"
+NGINX_SITE="/etc/nginx/sites-available/opennoesis"
 
-cd "$PROJECT_DIR"
-mkdir -p "$BACKUP_DIR"
+DB_CONTAINER="debate-db"         # container_name in compose
+DB_NAME="debate_db"
+DB_USER="debate_user"
 
-# Function to enable maintenance mode
+BACKEND_CONTAINER="debate-backend"
+FRONTEND_CONTAINER="debate-frontend"
+
+DB_BACKUP_FILE="$BACKUP_DIR/pre_deploy_$(date +%Y%m%d_%H%M%S).dump"
+
+log()  { echo -e "$1"; }
+warn() { echo -e "${YELLOW}$1${NC}"; }
+ok()   { echo -e "${GREEN}$1${NC}"; }
+err()  { echo -e "${RED}$1${NC}" >&2; }
+
+require_env() {
+  if [[ -z "${APP_TAG:-}" ]]; then
+    err "Missing required env var APP_TAG."
+    err "Usage: APP_TAG=<tag> $0"
+    exit 1
+  fi
+}
+
 enable_maintenance() {
-    echo -e "${YELLOW}Enabling maintenance mode...${NC}"
-    # Update nginx to serve maintenance page
-    sed -i 's/# MAINTENANCE_MODE_DISABLED/# MAINTENANCE_MODE_ENABLED/' /etc/nginx/sites-available/opennoesis
-    sed -i '/# MAINTENANCE_MODE_ENABLED/,/# END_MAINTENANCE_MODE/ s/^#//' /etc/nginx/sites-available/opennoesis
-    nginx -t && systemctl reload nginx
+  warn "Enabling maintenance mode..."
+  # Idempotent: only enable if not already enabled
+  if grep -q "# MAINTENANCE_MODE_DISABLED" "$NGINX_SITE"; then
+    sed -i 's/# MAINTENANCE_MODE_DISABLED/# MAINTENANCE_MODE_ENABLED/' "$NGINX_SITE"
+    sed -i '/# MAINTENANCE_MODE_ENABLED/,/# END_MAINTENANCE_MODE/ s/^#//' "$NGINX_SITE"
+  fi
+  nginx -t
+  systemctl reload nginx
 }
 
-# Function to disable maintenance mode
 disable_maintenance() {
-    echo -e "${YELLOW}Disabling maintenance mode...${NC}"
-    # Revert nginx to serve the application
-    sed -i 's/# MAINTENANCE_MODE_ENABLED/# MAINTENANCE_MODE_DISABLED/' /etc/nginx/sites-available/opennoesis
-    sed -i '/# MAINTENANCE_MODE_DISABLED/,/# END_MAINTENANCE_MODE/ s/^/#/' /etc/nginx/sites-available/opennoesis
-    nginx -t && systemctl reload nginx
+  warn "Disabling maintenance mode..."
+  # Idempotent: only disable if currently enabled
+  if grep -q "# MAINTENANCE_MODE_ENABLED" "$NGINX_SITE"; then
+    sed -i 's/# MAINTENANCE_MODE_ENABLED/# MAINTENANCE_MODE_DISABLED/' "$NGINX_SITE"
+    sed -i '/# MAINTENANCE_MODE_DISABLED/,/# END_MAINTENANCE_MODE/ s/^/#/' "$NGINX_SITE"
+  fi
+  nginx -t
+  systemctl reload nginx
 }
 
-# Function to save current state
 save_state() {
-    echo -e "${YELLOW}Saving current state...${NC}"
-    CURRENT_COMMIT=$(git rev-parse HEAD)
-    CURRENT_MIGRATION=$(docker exec debate-backend python manage.py showmigrations --plan | grep '\[X\]' | tail -n 1 | awk '{print $2}' 2>/dev/null || echo "")
+  warn "Saving current state..."
+  mkdir -p "$BACKUP_DIR"
+  chmod 700 "$BACKUP_DIR" || true
 
-    echo "COMMIT=$CURRENT_COMMIT" > "$STATE_FILE"
-    echo "MIGRATION=$CURRENT_MIGRATION" >> "$STATE_FILE"
+  local cur_backend_image cur_frontend_image
+  cur_backend_image="$(docker inspect "$BACKEND_CONTAINER" --format='{{.Config.Image}}' 2>/dev/null || true)"
+  cur_frontend_image="$(docker inspect "$FRONTEND_CONTAINER" --format='{{.Config.Image}}' 2>/dev/null || true)"
 
-    echo -e "${GREEN}State saved: commit=$CURRENT_COMMIT${NC}"
+  # Extract tags (best-effort). If image uses digest, tag extraction will be empty-ish; rollback will fallback.
+  local prev_tag=""
+  if [[ -n "$cur_backend_image" && "$cur_backend_image" != *@sha256:* && "$cur_backend_image" == *:* ]]; then
+    prev_tag="${cur_backend_image##*:}"
+  fi
+
+  {
+    echo "PREV_APP_TAG=$prev_tag"
+    echo "PREV_BACKEND_IMAGE=$cur_backend_image"
+    echo "PREV_FRONTEND_IMAGE=$cur_frontend_image"
+    echo "DB_BACKUP="
+  } > "$STATE_FILE"
+
+  ok "State saved to $STATE_FILE"
 }
 
-# Function to restore previous state
-restore_state() {
-    echo -e "${YELLOW}Restoring previous state...${NC}"
+backup_database() {
+  warn "Creating database backup (custom format)..."
+  mkdir -p "$BACKUP_DIR"
+  chmod 700 "$BACKUP_DIR" || true
 
-    if [ ! -f "$STATE_FILE" ]; then
-        echo -e "${RED}No state file found! Cannot restore.${NC}"
-        return 1
-    fi
+  docker ps --format '{{.Names}}' | grep -qx "$DB_CONTAINER" || {
+    err "DB container '$DB_CONTAINER' not running. Cannot backup."
+    return 1
+  }
 
-    source "$STATE_FILE"
-
-    # Restore git commit
-    if [ -n "$COMMIT" ]; then
-        echo -e "${YELLOW}Restoring to commit: $COMMIT${NC}"
-        git checkout -f "$COMMIT"
-    fi
-
-    # Rebuild and restart containers
-    docker compose -f "$COMPOSE_FILE" build
-    docker compose -f "$COMPOSE_FILE" up -d
-
-    # Wait for backend to be ready
-    sleep 10
-
-    # Restore migrations
-    if [ -n "$MIGRATION" ]; then
-        echo -e "${YELLOW}Restoring migrations to: $MIGRATION${NC}"
-        docker exec debate-backend python manage.py migrate $MIGRATION --noinput || echo -e "${YELLOW}Warning: Could not restore migrations${NC}"
-    fi
-
-    # Try to verify it's working
-    BACKEND_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/health/ || echo "000")
-    if [ "$BACKEND_RESPONSE" = "200" ]; then
-        echo -e "${GREEN}Restore successful!${NC}"
-        return 0
-    else
-        echo -e "${RED}Restore failed! Backend not responding.${NC}"
-        return 1
-    fi
+  if docker exec -t "$DB_CONTAINER" pg_dump -U "$DB_USER" -d "$DB_NAME" -Fc > "$DB_BACKUP_FILE"; then
+    ok "DB backup created: $DB_BACKUP_FILE"
+    sed -i "s|^DB_BACKUP=.*|DB_BACKUP=$DB_BACKUP_FILE|" "$STATE_FILE"
+    return 0
+  else
+    err "DB backup failed!"
+    return 1
+  fi
 }
 
-# Enable maintenance mode
-enable_maintenance
+restore_database() {
+  local backup_file="$1"
+  [[ -f "$backup_file" ]] || { err "Backup file not found: $backup_file"; return 1; }
 
-# Save current state before making changes
-if docker ps | grep -q "debate-backend"; then
-    save_state
-else
-    echo -e "${YELLOW}No running containers found, skipping state save${NC}"
-fi
+  warn "Restoring database from backup: $backup_file"
+  if cat "$backup_file" | docker exec -i "$DB_CONTAINER" pg_restore \
+      -U "$DB_USER" -d "$DB_NAME" --clean --if-exists; then
+    ok "Database restore successful."
+    return 0
+  else
+    err "Database restore failed."
+    return 1
+  fi
+}
 
-# Stop current containers
-echo -e "${YELLOW}Stopping current containers...${NC}"
-docker compose -f "$COMPOSE_FILE" down || true
-
-# Pull latest code
-echo -e "${YELLOW}Pulling latest code from GitHub...${NC}"
-git fetch origin master
-git reset --hard origin/master
-
-# Build new Docker images
-echo -e "${YELLOW}Building Docker images...${NC}"
-if ! docker compose -f "$COMPOSE_FILE" build; then
-    echo -e "${RED}Docker build failed! Restoring previous state...${NC}"
-    if restore_state; then
-        disable_maintenance
-    else
-        echo -e "${RED}Restore failed! Keeping maintenance mode active.${NC}"
+wait_for_db() {
+  warn "Waiting for database to be ready..."
+  local max_wait=60
+  local waited=0
+  while (( waited < max_wait )); do
+    if docker exec "$DB_CONTAINER" pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1; then
+      ok "Database is ready."
+      return 0
     fi
-    exit 1
-fi
+    sleep 2
+    waited=$(( waited + 2 ))
+    echo "  ... (${waited}s/${max_wait}s)"
+  done
+  err "Database not ready after ${max_wait}s."
+  return 1
+}
 
-# Start new containers
-echo -e "${YELLOW}Starting new containers...${NC}"
-if ! docker compose -f "$COMPOSE_FILE" up -d; then
-    echo -e "${RED}Failed to start containers! Restoring previous state...${NC}"
-    if restore_state; then
-        disable_maintenance
-    else
-        echo -e "${RED}Restore failed! Keeping maintenance mode active.${NC}"
-    fi
-    exit 1
-fi
+stop_app_services() {
+  warn "Stopping app services (keeping db/redis)..."
+  docker compose stop backend celery-worker celery-beat frontend >/dev/null 2>&1 || true
+  docker compose rm -f backend celery-worker celery-beat frontend >/dev/null 2>&1 || true
+}
 
-# Wait for containers to be ready
-echo -e "${YELLOW}Waiting for containers to be healthy...${NC}"
-MAX_WAIT=120
-WAITED=0
-HEALTH_CHECK_INTERVAL=5
+start_infra() {
+  warn "Ensuring db/redis are up..."
+  docker compose up -d db redis
+  wait_for_db
+}
 
-while [ $WAITED -lt $MAX_WAIT ]; do
-    BACKEND_HEALTH=$(docker inspect --format='{{.State.Health.Status}}' debate-backend 2>/dev/null || echo "unhealthy")
-    FRONTEND_HEALTH=$(docker inspect --format='{{.State.Health.Status}}' debate-frontend 2>/dev/null || echo "unhealthy")
+pull_images() {
+  warn "Pulling new images for APP_TAG=${APP_TAG}"
+  export APP_TAG
+  docker compose pull backend frontend
+}
 
-    if [ "$BACKEND_HEALTH" = "healthy" ] && [ "$FRONTEND_HEALTH" = "healthy" ]; then
-        echo -e "${GREEN}All containers are healthy!${NC}"
-        break
-    fi
+run_migrations() {
+  warn "Running migrations (one-off container)..."
+  docker compose run --rm backend python manage.py migrate --noinput
+  ok "Migrations completed."
+}
 
-    echo "Waiting for health checks... (${WAITED}s/${MAX_WAIT}s)"
-    sleep $HEALTH_CHECK_INTERVAL
-    WAITED=$((WAITED + HEALTH_CHECK_INTERVAL))
-done
+start_app_services() {
+  warn "Starting app services..."
+  docker compose up -d backend celery-worker celery-beat frontend
+}
 
-if [ $WAITED -ge $MAX_WAIT ]; then
-    echo -e "${RED}Health check timeout! Restoring previous state...${NC}"
-    if restore_state; then
-        disable_maintenance
-    else
-        echo -e "${RED}Restore failed! Keeping maintenance mode active.${NC}"
-    fi
-    exit 1
-fi
+smoke_tests() {
+  warn "Smoke tests..."
+  # Validate nginx routing to backend (Origin CA => -k)
+  if ! curl -sk -H "Host: opennoesis.com" --max-time 5 https://127.0.0.1/api/health/ >/dev/null; then
+    err "Backend smoke test failed (nginx -> backend)."
+    return 1
+  fi
 
-# Run database migrations
-echo -e "${YELLOW}Running database migrations...${NC}"
-if ! docker exec debate-backend python manage.py migrate --noinput; then
-    echo -e "${RED}Migration failed! Restoring previous state...${NC}"
-    if restore_state; then
-        disable_maintenance
-    else
-        echo -e "${RED}Restore failed! Keeping maintenance mode active.${NC}"
-    fi
-    exit 1
-fi
+  # Frontend direct (adjust to nginx if/when you proxy it there)
+  if ! curl -fsS --max-time 5 http://127.0.0.1:3000/ >/dev/null; then
+    err "Frontend smoke test failed (port 3000)."
+    return 1
+  fi
 
-# Collect static files
-echo -e "${YELLOW}Collecting static files...${NC}"
-docker exec debate-backend python manage.py collectstatic --noinput || echo -e "${YELLOW}Warning: collectstatic failed${NC}"
+  ok "Smoke tests passed."
+}
 
-# Perform smoke tests
-echo -e "${YELLOW}Performing smoke tests...${NC}"
-BACKEND_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/health/ || echo "000")
-FRONTEND_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/ || echo "000")
+rollback() {
+  err "Rolling back..."
 
-if [ "$BACKEND_RESPONSE" != "200" ] || [ "$FRONTEND_RESPONSE" != "200" ]; then
-    echo -e "${RED}Smoke tests failed! Backend: $BACKEND_RESPONSE, Frontend: $FRONTEND_RESPONSE${NC}"
-    echo -e "${RED}Restoring previous state...${NC}"
-    if restore_state; then
-        disable_maintenance
-    else
-        echo -e "${RED}Restore failed! Keeping maintenance mode active.${NC}"
-    fi
-    exit 1
-fi
+  if [[ ! -f "$STATE_FILE" ]]; then
+    err "No state file; cannot rollback safely. Keeping maintenance mode ON."
+    return 1
+  fi
 
-echo -e "${GREEN}Smoke tests passed!${NC}"
+  # shellcheck disable=SC1090
+  source "$STATE_FILE" || true
 
-# Disable maintenance mode
-disable_maintenance
+  # Restore DB if we have a backup
+  if [[ -n "${DB_BACKUP:-}" && -f "${DB_BACKUP:-}" ]]; then
+    restore_database "$DB_BACKUP" || err "DB restore failed; continuing rollback of containers anyway."
+  fi
 
-# Clean up old images
-echo -e "${YELLOW}Cleaning up old Docker images...${NC}"
-docker image prune -f
+  stop_app_services
+  start_infra
 
-echo -e "${GREEN}Deployment completed successfully!${NC}"
+  if [[ -n "${PREV_APP_TAG:-}" ]]; then
+    warn "Reverting APP_TAG to previous tag: ${PREV_APP_TAG}"
+    export APP_TAG="$PREV_APP_TAG"
+    docker compose pull backend frontend || true
+    start_app_services
+  else
+    warn "No previous tag detected. Attempting best-effort restart of existing containers."
+    start_app_services
+  fi
 
+  if smoke_tests; then
+    ok "Rollback successful."
+    disable_maintenance
+    return 0
+  fi
 
+  err "Rollback failed. Keeping maintenance mode ON."
+  return 1
+}
+
+on_error() {
+  err "Deployment failed (line $1)."
+  rollback || true
+  exit 1
+}
+trap 'on_error $LINENO' ERR
+
+main() {
+  require_env
+
+  cd "$PROJECT_DIR"
+  mkdir -p "$BACKUP_DIR"
+  chmod 700 "$BACKUP_DIR" || true
+
+  warn "Starting deployment with APP_TAG=${APP_TAG}"
+  enable_maintenance
+
+  save_state
+
+  start_infra
+
+  # Backup BEFORE applying migrations / starting new app code
+  backup_database
+
+  # Pull new images for requested tag
+  pull_images
+
+  # Stop app services (db/redis stay)
+  stop_app_services
+
+  # Apply schema first, while app is down
+  run_migrations
+
+  # Start everything
+  start_app_services
+
+  # Smoke tests (includes nginx->backend)
+  smoke_tests
+
+  disable_maintenance
+
+  # Keep only last 10 backups
+  warn "Cleaning old backups (keeping last 10)..."
+  ls -t "$BACKUP_DIR"/pre_deploy_*.dump 2>/dev/null | tail -n +11 | xargs -r rm -f
+
+  ok "Deployment completed successfully."
+  ok "Deployed APP_TAG=${APP_TAG}"
+}
+
+main

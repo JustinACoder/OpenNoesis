@@ -1,12 +1,49 @@
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: debate-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: debate_db
+      POSTGRES_USER: debate_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backups:/backups
+    networks:
+      - debate-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U debate_user -d debate_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: debate-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    networks:
+      - debate-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
   backend:
-    image: ghcr.io/justinacoder/debate-backend:latest
+    image: ghcr.io/justinacoder/debate-backend:${APP_TAG:-latest}
     container_name: debate-backend
     restart: unless-stopped
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     env_file:
       - ./backend/.env.prod
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
     ports:
       - "8000:8000"
     volumes:
@@ -22,13 +59,16 @@ services:
       start_period: 40s
 
   celery-worker:
-    image: ghcr.io/justinacoder/debate-backend:latest
+    image: ghcr.io/justinacoder/debate-backend:${APP_TAG:-latest}
     container_name: debate-celery-worker
     restart: unless-stopped
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     env_file:
       - ./backend/.env.prod
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
     networks:
       - debate-network
     stop_grace_period: 10m
@@ -41,24 +81,30 @@ services:
       start_period: 30s
 
   celery-beat:
-    image: ghcr.io/justinacoder/debate-backend:latest
+    image: ghcr.io/justinacoder/debate-backend:${APP_TAG:-latest}
     container_name: debate-celery-beat
     restart: unless-stopped
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     env_file:
       - ./backend/.env.prod
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
     networks:
       - debate-network
     stop_grace_period: 10m
     command: ["celery", "-A", "ProjectOpenDebate", "beat", "-l", "info"]
 
   frontend:
-    image: ghcr.io/justinacoder/debate-frontend:latest
+    image: ghcr.io/justinacoder/debate-frontend:${APP_TAG:-latest}
     container_name: debate-frontend
     restart: unless-stopped
     env_file:
       - ./frontend/.env.prod
+    depends_on:
+        backend:
+            condition: service_healthy
     environment:
       - NODE_ENV=production
     ports:
@@ -69,3 +115,7 @@ services:
 networks:
   debate-network:
     driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:

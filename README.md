@@ -209,11 +209,6 @@ celery -A ProjectOpenDebate beat -l info
 docker compose logs -f [service_name]
 ```
 
-### Health Checks
-```bash
-./health-check.sh
-```
-
 ### Access Django Admin
 Navigate to `https://your-domain.com/admin/`
 
