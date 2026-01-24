@@ -128,7 +128,7 @@ DATABASES = {
         'NAME': env("POSTGRES_DB", default="debate_db"),
         'USER': env("POSTGRES_USER", default="debate_user"),
         'PASSWORD': db_password,
-        'HOST': env("POSTGRES_HOST", default="127.0.0.1"),
+        'HOST': env("POSTGRES_HOST", default="db"),
         'PORT': env("POSTGRES_PORT", default="5432"),
         'TEST': {
             'NAME': 'debate_test',
@@ -137,7 +137,7 @@ DATABASES = {
 }
 
 # Channel layer definitions
-redis_host = env('REDIS_HOST', default='127.0.0.1')
+redis_host = env('REDIS_HOST', default='redis')
 redis_port = env('REDIS_PORT', default='6379')
 redis_db = env('REDIS_DB', default='0')
 redis_password = env('REDIS_PASSWORD', default='')
