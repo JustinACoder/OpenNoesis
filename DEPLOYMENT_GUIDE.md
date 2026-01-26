@@ -213,7 +213,8 @@ nano .env.prod
 
 **Required Variables:**
 ```bash
-NEXT_PUBLIC_API_URL=https://yourdomain.com/api
+NEXT_PUBLIC_API_URL=https://yourdomain.com
+DOCKER_API_URL=http://backend:8000
 ```
 
 ### 4. Create .env for Docker Compose

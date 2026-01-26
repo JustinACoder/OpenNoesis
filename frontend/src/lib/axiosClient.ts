@@ -6,7 +6,7 @@ import axios, {
 
 // Detect server vs. client
 const isServer = typeof window === "undefined";
-const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 async function queryServerForCSRFCookie(): Promise<string | undefined> {
   return await fetch(apiUrl + "/set-csrf-token", {

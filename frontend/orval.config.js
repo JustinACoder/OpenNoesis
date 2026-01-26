@@ -6,7 +6,7 @@ module.exports = {
       schemas: "src/lib/models",
       client: "react-query",
       httpClient: "fetch",
-      baseUrl: "http://localhost:8000",
+      baseUrl: "",
       // override: {
       //   mutator: {
       //     path: "./src/lib/axiosClient.ts",

@@ -8,7 +8,7 @@ async function getServerCookieStore() {
 
 function getApiUrl() {
   if (isServer) return process.env.DOCKER_API_URL;
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 }
 
 /* ---------------- CSRF Handling ---------------- */
@@ -91,7 +91,7 @@ export const customFetch = async <T>(
 
   // Perform fetch
   const requestUrl = url.startsWith("http") ? url : getApiUrl() + url;
-  //console.log("Options passed to customFetch:", options);
+  //console.log("Fecthing URL:", requestUrl);
   const allOptions = {
     ...options,
     headers,

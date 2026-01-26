@@ -11,8 +11,6 @@ import DebateSection from "@/components/DebateSection";
 import { Loader2 } from "lucide-react";
 
 export default async function HomePage() {
-  console.time("HomePage Get debates");
-
   // Parallel fetching to speed up SSR
   const [trending, popular, controversial, recent, random] = await Promise.all([
     debateApiTrendingDebates(undefined, {
@@ -31,8 +29,6 @@ export default async function HomePage() {
       next: { revalidate: 3600 },
     }),
   ]);
-
-  console.timeEnd("HomePage Get debates");
 
   const sections = [
     { title: "Trending Debates", items: trending.items },

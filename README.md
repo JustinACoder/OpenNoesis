@@ -131,7 +131,8 @@ REDIS_PASSWORD=your-redis-password
 
 ### Frontend (.env.production or .env.local)
 ```env
-NEXT_PUBLIC_API_URL=https://your-domain.com/api
+NEXT_PUBLIC_API_URL=https://your-domain.com
+DOCKER_API_URL=http://backend:8000
 ```
 
 ## 📚 Project Structure
