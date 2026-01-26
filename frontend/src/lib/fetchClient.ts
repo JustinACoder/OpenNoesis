@@ -6,16 +6,19 @@ async function getServerCookieStore() {
   return cookies();
 }
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+function getApiUrl() {
+  if (isServer) return process.env.DOCKER_API_URL;
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+}
 
 /* ---------------- CSRF Handling ---------------- */
 async function queryServerForCSRFCookie(): Promise<string | undefined> {
   try {
-    const res = await fetch(apiUrl + "/set-csrf-token", {
+    const res = await fetch(getApiUrl() + "/set-csrf-token", {
       method: "GET",
       credentials: "include",
     });
-    if (!res.ok) throw new Error("Failed to fetch CSRF token");
+    if (!res.ok) throw new Error("Response not OK");
     const json = await res.json();
     return json.csrftoken || undefined;
   } catch (err) {
@@ -87,7 +90,7 @@ export const customFetch = async <T>(
   }
 
   // Perform fetch
-  const requestUrl = url.startsWith("http") ? url : apiUrl + url;
+  const requestUrl = url.startsWith("http") ? url : getApiUrl() + url;
   //console.log("Options passed to customFetch:", options);
   const allOptions = {
     ...options,
