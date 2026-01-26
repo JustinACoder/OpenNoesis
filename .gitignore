@@ -9,3 +9,6 @@ backups/
 # OS
 .DS_Store
 Thumbs.db
+
+# Other
+myscripts/

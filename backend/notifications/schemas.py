@@ -18,6 +18,6 @@ class NotificationSchema(ModelSchema):
     notification_type_name: str = Field(..., alias="notification_type.name")
     info_args: Dict[str, Any] = {}
 
-    class Config:
+    class Meta:
         model = Notification
-        model_exclude = ["user", "notification_type"]
+        exclude = ["user", "notification_type"]

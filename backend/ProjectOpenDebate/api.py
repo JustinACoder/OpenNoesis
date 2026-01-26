@@ -19,9 +19,9 @@ class CurrentUserResponse(ModelSchema):
     is_authenticated: bool
     is_anonymous: bool
 
-    class Config:
+    class Meta:
         model = get_user_model()
-        model_exclude = ['password']
+        exclude = ['password']
 
 # API Endpoints
 @router.get("/set-csrf-token", response=CSRFTokenSchema)

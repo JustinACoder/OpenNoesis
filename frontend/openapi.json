@@ -382,6 +382,23 @@
               "type": "integer"
             },
             "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            },
+            "required": false
           }
         ],
         "responses": {
@@ -563,6 +580,23 @@
               "type": "integer"
             },
             "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            },
+            "required": false
           }
         ],
         "responses": {
@@ -601,6 +635,23 @@
               "minimum": 1,
               "title": "Page",
               "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
             },
             "required": false
           }
@@ -643,6 +694,23 @@
               "type": "integer"
             },
             "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            },
+            "required": false
           }
         ],
         "responses": {
@@ -683,6 +751,23 @@
               "type": "integer"
             },
             "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            },
+            "required": false
           }
         ],
         "responses": {
@@ -721,6 +806,23 @@
               "minimum": 1,
               "title": "Page",
               "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
             },
             "required": false
           }
@@ -770,6 +872,23 @@
               "minimum": 1,
               "title": "Page",
               "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
             },
             "required": false
           }
@@ -844,8 +963,15 @@
             "in": "query",
             "name": "user_id",
             "schema": {
-              "title": "User Id",
-              "type": "integer"
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
             },
             "required": false
           },
@@ -857,6 +983,23 @@
               "minimum": 1,
               "title": "Page",
               "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
             },
             "required": false
           }
@@ -906,6 +1049,23 @@
               "minimum": 1,
               "title": "Page",
               "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
             },
             "required": false
           }
@@ -1202,6 +1362,23 @@
               "minimum": 1,
               "title": "Page",
               "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
             },
             "required": false
           }
@@ -3745,6 +3922,18 @@
             "minimum": 1,
             "title": "Page",
             "type": "integer"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Size"
           }
         },
         "title": "Input",
@@ -4305,10 +4494,6 @@
             "title": "Title",
             "type": "string"
           },
-          "description": {
-            "title": "Description",
-            "type": "string"
-          },
           "date": {
             "format": "date-time",
             "title": "Date",
@@ -4334,7 +4519,6 @@
         },
         "required": [
           "title",
-          "description",
           "date",
           "slug",
           "description_preview"
@@ -4655,6 +4839,7 @@
             "type": "string"
           },
           "info_args": {
+            "additionalProperties": true,
             "default": {},
             "title": "Info Args",
             "type": "object"

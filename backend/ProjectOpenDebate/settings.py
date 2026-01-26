@@ -197,9 +197,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Allauth settings
 HEADLESS_ONLY = True
 ACCOUNT_EMAIL_SUBJECT_PREFIX = '[DebateArena] '
-ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+ACCOUNT_LOGIN_METHODS = {'email', 'username'}
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
-ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
 ACCOUNT_CHANGE_EMAIL = True
 ACCOUNT_EMAIL_UNKNOWN_ACCOUNTS = False
 ACCOUNT_USERNAME_VALIDATORS = 'users.validators.username_validators'

@@ -4,7 +4,7 @@ services:
     container_name: debate-db
     restart: unless-stopped
     env_file:
-      - ./backend/.env.prod
+      - ./backend/.env
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./backups:/backups
@@ -36,7 +36,7 @@ services:
     container_name: debate-backend
     restart: unless-stopped
     env_file:
-      - ./backend/.env.prod
+      - ./backend/.env
     depends_on:
       redis:
         condition: service_healthy
@@ -50,7 +50,7 @@ services:
       - debate-network
     command: ["daphne", "-b", "0.0.0.0", "-p", "8000", "ProjectOpenDebate.asgi:application"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -61,7 +61,7 @@ services:
     container_name: debate-celery-worker
     restart: unless-stopped
     env_file:
-      - ./backend/.env.prod
+      - ./backend/.env
     depends_on:
       redis:
         condition: service_healthy
@@ -83,7 +83,7 @@ services:
     container_name: debate-celery-beat
     restart: unless-stopped
     env_file:
-      - ./backend/.env.prod
+      - ./backend/.env
     depends_on:
       redis:
         condition: service_healthy
@@ -99,7 +99,7 @@ services:
     container_name: debate-frontend
     restart: unless-stopped
     env_file:
-      - ./frontend/.env.prod
+      - ./frontend/.env
     depends_on:
         backend:
             condition: service_healthy

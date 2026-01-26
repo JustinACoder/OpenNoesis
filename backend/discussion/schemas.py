@@ -21,9 +21,9 @@ class ArchiveStatusInputSchema(Schema):
 
 class MessageSchema(ModelSchema):
     text: str = Field(..., max_length=5000)
-    class Config:
+    class Meta:
         model = Message
-        model_fields = '__all__'
+        fields = '__all__'
 
 class DiscussionSchema(ModelSchema):
     debate: DebatePreviewSchema
@@ -37,11 +37,11 @@ class DiscussionSchema(ModelSchema):
     latest_activity: datetime
     inviteuse_id: Optional[int] = Field(None, alias='inviteuse__id')
 
-    class Config:
+    class Meta:
         model = Discussion
-        model_fields = '__all__'
+        fields = '__all__'
 
 class ReadCheckpointSchema(ModelSchema):
-    class Config:
+    class Meta:
         model = ReadCheckpoint
-        model_fields = '__all__'
+        fields = '__all__'

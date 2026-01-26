@@ -11,7 +11,7 @@ from users.api import router as users_router
 from pairing.api import router as pairing_router
 from .api import router as general_router
 
-api = NinjaAPI(version=settings.API_VERSION, title=settings.API_TITLE, csrf=True)
+api = NinjaAPI(version=settings.API_VERSION, title=settings.API_TITLE)
 
 api.add_router('/discussions', discussion_router, tags=['Discussions'])
 api.add_router('/invites', debateme_router, tags=['Invites'])

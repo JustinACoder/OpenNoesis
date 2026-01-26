@@ -16,14 +16,14 @@ class PairingRequestSchema(ModelSchema):
     debate: DebatePreviewSchema
     status: PairingRequest.Status
 
-    class Config:
+    class Meta:
         model = PairingRequest
-        model_exclude = ['user']
+        exclude = ['user']
 
 class CurrentActivePairingRequest(ModelSchema):
     debate: DebatePreviewSchema
     status: Literal[PairingRequest.Status.ACTIVE, PairingRequest.Status.MATCH_FOUND]
 
-    class Config:
+    class Meta:
         model = PairingRequest
-        model_exclude = ['user']
+        exclude = ['user']
