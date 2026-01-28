@@ -38,7 +38,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # Set up environment variables
-cp .env.prod.example .env.dev
+cp .env.example .env.dev
 # Edit .env.dev with your local settings
 
 # Run migrations
@@ -57,14 +57,32 @@ cd frontend
 npm install
 
 # Set up environment variables
-cp .env.prod.example .env.local
+cp .env.example .env.local
 # Edit .env.local with your settings
 
 # Run development server
 npm run dev
 ```
 
-### Using Docker (Recommended for Production)
+### Using Docker
+
+#### Development (with live reloading)
+```bash
+# Quick start - uses Django runserver and Next.js dev server
+./dev.sh          # Linux/Mac/WSL
+
+# Or manually
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+```
+
+**Development features:**
+- ✅ Live code reloading (backend & frontend)
+- ✅ Django runserver with debug toolbar
+- ✅ Next.js dev server with Turbopack HMR
+- ✅ Volume mounts for instant code changes
+- ✅ Detailed error messages and logging
+
+#### Production
 ```bash
 # Build and start all services
 docker compose up -d
@@ -126,7 +144,7 @@ DB_PASSWORD=your-password
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_PASSWORD=your-redis-password
-# ... see backend/.env.prod.example for all variables
+# ... see backend/.env.example for all variables
 ```
 
 ### Frontend (.env.production or .env.local)

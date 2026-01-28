@@ -83,21 +83,10 @@ Complete guide for deploying the Debate Arena platform on a VPS using Docker wit
 
 ### 1. Update System & Install Docker
 
+Run `apt update`. Then, install Docker by following their official documentation.
+You will also need `git` and `nginx`. You might want to install additional tools like `htop`, `curl`, etc.
+
 ```bash
-# Update system
-apt-get update && apt-get upgrade -y
-
-# Install Docker
-curl -fsSL https://get.docker.com | sh
-systemctl enable docker
-systemctl start docker
-
-# Install Docker Compose (if not included)
-apt-get install -y docker-compose-plugin
-
-# Install other dependencies
-apt-get install -y nginx git curl
-```
 
 ### 2. Create Project Directory
 
@@ -137,20 +126,6 @@ echo "YOUR_GITHUB_PAT" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password
 docker pull ghcr.io/YOUR_USERNAME/debate-backend:latest 2>&1 | grep -q "pull access denied" && echo "Login failed" || echo "Login successful"
 ```
 
-### 3. Update docker-compose.yml with your username
-
-Edit `/opt/opennoesis/docker-compose.yml` and replace `justinacoder` with your GitHub username:
-
-```yaml
-backend:
-  image: ${DOCKER_IMAGE:-ghcr.io/YOUR_USERNAME/debate-backend:latest}
-  # ...
-
-frontend:
-  image: ${DOCKER_IMAGE_FRONTEND:-ghcr.io/YOUR_USERNAME/debate-frontend:latest}
-  # ...
-```
-
 ---
 
 ## Environment Configuration
@@ -159,16 +134,16 @@ frontend:
 
 ```bash
 cd /opt/opennoesis
-git clone https://github.com/YOUR_USERNAME/ProjectOpenDebate.git .
-# Or use SSH: git clone git@github.com:YOUR_USERNAME/ProjectOpenDebate.git .
+git clone https://github.com/JustinACoder/ProjectOpenDebate.git .
+# Or use SSH: git clone git@github.com:JustinACoder/ProjectOpenDebate.git .
 ```
 
 ### 2. Backend Environment
 
 ```bash
 cd /opt/opennoesis/backend
-cp .env.prod.example .env.prod
-nano .env.prod
+cp .env.example .env
+nano .env
 ```
 
 **Required Variables:**
@@ -207,7 +182,7 @@ CSRF_TRUSTED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
 
 ```bash
 cd /opt/opennoesis/frontend
-cp .env.prod.example .env.prod
+cp .env.example .env.prod
 nano .env.prod
 ```
 
@@ -336,7 +311,7 @@ export DOCKER_IMAGE=ghcr.io/YOUR_USERNAME/debate-backend:latest
 export DOCKER_IMAGE_FRONTEND=ghcr.io/YOUR_USERNAME/debate-frontend:latest
 
 # Make scripts executable
-chmod +x deploy.sh rollback.sh maintenance.sh quick-ref.sh
+chmod +x deploy.sh rollback.sh maintenance.sh
 
 # Run deployment
 ./deploy.sh
@@ -523,24 +498,6 @@ cd /opt/opennoesis
 - Database maintenance
 - Testing deployment scripts
 - Emergency disable of application
-
----
-
-### quick-ref.sh
-
-**Purpose:** Quick reference for common operations
-
-**Commands:**
-```bash
-./quick-ref.sh deploy          # Deploy (not typically used, CI/CD handles this)
-./quick-ref.sh rollback        # Rollback to previous
-./quick-ref.sh logs [service]  # View logs
-./quick-ref.sh status          # Show deployment status
-./quick-ref.sh migrate         # Run migrations manually
-./quick-ref.sh shell           # Open Django shell
-./quick-ref.sh restart         # Restart all services
-./quick-ref.sh cleanup         # Clean Docker images
-```
 
 ---
 

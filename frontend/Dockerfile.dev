@@ -1,0 +1,13 @@
+# Development Dockerfile for Next.js frontend
+FROM node:24-alpine
+
+WORKDIR /app
+
+RUN apk add --no-cache git
+
+# Install deps first (cache-friendly)
+COPY package.json package-lock.json ./
+RUN npm ci
+
+EXPOSE 3000
+CMD ["npm", "run", "dev"]

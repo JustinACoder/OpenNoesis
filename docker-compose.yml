@@ -32,7 +32,6 @@ services:
       retries: 10
 
   backend:
-    image: ghcr.io/justinacoder/debate-backend:${APP_TAG:-latest}
     container_name: debate-backend
     restart: unless-stopped
     env_file:
@@ -57,7 +56,6 @@ services:
       start_period: 40s
 
   celery-worker:
-    image: ghcr.io/justinacoder/debate-backend:${APP_TAG:-latest}
     container_name: debate-celery-worker
     restart: unless-stopped
     env_file:
@@ -79,7 +77,6 @@ services:
       start_period: 30s
 
   celery-beat:
-    image: ghcr.io/justinacoder/debate-backend:${APP_TAG:-latest}
     container_name: debate-celery-beat
     restart: unless-stopped
     env_file:
@@ -95,7 +92,6 @@ services:
     command: ["celery", "-A", "ProjectOpenDebate", "beat", "-l", "info"]
 
   frontend:
-    image: ghcr.io/justinacoder/debate-frontend:${APP_TAG:-latest}
     container_name: debate-frontend
     restart: unless-stopped
     env_file:

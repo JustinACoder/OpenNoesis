@@ -1,0 +1,6 @@
+services:
+  backend:
+    image: ghcr.io/justinacoder/debate-backend:${APP_TAG:-latest}
+
+  frontend:
+    image: ghcr.io/justinacoder/debate-frontend:${APP_TAG:-latest}
