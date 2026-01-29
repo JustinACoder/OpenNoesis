@@ -71,6 +71,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     query: {
       staleTime: 1000 * 60 * 5, // 5 minutes
       refetchOnWindowFocus: true,
+      retry: false,
     },
   });
 
