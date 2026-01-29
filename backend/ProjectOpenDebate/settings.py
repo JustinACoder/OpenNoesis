@@ -72,7 +72,7 @@ if ENV == "prod":
     CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 
     # Security settings for production
-    SECURE_SSL_REDIRECT = True
+    SECURE_SSL_REDIRECT = False  # This is handled by nginx, not Django
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
@@ -257,7 +257,7 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(minute="0"),
     },
 }
-CELERYD_PREFETCH_MULTIPLIER = 1  # Default is 4, but 1 is recommended with long running tasks
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1  # Default is 4, but 1 is recommended with long running tasks
 ## Late ACK
 # If true, tasks are acknowledged after execution, not before. This can be useful in the case the worker suddenly
 # crashes or stops while executing a task, as the task will be retried (if it hasn't exceeded max retries).

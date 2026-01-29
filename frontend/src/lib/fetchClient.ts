@@ -14,9 +14,16 @@ function getApiUrl() {
 /* ---------------- CSRF Handling ---------------- */
 async function queryServerForCSRFCookie(): Promise<string | undefined> {
   try {
+    const headers = new Headers();
+
+    if (isServer) {
+      headers.set("X-Forwarded-Proto", "https"); // If we are not on the server, this is overridden by nginx
+    }
+
     const res = await fetch(getApiUrl() + "/set-csrf-token", {
       method: "GET",
       credentials: "include",
+      headers: headers,
     });
     if (!res.ok) throw new Error("Response not OK");
     const json = await res.json();
@@ -87,6 +94,11 @@ export const customFetch = async <T>(
   if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
     const token = await getCSRFToken();
     if (token) headers.set("X-CSRFToken", token);
+  }
+
+  // Add the X-Forwarded-Proto header if we are on the server
+  if (isServer) {
+    headers.set("X-Forwarded-Proto", "https"); // If we are not on the server, this is overridden by nginx
   }
 
   // Perform fetch
