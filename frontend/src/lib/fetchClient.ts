@@ -8,7 +8,7 @@ async function getServerCookieStore() {
 
 function getApiUrl() {
   if (isServer) return process.env.DOCKER_API_URL;
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  return process.env.NEXT_PUBLIC_API_URL || "";
 }
 
 /* ---------------- CSRF Handling ---------------- */
@@ -20,7 +20,7 @@ async function queryServerForCSRFCookie(): Promise<string | undefined> {
       headers.set("X-Forwarded-Proto", "https"); // If we are not on the server, this is overridden by nginx
     }
 
-    const res = await fetch(getApiUrl() + "/set-csrf-token", {
+    const res = await fetch(getApiUrl() + "/api/set-csrf-token", {
       method: "GET",
       credentials: "include",
       headers: headers,

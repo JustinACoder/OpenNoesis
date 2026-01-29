@@ -12,3 +12,8 @@ Thumbs.db
 
 # Other
 myscripts/
+
+# Envs
+.env
+.env.*
+!.env.example
