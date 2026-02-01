@@ -41,13 +41,13 @@ export default async function HomePage() {
   return (
     <NavigationOverlay>
       <div className="container mx-auto px-4 py-8 space-y-12">
-        {/* The popular debates are rendered immediately for SEO */}
+        {/* The trending debates are rendered immediately for SEO */}
         <section>
           <h2 className="text-2xl font-semibold mb-6">{sections[0].title}</h2>
           <DebateSection debates={sections[0].items} />
         </section>
 
-        {sections.map(({ title, items }) => (
+        {sections.slice(1).map(({ title, items }) => (
           <section key={title}>
             <h2 className="text-2xl font-semibold mb-6">{title}</h2>
             <Suspense
