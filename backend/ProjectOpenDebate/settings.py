@@ -196,7 +196,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Allauth settings
 HEADLESS_ONLY = True
-ACCOUNT_EMAIL_SUBJECT_PREFIX = '[DebateArena] '
+ACCOUNT_EMAIL_SUBJECT_PREFIX = f'[{env("EMAIL_PREFIX", default="OpenNoesis")}] '
 ACCOUNT_LOGIN_METHODS = {'email', 'username'}
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
