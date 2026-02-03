@@ -1,4 +1,3 @@
-import { projectOpenDebateApiGetCurrentUserObject } from "@/lib/api/general";
 import React from "react";
 import BottomNavigation from "@/components/navigation/BottomNavigation";
 import SearchBar from "@/components/navigation/SearchBar";
@@ -16,6 +15,7 @@ import NavigationActions from "@/components/navigation/NavigationActions";
 import links from "./links";
 import { Footer } from "@/components/Footer";
 import ActiveSearchBanner from "@/components/ActiveSearchBanner";
+import { ClientAuthGate } from "@/components/ClientAuthGate";
 
 const HeaderLinks = () => {
   return (
@@ -53,8 +53,6 @@ export const NavigationOverlay = async ({
   header_full_width = false,
   children,
 }: NavigationOverlayProps) => {
-  const user = await projectOpenDebateApiGetCurrentUserObject();
-
   return (
     <NavigationProvider>
       <MobileSearchOverlay />
@@ -77,7 +75,9 @@ export const NavigationOverlay = async ({
           </div>
         </header>
 
-        {user.is_authenticated && <ActiveSearchBanner />}
+        <ClientAuthGate>
+          <ActiveSearchBanner />
+        </ClientAuthGate>
 
         {/* Render the children components */}
         <div
@@ -90,10 +90,12 @@ export const NavigationOverlay = async ({
         </div>
 
         {/* Render the bottom navigation bar if the user is authenticated */}
-        {user.is_authenticated && !hide_bottom_menu && (
-          <div className="md:hidden flex">
-            <BottomNavigation />
-          </div>
+        {!hide_bottom_menu && (
+          <ClientAuthGate>
+            <div className="md:hidden flex">
+              <BottomNavigation />
+            </div>
+          </ClientAuthGate>
         )}
       </div>
     </NavigationProvider>

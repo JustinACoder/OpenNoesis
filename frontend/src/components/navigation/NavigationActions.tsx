@@ -47,10 +47,10 @@ const NavigationActions = () => {
     logout.mutate(
       { client: "browser" },
       {
-        onError: async (error) => {
+        onSettled: async () => {
           // Logout returns 401 on success as the session is deleted
-          // It's a weird pattern, but anyway, we handle it here by refetching the user
-          console.log("Logout successful:", error);
+          // Whether it succeeds or fails, we need to clear user data and refetch auth state
+          console.log("Logout successful");
           await invalidateUser();
         },
       },

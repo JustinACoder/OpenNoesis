@@ -6,6 +6,7 @@ import { getProjectOpenDebateApiGetCurrentUserObjectQueryKey } from "@/lib/api/g
 import {
   useDeleteAllauthClientV1AuthSession,
   useGetAllauthClientV1AuthSession,
+  getGetAllauthClientV1AuthSessionQueryKey,
 } from "@/lib/api/authentication-current-session";
 import { usePostAllauthClientV1AuthLogin } from "@/lib/api/authentication-account";
 import type {
@@ -48,9 +49,14 @@ const useLoginLogoutActions = (queryClient: QueryClient) => {
   const logoutMutation = useDeleteAllauthClientV1AuthSession();
 
   const invalidateUser = useCallback(async () => {
-    await queryClient.invalidateQueries({
-      queryKey: getProjectOpenDebateApiGetCurrentUserObjectQueryKey(),
-    });
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: getGetAllauthClientV1AuthSessionQueryKey("browser"),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: getProjectOpenDebateApiGetCurrentUserObjectQueryKey(),
+      }),
+    ]);
   }, [queryClient]);
 
   return {
@@ -75,13 +81,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     },
   });
 
-  // Determine auth status based on the user query
+  // Determine auth status based on the session query
   const authStatus: AuthStatus = useMemo(() => {
+    // Show loading if we're fetching on initial load
     if (isLoading) return "loading";
+
+    // If we have an error, we're unauthenticated
     if (error) return "unauthenticated";
+
+    // If we have data, we're authenticated
     if (sessionData) return "authenticated";
+
+    // In other cases (?), we're unauthenticated
     return "unauthenticated";
-  }, [isLoading, error, sessionData]);
+  }, [isLoading, sessionData, error]);
 
   const isEmailPendingVerification = useMemo(() => {
     // Check if there is a flow with id "verify_email" that is pending

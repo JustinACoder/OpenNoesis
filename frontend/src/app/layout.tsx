@@ -6,6 +6,7 @@ import Providers from "@/providers/providers";
 import { getProjectOpenDebateApiGetCurrentUserObjectQueryOptions } from "@/lib/api/general";
 import { dehydrate, QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { getGetAllauthClientV1AuthSessionQueryOptions } from "@/lib/api/authentication-current-session";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,7 +35,12 @@ export default async function RootLayout({
   const queryClient = new QueryClient();
   const currentUserQueryOptions =
     getProjectOpenDebateApiGetCurrentUserObjectQueryOptions();
-  await queryClient.prefetchQuery(currentUserQueryOptions);
+  const currentSessionQueryOptions =
+    getGetAllauthClientV1AuthSessionQueryOptions("browser");
+  await Promise.all([
+    queryClient.prefetchQuery(currentUserQueryOptions),
+    queryClient.prefetchQuery(currentSessionQueryOptions),
+  ]);
 
   // Create the dehydrated state for the Providers
   const dehydratedState = dehydrate(queryClient);
