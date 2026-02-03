@@ -150,6 +150,7 @@ REDIS_PASSWORD=your-redis-password
 ### Frontend (.env.production or .env.local)
 ```env
 NEXT_PUBLIC_API_URL=https://your-domain.com
+NEXT_PUBLIC_WS_URL=wss://your-domain.com/ws/
 DOCKER_API_URL=http://backend:8000
 ```
 

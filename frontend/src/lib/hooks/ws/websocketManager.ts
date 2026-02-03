@@ -13,7 +13,8 @@ type EventHandler = (...args: any[]) => void;
 class WebSocketManager {
   private static instance: WebSocketManager;
   private ws: WebSocket | null = null;
-  private url: string = "ws://localhost:8000/ws/";
+  private url: string =
+    process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/ws/";
   private reconnectTimeout: NodeJS.Timeout | null = null;
   private messageHandlers: Set<MessageHandler> = new Set();
   private streamHandlers: Map<string, Set<MessageHandler>> = new Map();

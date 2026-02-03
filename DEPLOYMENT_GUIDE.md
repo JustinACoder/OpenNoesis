@@ -189,6 +189,7 @@ nano .env.prod
 **Required Variables:**
 ```bash
 NEXT_PUBLIC_API_URL=https://yourdomain.com
+NEXT_PUBLIC_WS_URL=wss://yourdomain.com/ws/
 DOCKER_API_URL=http://backend:8000
 ```
 
