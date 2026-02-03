@@ -163,16 +163,18 @@ So, when making changes to the backend API that affect the schema, just run this
 
 ## Environment Variables
 
-**Backend** (`.env`):
+**Root folder** (used by docker compose for build-time args):
+- `.env.dev`: Development environment variables (used by `./dev.sh`)
+- `.env.prod`: Production environment variables (used by `./build_prod_image.sh` and `./prod.sh`)
+- Contains `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_WS_URL` needed at docker compose build time
+
+**Backend** (`backend/.env`):
 - `ENV`: `dev` or `prod`
 - `SECRET_KEY`, `POSTGRES_*`, `REDIS_*`
 - `FRONTEND_URL` for allauth email links
 - `EMAIL_*` for SMTP config
 - See `backend/.env.example` for full list
 
-**Frontend** (`.env`):
+**Frontend** (`frontend/.env`):
 - `DOCKER_API_URL`: Server-side API base (e.g., `http://backend:8000`)
 
-**Global** (`.env`):
-- `NEXT_PUBLIC_API_URL`: Client-side API base (e.g., `http://localhost:8000`) needed at docker compose build time
-- `NEXT_PUBLIC_WS_URL`: WebSocket URL (e.g., `ws://localhost:8000/ws/`) needed at docker compose build time
