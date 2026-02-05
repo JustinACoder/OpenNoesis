@@ -1,8 +1,5 @@
-import { Home, Info } from "lucide-react";
+import { Compass } from "lucide-react";
 
-const links = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/explore", label: "Explore", icon: Info },
-];
+const links = [{ href: "/", label: "Explore", icon: Compass }];
 
 export default links;
