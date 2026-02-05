@@ -32,6 +32,7 @@ Read the relevant files based on your task:
 | Celery + Redis | Async task queue with django-celery-beat |
 | PostgreSQL | Database (GIN indexes, advisory locks, full-text search) |
 | django-allauth | Authentication (headless mode, session-based) |
+| django-ses | AWS SES email via HTTP (bypasses SMTP port restrictions) |
 
 ### Frontend
 

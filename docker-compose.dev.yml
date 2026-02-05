@@ -11,7 +11,6 @@ services:
     user: root
     volumes:
       - ./backend:/app
-      - backend-venv:/opt/venv
     command: [ "python", "manage.py", "runserver", "0.0.0.0:8000" ]
     environment: &django_env
       DJANGO_SETTINGS_MODULE: ProjectOpenDebate.settings
@@ -44,6 +43,5 @@ services:
       WATCHPACK_POLLING: "true"
 
 volumes:
-  backend-venv:
   frontend-node-modules:
   frontend-next-cache:

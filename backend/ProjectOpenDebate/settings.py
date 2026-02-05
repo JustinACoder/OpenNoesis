@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'debug_toolbar',
     'django_celery_results',
     'django_celery_beat',
+    'django_ses',
     'debate.apps.DebateConfig',
     'users.apps.UsersConfig',
     'discussion.apps.DiscussionConfig',
@@ -228,12 +229,22 @@ HEADLESS_FRONTEND_URLS = {
 }
 
 # Email backend settings
+# Use 'django_ses.SESBackend' for AWS SES via HTTP (bypasses SMTP port restrictions)
+# Use 'django.core.mail.backends.smtp.EmailBackend' for traditional SMTP
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
+
+# SMTP settings (used when EMAIL_BACKEND is smtp.EmailBackend)
 EMAIL_HOST = env("EMAIL_HOST", default="smtp.gmail.com")
 EMAIL_PORT = env.int("EMAIL_PORT", default=587)
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+
+# AWS SES settings (used when EMAIL_BACKEND is django_ses.SESBackend)
+AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
+AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")
+AWS_SES_REGION_NAME = env("AWS_SES_REGION_NAME", default="us-east-1")
+AWS_SES_REGION_ENDPOINT = env("AWS_SES_REGION_ENDPOINT", default=f"email.{AWS_SES_REGION_NAME}.amazonaws.com")
 
 EMAIL_SUBJECT_PREFIX = env("EMAIL_SUBJECT_PREFIX", default='[OpenNoesis] ')
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@opennoesis.com")
