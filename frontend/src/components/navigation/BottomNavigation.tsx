@@ -10,7 +10,7 @@ const BottomNavigation = async () => {
   const user = await projectOpenDebateApiGetCurrentUserObject();
 
   return (
-    <div className="z-50 border-t w-full">
+    <div className="z-50 border-t w-full bg-background">
       <div className="grid grid-cols-5 h-16">
         <Link
           href="/"
