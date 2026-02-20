@@ -14,19 +14,19 @@ export default async function HomePage() {
   // Parallel fetching to speed up SSR
   const [trending, popular, controversial, recent, random] = await Promise.all([
     debateApiTrendingDebates(undefined, {
-      next: { revalidate: 3600 },
+      next: { revalidate: 60 },
     }),
     debateApiPopularDebates(undefined, {
-      next: { revalidate: 3600 },
+      next: { revalidate: 60 },
     }),
     debateApiControversialDebates(undefined, {
-      next: { revalidate: 3600 },
+      next: { revalidate: 60 },
     }),
     debateApiRecentDebates(undefined, {
-      next: { revalidate: 3600 },
+      next: { revalidate: 60 },
     }),
     debateApiRandomDebates(undefined, {
-      next: { revalidate: 3600 },
+      next: { revalidate: 60 },
     }),
   ]);
 

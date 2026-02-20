@@ -7,7 +7,7 @@ from django.db.models import Q
 
 from debate.models import Stance
 from django.db import models
-from datetime import datetime, timedelta
+from datetime import timedelta
 from django.conf import settings
 from django.utils import timezone
 
@@ -73,7 +73,7 @@ class PairingRequest(models.Model):
         This should be called by the client every settings.PAIRING_KEEPALIVE_INTERVAL seconds
         to keep the PairingRequest active.
         """
-        self.last_keepalive_ping = datetime.now()
+        self.last_keepalive_ping = timezone.now()
         self.save()
 
     def switch_status(self, new_status: Status):

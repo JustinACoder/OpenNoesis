@@ -31,7 +31,7 @@ class WebSocketManager {
       WebSocketManager.instance = new WebSocketManager();
       console.log("WebSocketManager instance created");
     } else {
-      console.log("WebSocketManager instance reused");
+      console.debug("WebSocketManager instance reused");
     }
     return WebSocketManager.instance;
   }

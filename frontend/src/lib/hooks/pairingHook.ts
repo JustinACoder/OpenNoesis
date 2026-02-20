@@ -15,7 +15,6 @@ export type PairingBannerStatus =
 
 type UsePairingResult = {
   forceClosePairingBanner: () => void;
-  elapsedSeconds: number;
 } & (
   | {
       status: CurrentActivePairingRequestStatus;
@@ -123,22 +122,6 @@ export function usePairing(): UsePairingResult {
     return undefined;
   }, [errorStatus, pairingRequest, wsConnectionStatus, hasAttemptedConnection]);
 
-  // Elapsed time
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  useEffect(() => {
-    const createdAt = pairingRequest?.created_at;
-
-    if (!createdAt) return () => {};
-
-    const base = new Date(createdAt).getTime();
-    setElapsedSeconds(Math.floor((Date.now() - base) / 1000));
-
-    const interval = setInterval(() => {
-      setElapsedSeconds((s) => s + 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [pairingRequest?.created_at]);
-
   // Send keepalive periodically
   useEffect(() => {
     if (!isStrCoreStatus(status)) return;
@@ -165,14 +148,13 @@ export function usePairing(): UsePairingResult {
       );
     }
 
-    return { status, pairingRequest, elapsedSeconds, forceClosePairingBanner };
+    return { status, pairingRequest, forceClosePairingBanner };
   } else if (isStrErrorStatus(status)) {
-    return { status, pairingRequest, elapsedSeconds, forceClosePairingBanner };
+    return { status, pairingRequest, forceClosePairingBanner };
   } else {
     return {
       status: null,
       pairingRequest: undefined as never,
-      elapsedSeconds,
       forceClosePairingBanner,
     };
   }

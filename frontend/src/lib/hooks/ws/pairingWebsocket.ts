@@ -1,5 +1,6 @@
 import { useCallback, useRef } from "react";
 import { useWebSocket } from "./websocket";
+import { useEvent } from "@/lib/hooks/useEvent";
 import { CurrentActivePairingRequest } from "@/lib/models";
 
 interface UsePairingWebSocketOptions {
@@ -24,6 +25,10 @@ export function usePairingWebSocket({
   onKeepAliveNoResponse,
 }: UsePairingWebSocketOptions = {}) {
   const hasReceivedKeepAliveAck = useRef(true);
+  const keepAliveAckTimeoutMsRef = useRef(keepAliveAckTimeoutMs);
+
+  // Stable callback reference
+  const handleKeepAliveNoResponse = useEvent(onKeepAliveNoResponse);
 
   const { send, connectionStatus, hasAttemptedConnection } = useWebSocket({
     stream: "pairing",
@@ -66,10 +71,10 @@ export function usePairingWebSocket({
     hasReceivedKeepAliveAck.current = false;
     setTimeout(() => {
       if (!hasReceivedKeepAliveAck.current) {
-        onKeepAliveNoResponse?.();
+        handleKeepAliveNoResponse();
       }
-    }, keepAliveAckTimeoutMs);
-  }, [keepAliveAckTimeoutMs, onKeepAliveNoResponse, send]);
+    }, keepAliveAckTimeoutMsRef.current);
+  }, [send, handleKeepAliveNoResponse]);
 
   return {
     wsConnectionStatus: connectionStatus,

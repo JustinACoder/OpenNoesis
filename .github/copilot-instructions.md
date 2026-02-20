@@ -149,6 +149,57 @@ docker exec debate-backend python manage.py migrate
 docker exec -it debate-backend python manage.py shell_plus
 ```
 
+### Running Commands in Development
+
+**Important**: All development commands should be run through Docker containers, not directly on the host.
+
+**Container Names:**
+- `debate-backend` - Django backend
+- `debate-frontend` - Next.js frontend  
+- `debate-db` - PostgreSQL database
+- `debate-redis` - Redis cache
+- `debate-celery-worker` - Celery worker
+- `debate-celery-beat` - Celery beat scheduler
+
+**Backend Commands:**
+```bash
+# General pattern
+docker exec debate-backend <command>
+
+# Examples
+docker exec debate-backend python manage.py migrate
+docker exec debate-backend python manage.py makemigrations
+docker exec debate-backend python manage.py createsuperuser
+docker exec -it debate-backend python manage.py shell_plus
+docker exec debate-backend pytest
+```
+
+**Frontend Commands:**
+```bash
+# General pattern
+docker exec debate-frontend <command>
+
+# Examples
+docker exec debate-frontend npm run lint
+docker exec debate-frontend npm run build
+docker exec debate-frontend npm test
+docker exec -it debate-frontend npm install <package>
+```
+
+**Other Containers:**
+```bash
+# PostgreSQL shell
+docker exec -it debate-db psql -U postgres -d debate_db
+
+# Redis CLI
+docker exec -it debate-redis redis-cli
+
+# View logs
+docker logs debate-backend
+docker logs debate-frontend
+docker logs debate-celery-worker
+```
+
 ### API Schema Generation
 
 ```bash

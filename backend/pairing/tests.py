@@ -210,6 +210,27 @@ class ActivePairingRequestTest(PairingTestBase):
             {"detail": "You already have an active pairing request."}
         )
 
+    def test_expired_active_request_allows_new_request(self):
+        """Test that expired active requests don't block creating new ones"""
+        # Create initial active request and expire it
+        request = PairingRequest.objects.create(
+            user=self.user1,
+            debate=self.debate1,
+            status=PairingRequest.Status.ACTIVE,
+            desired_stance=-1
+        )
+        request.last_keepalive_ping = timezone.now() - timedelta(hours=1)
+        request.save()
+
+        # Should be able to create a new active request
+        client = self.authenticate_user1()
+        response = client.post(
+            reverse_lazy_api("request_pairing"),
+            data={"debate_id": self.debate1.id, "desired_stance": -1, "pairing_type": "active"},
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 204)
+
     def test_invalid_pairing_type(self):
         client = self.authenticate_user1()
         response = client.post(
