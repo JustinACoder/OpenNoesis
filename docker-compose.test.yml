@@ -1,0 +1,37 @@
+# CI/Test environment override
+# Usage: docker compose -f docker-compose.yml -f docker-compose.test.yml up
+
+services:
+  db:
+    env_file: [ ]
+    environment:
+      POSTGRES_DB: debate_db
+      POSTGRES_USER: debate_user
+      POSTGRES_PASSWORD: debate_password
+
+  redis:
+    command: [ "redis-server", "--appendonly", "no" ]
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: builder
+    env_file: [ ]
+    environment:
+      DJANGO_SETTINGS_MODULE: ProjectOpenDebate.test_settings
+    ports: [ ]
+    volumes: [ ]
+    healthcheck:
+      test: [ "NONE" ]
+      disable: true
+    command: [ "python", "manage.py", "test" ]
+
+  celery-worker:
+    profiles: [ "disabled" ]
+
+  celery-beat:
+    profiles: [ "disabled" ]
+
+  frontend:
+    profiles: [ "disabled" ]
