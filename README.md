@@ -1,6 +1,6 @@
 # OpenNoesis
 
-OpenNoesis is an open-source real-time debate platform where users can engage in structured debates, get matched with opponents through a pairing system, and participate in topic-based discussions — all powered by WebSockets for a live experience.
+OpenNoesis is a real-time debate platform where users can engage in structured debates, get matched with opponents through a pairing system, and participate in topic-based discussions — all powered by WebSockets for a live experience.
 
 ## Tech Stack
 
