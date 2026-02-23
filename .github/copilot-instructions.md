@@ -17,6 +17,7 @@ Read the relevant files based on your task:
 | [websocket-patterns.md](./instructions/websocket-patterns.md) | When working on real-time features |
 | [commands.md](./instructions/commands.md) | When running dev/build/deploy commands |
 | [workflows.md](./instructions/workflows.md) | When adding new features end-to-end |
+| [infrastructure-patterns.md](./instructions/infrastructure-patterns.md) | When modifying Docker, compose files, deploy/rollback scripts, nginx |
 
 ---
 
@@ -210,6 +211,35 @@ docker logs debate-celery-worker
 This private script basically builds the docker compose, then runs the containers, 
 then runs the commands to generate the OpenAPI schema, copy it to frontend, and run orval.
 So, when making changes to the backend API that affect the schema, just run this script afterwards.
+
+---
+
+## CI/CD (GitHub Actions)
+
+### Workflows (`.github/workflows/`)
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `django.yml` | Push/PR to `dev`, `master` | Runs Django tests via `docker-compose.test.yml` |
+| `deploy.yml` | Push to `master` | Builds & pushes images to ghcr.io, then deploys to production (requires manual approval) |
+
+### Image Tagging
+
+Images are pushed to `ghcr.io/justinacoder/debate-backend` and `ghcr.io/justinacoder/debate-frontend` with:
+- **Versioned tag**: `YYYY-MM-DD_<short-sha>` (e.g., `2026-02-22_a1b2c3d`) — matches the `APP_TAG` convention used by `deploy.sh` and `rollback.sh`
+- **`latest` tag**: Always points to the most recent master build
+
+### Deploy Approval
+
+The `deploy` job uses a GitHub Actions **environment** called `production` with required reviewers. After images are built, the deploy job will pause and wait for manual approval before SSHing into the VPS and running `deploy.sh`.
+
+**Required setup in GitHub → Settings → Environments → `production`:**
+- Add required reviewers
+- Add environment secrets: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`
+
+**Required setup in GitHub → Settings → Actions → Variables (repository-level):**
+- `NEXT_PUBLIC_WS_URL`: Production WebSocket URL (e.g., `wss://opennoesis.com/ws/`)
+- `NEXT_PUBLIC_API_URL`: **Do not create this variable.** Leaving it unset makes API calls relative to the current domain, which is the correct behavior behind a reverse proxy. Only create it if you need to override the default.
 
 ---
 

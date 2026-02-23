@@ -1,0 +1,102 @@
+name: Build & Deploy
+
+on:
+  push:
+    branches: [ "master" ]
+
+env:
+  REGISTRY: ghcr.io
+  COMPOSE_FILES: -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.build.yml
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      app_tag: ${{ steps.meta.outputs.app_tag }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate image tag
+        id: meta
+        run: |
+          TAG="$(date +%Y-%m-%d)_${GITHUB_SHA::7}"
+          echo "app_tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Generated APP_TAG: $TAG"
+
+      - name: Build and push versioned images
+        env:
+          APP_TAG: ${{ steps.meta.outputs.app_tag }}
+          # NEXT_PUBLIC_API_URL defaults to empty in docker-compose.build.yml
+          # (relative fetch, ideal for reverse proxy). Only set the GitHub
+          # variable if you need to override that default.
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || '' }}
+          NEXT_PUBLIC_WS_URL: ${{ vars.NEXT_PUBLIC_WS_URL }}
+        run: |
+          docker compose ${{ env.COMPOSE_FILES }} build
+          docker compose ${{ env.COMPOSE_FILES }} push
+
+      - name: Tag and push latest
+        env:
+          APP_TAG: ${{ steps.meta.outputs.app_tag }}
+        run: |
+          docker tag ghcr.io/justinacoder/debate-backend:$APP_TAG ghcr.io/justinacoder/debate-backend:latest
+          docker tag ghcr.io/justinacoder/debate-frontend:$APP_TAG ghcr.io/justinacoder/debate-frontend:latest
+          docker push ghcr.io/justinacoder/debate-backend:latest
+          docker push ghcr.io/justinacoder/debate-frontend:latest
+
+      - name: Warn if infrastructure files changed
+        run: |
+          INFRA_FILES=$(git diff --name-only HEAD~1 HEAD -- \
+            'docker-compose*.yml' \
+            'deploy.sh' \
+            'rollback.sh' \
+            'nginx.conf' \
+            'prod.sh' \
+            'maintenance.sh' \
+            'backend/Dockerfile' \
+            'frontend/Dockerfile' \
+          )
+          if [ -n "$INFRA_FILES" ]; then
+            echo "::warning::⚠️ Infrastructure files changed in this deploy. Rollback may not work if these changes are incompatible with the previous Docker images. Changed files: $INFRA_FILES"
+            echo "### ⚠️ Infrastructure files changed" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "The following files were modified. If these changes are not backward-compatible with the previous Docker images, **rollback will fail**." >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "$INFRA_FILES" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Verify rollback compatibility before approving." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment: production
+
+    steps:
+      - name: Deploy to production
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /opt/opennoesis
+            git fetch origin master
+            git reset --hard origin/master
+            APP_TAG=${{ needs.build.outputs.app_tag }} ./deploy.sh
