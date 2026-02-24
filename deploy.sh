@@ -24,7 +24,21 @@ STATE_FILE="$PROJECT_DIR/.deploy_state"
 
 NGINX_SITE="/etc/nginx/sites-available/opennoesis"
 
-DB_CONTAINER="debate-db"         # container_name in compose
+# ----- Compose service names (defined once) -----
+SVC_DB="debate-db"
+SVC_REDIS="debate-redis"
+SVC_BACKEND="debate-backend"
+SVC_CELERY_WORKER="debate-celery-worker"
+SVC_CELERY_BEAT="debate-celery-beat"
+SVC_FRONTEND="debate-frontend"
+
+# Services grouped for reuse
+SVC_INFRA=("$SVC_DB" "$SVC_REDIS")
+SVC_APP=("$SVC_BACKEND" "$SVC_CELERY_WORKER" "$SVC_CELERY_BEAT" "$SVC_FRONTEND")
+
+# ----- Runtime container names (docker exec/inspect targets) -----
+# (These refer to container_name values in compose, not service keys)
+DB_CONTAINER="debate-db"
 DB_NAME="debate_db"
 DB_USER="debate_user"
 
@@ -147,20 +161,20 @@ wait_for_db() {
 
 stop_app_services() {
   warn "Stopping app services (keeping db/redis)..."
-  docker compose stop backend celery-worker celery-beat frontend >/dev/null 2>&1 || true
-  docker compose rm -f backend celery-worker celery-beat frontend >/dev/null 2>&1 || true
+  docker compose stop "${SVC_APP[@]}" >/dev/null 2>&1 || true
+  docker compose rm -f "${SVC_APP[@]}" >/dev/null 2>&1 || true
 }
 
 start_infra() {
   warn "Ensuring db/redis are up..."
-  docker compose up -d db redis
+  docker compose up -d "${SVC_INFRA[@]}"
   wait_for_db
 }
 
 pull_images() {
   warn "Pulling new images for APP_TAG=${APP_TAG}"
   export APP_TAG
-  docker compose pull backend frontend
+  docker compose pull "$SVC_BACKEND" "$SVC_FRONTEND"
 }
 
 run_migrations() {
@@ -176,7 +190,7 @@ collect_static() {
 
 start_app_services() {
   warn "Starting app services..."
-  docker compose up -d backend celery-worker celery-beat frontend
+  docker compose up -d "${SVC_APP[@]}"
 }
 
 smoke_tests() {
@@ -218,7 +232,7 @@ rollback() {
   if [[ -n "${PREV_APP_TAG:-}" ]]; then
     warn "Reverting APP_TAG to previous tag: ${PREV_APP_TAG}"
     export APP_TAG="$PREV_APP_TAG"
-    docker compose pull backend frontend || true
+    docker compose pull "$SVC_BACKEND" "$SVC_FRONTEND" || true
     start_app_services
   else
     warn "No previous tag detected. Attempting best-effort restart of existing containers."
@@ -267,7 +281,7 @@ main() {
 
   # Start backend first (so we can exec migrate/collectstatic in it)
   warn "Starting backend container (only)..."
-  docker compose up -d backend
+  docker compose up -d "$SVC_BACKEND"
 
   # Apply schema + collect static inside the running backend container
   run_migrations
@@ -275,7 +289,7 @@ main() {
 
   # Start the rest
   warn "Starting remaining app services..."
-  docker compose up -d celery-worker celery-beat frontend
+  docker compose up -d "$SVC_CELERY_WORKER" "$SVC_CELERY_BEAT" "$SVC_FRONTEND"
 
   # Smoke tests (includes nginx->backend)
   smoke_tests
