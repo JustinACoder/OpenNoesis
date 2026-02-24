@@ -24,13 +24,23 @@ STATE_FILE="$PROJECT_DIR/.deploy_state"
 
 NGINX_SITE="/etc/nginx/sites-available/opennoesis"
 
+# ----- Compose files (prod) -----
+COMPOSE_FILES=(
+  -f docker-compose.yml
+  -f docker-compose.prod.yml
+)
+
+dc() {
+  docker compose "${COMPOSE_FILES[@]}" "$@"
+}
+
 # ----- Compose service names (defined once) -----
-SVC_DB="debate-db"
-SVC_REDIS="debate-redis"
-SVC_BACKEND="debate-backend"
-SVC_CELERY_WORKER="debate-celery-worker"
-SVC_CELERY_BEAT="debate-celery-beat"
-SVC_FRONTEND="debate-frontend"
+SVC_DB="db"
+SVC_REDIS="redis"
+SVC_BACKEND="backend"
+SVC_CELERY_WORKER="celery-worker"
+SVC_CELERY_BEAT="celery-beat"
+SVC_FRONTEND="frontend"
 
 # Services grouped for reuse
 SVC_INFRA=("$SVC_DB" "$SVC_REDIS")
@@ -161,20 +171,20 @@ wait_for_db() {
 
 stop_app_services() {
   warn "Stopping app services (keeping db/redis)..."
-  docker compose stop "${SVC_APP[@]}" >/dev/null 2>&1 || true
-  docker compose rm -f "${SVC_APP[@]}" >/dev/null 2>&1 || true
+  dc stop "${SVC_APP[@]}" >/dev/null 2>&1 || true
+  dc rm -f "${SVC_APP[@]}" >/dev/null 2>&1 || true
 }
 
 start_infra() {
   warn "Ensuring db/redis are up..."
-  docker compose up -d "${SVC_INFRA[@]}"
+  dc up -d "${SVC_INFRA[@]}"
   wait_for_db
 }
 
 pull_images() {
   warn "Pulling new images for APP_TAG=${APP_TAG}"
   export APP_TAG
-  docker compose pull "$SVC_BACKEND" "$SVC_FRONTEND"
+  dc pull "$SVC_BACKEND" "$SVC_FRONTEND"
 }
 
 run_migrations() {
@@ -190,7 +200,7 @@ collect_static() {
 
 start_app_services() {
   warn "Starting app services..."
-  docker compose up -d "${SVC_APP[@]}"
+  dc up -d "${SVC_APP[@]}"
 }
 
 smoke_tests() {
@@ -232,7 +242,7 @@ rollback() {
   if [[ -n "${PREV_APP_TAG:-}" ]]; then
     warn "Reverting APP_TAG to previous tag: ${PREV_APP_TAG}"
     export APP_TAG="$PREV_APP_TAG"
-    docker compose pull "$SVC_BACKEND" "$SVC_FRONTEND" || true
+    dc pull "$SVC_BACKEND" "$SVC_FRONTEND" || true
     start_app_services
   else
     warn "No previous tag detected. Attempting best-effort restart of existing containers."
@@ -281,7 +291,7 @@ main() {
 
   # Start backend first (so we can exec migrate/collectstatic in it)
   warn "Starting backend container (only)..."
-  docker compose up -d "$SVC_BACKEND"
+  dc up -d "$SVC_BACKEND"
 
   # Apply schema + collect static inside the running backend container
   run_migrations
@@ -289,7 +299,7 @@ main() {
 
   # Start the rest
   warn "Starting remaining app services..."
-  docker compose up -d "$SVC_CELERY_WORKER" "$SVC_CELERY_BEAT" "$SVC_FRONTEND"
+  dc up -d "$SVC_CELERY_WORKER" "$SVC_CELERY_BEAT" "$SVC_FRONTEND"
 
   # Smoke tests (includes nginx->backend)
   smoke_tests
