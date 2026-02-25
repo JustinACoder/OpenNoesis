@@ -55,6 +55,7 @@ DB_USER="debate_user"
 
 # State flags
 DEPLOY_SUCCESS=0
+ROLLBACK_SUCCESS=0
 
 require_cmd() {
   local cmd="$1"
@@ -325,6 +326,7 @@ rollback() {
 
   if smoke_tests; then
     ok "Rollback successful."
+    ROLLBACK_SUCCESS=1
     return 0
   fi
 
@@ -341,14 +343,18 @@ trap 'on_err $LINENO' ERR
 
 on_exit() {
   # Only disable maintenance if deployment succeeded AND marker exists.
-  if [[ "${DEPLOY_SUCCESS}" == "1" ]]; then
+  if [[ "${DEPLOY_SUCCESS}" == "1" || "${ROLLBACK_SUCCESS}" == "1" ]]; then
     if [[ -f "$MAINT_FLAG" ]]; then
       disable_maintenance || true
     fi
+
+    if [[ "${ROLLBACK_SUCCESS}" == "1" ]]; then
+      warn "Deployment failed but rollback succeeded. Maintenance mode disabled, but please investigate the root cause."
+    fi
+
   else
-    # Failure path: keep maintenance on (do not try to disable).
     if [[ -f "$MAINT_FLAG" ]]; then
-      warn "Leaving maintenance mode ON due to failed/partial deployment."
+      error "Leaving maintenance mode ON due to failed deployment AND failed rollback."
     fi
   fi
 }
