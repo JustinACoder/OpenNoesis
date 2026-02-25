@@ -3,8 +3,6 @@ services:
     image: postgres:16-alpine
     container_name: debate-db
     restart: unless-stopped
-    env_file:
-      - ./backend/.env
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./backups:/backups
@@ -34,8 +32,6 @@ services:
   backend:
     container_name: debate-backend
     restart: unless-stopped
-    env_file:
-      - ./backend/.env
     depends_on:
       redis:
         condition: service_healthy
@@ -58,8 +54,6 @@ services:
   celery-worker:
     container_name: debate-celery-worker
     restart: unless-stopped
-    env_file:
-      - ./backend/.env
     depends_on:
       redis:
         condition: service_healthy
@@ -79,8 +73,6 @@ services:
   celery-beat:
     container_name: debate-celery-beat
     restart: unless-stopped
-    env_file:
-      - ./backend/.env
     depends_on:
       redis:
         condition: service_healthy
@@ -94,8 +86,6 @@ services:
   frontend:
     container_name: debate-frontend
     restart: unless-stopped
-    env_file:
-      - ./frontend/.env
     depends_on:
         backend:
             condition: service_healthy

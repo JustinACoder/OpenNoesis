@@ -3,7 +3,6 @@
 
 services:
   db:
-    env_file: [ ]
     environment:
       POSTGRES_DB: debate_db
       POSTGRES_USER: debate_user
@@ -17,7 +16,6 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       target: builder
-    env_file: [ ]
     environment:
       DJANGO_SETTINGS_MODULE: ProjectOpenDebate.test_settings
     ports: [ ]

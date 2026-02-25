@@ -1,12 +1,24 @@
 services:
+  db:
+    env_file:
+      - ./backend/.env
+
   backend:
     image: ghcr.io/justinacoder/debate-backend:${APP_TAG:-latest}
+    env_file:
+      - ./backend/.env
 
   frontend:
     image: ghcr.io/justinacoder/debate-frontend:${APP_TAG:-latest}
+    env_file:
+      - ./frontend/.env
 
   celery-worker:
     image: ghcr.io/justinacoder/debate-backend:${APP_TAG:-latest}
+    env_file:
+      - ./backend/.env
 
   celery-beat:
     image: ghcr.io/justinacoder/debate-backend:${APP_TAG:-latest}
+    env_file:
+      - ./backend/.env

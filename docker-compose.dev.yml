@@ -9,6 +9,8 @@ services:
       dockerfile: Dockerfile
       target: builder
     user: root
+    env_file:
+      - ./backend/.env
     volumes:
       - ./backend:/app
     command: [ "python", "manage.py", "runserver", "0.0.0.0:8000" ]
@@ -34,6 +36,8 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
         NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost:8000/ws/}
+    env_file:
+      - ./frontend/.env
     volumes:
       - ./frontend:/app
       - frontend-node-modules:/app/node_modules
