@@ -264,7 +264,7 @@ smoke_tests() {
   local code
 
   # Backend health (nginx -> backend)
-  code="$(curl -sk -o /dev/null -w "%{http_code}" -H "Host: opennoesis.com" --max-time 8 https://127.0.0.1/api/health/ || true)"
+  code="$(curl -sk -o /dev/null -w "%{http_code}" -H "Host: opennoesis.com" --max-time 8 https://127.0.0.1/api/health || true)"
   if [[ "$code" != "200" ]]; then
     err "Backend smoke test failed (expected 200, got ${code})."
     return 1
