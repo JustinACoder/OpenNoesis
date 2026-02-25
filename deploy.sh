@@ -72,22 +72,14 @@ require_env() {
 
 enable_maintenance() {
   warn "Enabling maintenance mode..."
-  # Idempotent: only enable if not already enabled
-  if grep -q "# MAINTENANCE_MODE_DISABLED" "$NGINX_SITE"; then
-    sed -i 's/# MAINTENANCE_MODE_DISABLED/# MAINTENANCE_MODE_ENABLED/' "$NGINX_SITE"
-    sed -i '/# MAINTENANCE_MODE_ENABLED/,/# END_MAINTENANCE_MODE/ s/^#//' "$NGINX_SITE"
-  fi
+  touch /etc/nginx/maintenance.on
   nginx -t
   systemctl reload nginx
 }
 
 disable_maintenance() {
   warn "Disabling maintenance mode..."
-  # Idempotent: only disable if currently enabled
-  if grep -q "# MAINTENANCE_MODE_ENABLED" "$NGINX_SITE"; then
-    sed -i 's/# MAINTENANCE_MODE_ENABLED/# MAINTENANCE_MODE_DISABLED/' "$NGINX_SITE"
-    sed -i '/# MAINTENANCE_MODE_DISABLED/,/# END_MAINTENANCE_MODE/ s/^/#/' "$NGINX_SITE"
-  fi
+  rm -f /etc/nginx/maintenance.on
   nginx -t
   systemctl reload nginx
 }
@@ -127,7 +119,7 @@ backup_database() {
     return 1
   }
 
-  if docker exec -t "$DB_CONTAINER" pg_dump -U "$DB_USER" -d "$DB_NAME" -Fc > "$DB_BACKUP_FILE"; then
+  if docker exec "$DB_CONTAINER" pg_dump -U "$DB_USER" -d "$DB_NAME" -Fc > "$DB_BACKUP_FILE"; then
     ok "DB backup created: $DB_BACKUP_FILE"
     sed -i "s|^DB_BACKUP=.*|DB_BACKUP=$DB_BACKUP_FILE|" "$STATE_FILE"
     return 0
@@ -212,8 +204,8 @@ smoke_tests() {
   fi
 
   # Frontend direct (adjust to nginx if/when you proxy it there)
-  if ! curl -fsS --max-time 5 http://127.0.0.1:3000/ >/dev/null; then
-    err "Frontend smoke test failed (port 3000)."
+  if ! curl -sk -H "Host: opennoesis.com" --max-time 5 https://127.0.0.1/ >/dev/null; then
+    err "Frontend smoke test failed (nginx -> frontend)."
     return 1
   fi
 
