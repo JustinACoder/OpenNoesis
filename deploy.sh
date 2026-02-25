@@ -203,25 +203,6 @@ restore_database() {
   fi
 }
 
-wait_for_db() {
-  warn "Waiting for database to be ready..."
-  local max_wait=60
-  local waited=0
-
-  while (( waited < max_wait )); do
-    if dc exec -T "$SVC_DB" pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1; then
-      ok "Database is ready."
-      return 0
-    fi
-    sleep 2
-    waited=$(( waited + 2 ))
-    echo "  ... (${waited}s/${max_wait}s)"
-  done
-
-  err "Database not ready after ${max_wait}s."
-  return 1
-}
-
 stop_app_services() {
   warn "Stopping app services (keeping db/redis)..."
   dc stop "${SVC_APP[@]}" >/dev/null 2>&1 || true
@@ -230,8 +211,7 @@ stop_app_services() {
 
 start_infra() {
   warn "Ensuring db/redis are up..."
-  dc up -d "${SVC_INFRA[@]}"
-  wait_for_db
+  dc up -d --wait "${SVC_INFRA[@]}"
 }
 
 pull_images() {
@@ -251,11 +231,6 @@ collect_static() {
   warn "Collecting static files (backend container)..."
   dc exec -T "$SVC_BACKEND" python manage.py collectstatic --noinput
   ok "collectstatic completed."
-}
-
-start_app_services() {
-  warn "Starting app services..."
-  dc up -d "${SVC_APP[@]}"
 }
 
 smoke_tests() {
@@ -334,17 +309,17 @@ rollback() {
   # Preferred rollback: pin to previous image refs via override file
   if make_rollback_override_file; then
     warn "Starting services with pinned previous images..."
-    dc up -d "${SVC_APP[@]}"
+    dc up -d --wait "${SVC_APP[@]}"
   else
     # Fallback: try previous tags (only if present and you deploy by tag)
     if [[ -n "${PREV_BACKEND_TAG:-}" && -n "${PREV_FRONTEND_TAG:-}" && "${PREV_BACKEND_TAG}" == "${PREV_FRONTEND_TAG}" ]]; then
       warn "Reverting APP_TAG to previous tag: ${PREV_BACKEND_TAG}"
       export APP_TAG="$PREV_BACKEND_TAG"
       dc pull "${SVC_APP[@]}" || true
-      dc up -d "${SVC_APP[@]}"
+      dc up -d --wait "${SVC_APP[@]}"
     else
       warn "No reliable previous tag/image pin available. Attempting best-effort restart with whatever images are present."
-      dc up -d "${SVC_APP[@]}"
+      dc up -d --wait "${SVC_APP[@]}"
     fi
   fi
 
@@ -410,14 +385,14 @@ main() {
 
   # Start backend first (so we can exec migrate/collectstatic in it)
   warn "Starting backend container (only)..."
-  dc up -d "$SVC_BACKEND"
+  dc up -d --wait "$SVC_BACKEND"
 
   run_migrations
   collect_static
 
   # Start the rest
   warn "Starting remaining app services..."
-  dc up -d "$SVC_CELERY_WORKER" "$SVC_CELERY_BEAT" "$SVC_FRONTEND"
+  dc up -d --wait "$SVC_CELERY_WORKER" "$SVC_CELERY_BEAT" "$SVC_FRONTEND"
 
   smoke_tests
 
