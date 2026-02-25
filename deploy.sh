@@ -1,13 +1,6 @@
 #!/bin/bash
 # Deploy with maintenance mode + pre-migration DB backup + rollback
 #
-# Assumptions:
-# - Run on the VPS as root (or via sudo).
-# - docker-compose.yml is in /opt/opennoesis (PROJECT_DIR).
-# - docker-compose.yml uses APP_TAG for BOTH images, e.g.:
-#     backend:  image: ghcr.io/justinacoder/debate-backend:${APP_TAG}
-#     frontend: image: ghcr.io/justinacoder/debate-frontend:${APP_TAG}
-#
 # Usage:
 #   APP_TAG=2026-01-24_01 ./deploy.sh
 #
@@ -21,8 +14,7 @@ NC='\033[0m'
 PROJECT_DIR="/opt/opennoesis"
 BACKUP_DIR="$PROJECT_DIR/backups"
 STATE_FILE="$PROJECT_DIR/.deploy_state"
-
-NGINX_SITE="/etc/nginx/sites-available/opennoesis"
+MAINT_FLAG="/etc/nginx/maintenance.on"
 
 # ----- Compose files (prod) -----
 COMPOSE_FILES=(
@@ -30,11 +22,23 @@ COMPOSE_FILES=(
   -f docker-compose.prod.yml
 )
 
+# Optional extra compose file (used for rollback pinning)
+EXTRA_COMPOSE_FILE=""
+
 dc() {
-  docker compose "${COMPOSE_FILES[@]}" "$@"
+  if [[ -n "${EXTRA_COMPOSE_FILE:-}" ]]; then
+    docker compose "${COMPOSE_FILES[@]}" -f "$EXTRA_COMPOSE_FILE" "$@"
+  else
+    docker compose "${COMPOSE_FILES[@]}" "$@"
+  fi
 }
 
-# ----- Compose service names (defined once) -----
+log()  { echo -e "$1"; }
+warn() { echo -e "${YELLOW}$1${NC}"; }
+ok()   { echo -e "${GREEN}$1${NC}"; }
+err()  { echo -e "${RED}$1${NC}" >&2; }
+
+# ----- Compose service names -----
 SVC_DB="db"
 SVC_REDIS="redis"
 SVC_BACKEND="backend"
@@ -42,25 +46,23 @@ SVC_CELERY_WORKER="celery-worker"
 SVC_CELERY_BEAT="celery-beat"
 SVC_FRONTEND="frontend"
 
-# Services grouped for reuse
 SVC_INFRA=("$SVC_DB" "$SVC_REDIS")
 SVC_APP=("$SVC_BACKEND" "$SVC_CELERY_WORKER" "$SVC_CELERY_BEAT" "$SVC_FRONTEND")
 
-# ----- Runtime container names (docker exec/inspect targets) -----
-# (These refer to container_name values in compose, not service keys)
-DB_CONTAINER="debate-db"
+# ----- DB credentials (used inside the DB container) -----
 DB_NAME="debate_db"
 DB_USER="debate_user"
 
-BACKEND_CONTAINER="debate-backend"
-FRONTEND_CONTAINER="debate-frontend"
+# State flags
+DEPLOY_SUCCESS=0
 
-DB_BACKUP_FILE="$BACKUP_DIR/pre_deploy_$(date +%Y%m%d_%H%M%S).dump"
-
-log()  { echo -e "$1"; }
-warn() { echo -e "${YELLOW}$1${NC}"; }
-ok()   { echo -e "${GREEN}$1${NC}"; }
-err()  { echo -e "${RED}$1${NC}" >&2; }
+require_cmd() {
+  local cmd="$1"
+  command -v "$cmd" >/dev/null 2>&1 || {
+    err "Missing required command: $cmd"
+    exit 1
+  }
+}
 
 require_env() {
   if [[ -z "${APP_TAG:-}" ]]; then
@@ -72,61 +74,113 @@ require_env() {
 
 enable_maintenance() {
   warn "Enabling maintenance mode..."
-  touch /etc/nginx/maintenance.on
+  touch "$MAINT_FLAG"
   nginx -t
   systemctl reload nginx
 }
 
 disable_maintenance() {
   warn "Disabling maintenance mode..."
-  rm -f /etc/nginx/maintenance.on
+  rm -f "$MAINT_FLAG"
   nginx -t
   systemctl reload nginx
 }
 
+atomic_write() {
+  # atomic_write <path> <content>
+  local path="$1"
+  local content="$2"
+  local tmp
+  tmp="$(mktemp "${path}.XXXXXX")"
+  printf "%s" "$content" > "$tmp"
+  chmod 600 "$tmp"
+  mv -f "$tmp" "$path"
+}
+
 save_state() {
   warn "Saving current state..."
+
   mkdir -p "$BACKUP_DIR"
-  chmod 700 "$BACKUP_DIR" || true
+  chmod 700 "$BACKUP_DIR"
 
+  # Try to record the currently running image refs (most robust)
   local cur_backend_image cur_frontend_image
-  cur_backend_image="$(docker inspect "$BACKEND_CONTAINER" --format='{{.Config.Image}}' 2>/dev/null || true)"
-  cur_frontend_image="$(docker inspect "$FRONTEND_CONTAINER" --format='{{.Config.Image}}' 2>/dev/null || true)"
+  cur_backend_image="$(dc ps -q "$SVC_BACKEND" | xargs -r docker inspect --format='{{.Config.Image}}' 2>/dev/null | head -n 1 || true)"
+  cur_frontend_image="$(dc ps -q "$SVC_FRONTEND" | xargs -r docker inspect --format='{{.Config.Image}}' 2>/dev/null | head -n 1 || true)"
 
-  # Extract tags (best-effort). If image uses digest, tag extraction will be empty-ish; rollback will fallback.
-  local prev_tag=""
+  # Best-effort previous tags (may be empty if digest/no tag)
+  local prev_backend_tag="" prev_frontend_tag=""
   if [[ -n "$cur_backend_image" && "$cur_backend_image" != *@sha256:* && "$cur_backend_image" == *:* ]]; then
-    prev_tag="${cur_backend_image##*:}"
+    prev_backend_tag="${cur_backend_image##*:}"
+  fi
+  if [[ -n "$cur_frontend_image" && "$cur_frontend_image" != *@sha256:* && "$cur_frontend_image" == *:* ]]; then
+    prev_frontend_tag="${cur_frontend_image##*:}"
   fi
 
-  {
-    echo "PREV_APP_TAG=$prev_tag"
-    echo "PREV_BACKEND_IMAGE=$cur_backend_image"
-    echo "PREV_FRONTEND_IMAGE=$cur_frontend_image"
-    echo "DB_BACKUP="
-  } > "$STATE_FILE"
+  local content
+  content=$(
+    cat <<EOF
+PREV_BACKEND_TAG=${prev_backend_tag}
+PREV_FRONTEND_TAG=${prev_frontend_tag}
+PREV_BACKEND_IMAGE=${cur_backend_image}
+PREV_FRONTEND_IMAGE=${cur_frontend_image}
+DB_BACKUP=
+EOF
+  )
 
+  atomic_write "$STATE_FILE" "$content"
   ok "State saved to $STATE_FILE"
 }
 
 backup_database() {
-  warn "Creating database backup (custom format)..."
+  warn "Creating database backup (custom format) + verify..."
   mkdir -p "$BACKUP_DIR"
-  chmod 700 "$BACKUP_DIR" || true
+  chmod 700 "$BACKUP_DIR"
 
-  docker ps --format '{{.Names}}' | grep -qx "$DB_CONTAINER" || {
-    err "DB container '$DB_CONTAINER' not running. Cannot backup."
-    return 1
-  }
+  local ts backup_tmp backup_final
+  ts="$(date +%Y%m%d_%H%M%S)"
+  backup_tmp="$BACKUP_DIR/.pre_deploy_${ts}.dump.tmp"
+  backup_final="$BACKUP_DIR/pre_deploy_${ts}.dump"
 
-  if docker exec "$DB_CONTAINER" pg_dump -U "$DB_USER" -d "$DB_NAME" -Fc > "$DB_BACKUP_FILE"; then
-    ok "DB backup created: $DB_BACKUP_FILE"
-    sed -i "s|^DB_BACKUP=.*|DB_BACKUP=$DB_BACKUP_FILE|" "$STATE_FILE"
-    return 0
-  else
-    err "DB backup failed!"
+  # Dump to temp file (avoid treating partial dump as valid)
+  if ! dc exec -T "$SVC_DB" pg_dump -U "$DB_USER" -d "$DB_NAME" -Fc > "$backup_tmp"; then
+    err "DB backup failed (pg_dump error)."
+    rm -f "$backup_tmp" || true
     return 1
   fi
+
+  # Basic sanity: non-empty
+  if [[ ! -s "$backup_tmp" ]]; then
+    err "DB backup file is empty; refusing to continue."
+    rm -f "$backup_tmp" || true
+    return 1
+  fi
+
+  # Verify dump can be read (list archive contents)
+  if ! cat "$backup_tmp" | dc exec -T "$SVC_DB" pg_restore -l >/dev/null 2>&1; then
+    err "DB backup verification failed (pg_restore -l)."
+    rm -f "$backup_tmp" || true
+    return 1
+  fi
+
+  mv -f "$backup_tmp" "$backup_final"
+  ok "DB backup created: $backup_final"
+
+  # Update state file atomically
+  source "$STATE_FILE" >/dev/null 2>&1 || true
+  local content
+  content=$(
+    cat <<EOF
+PREV_BACKEND_TAG=${PREV_BACKEND_TAG:-}
+PREV_FRONTEND_TAG=${PREV_FRONTEND_TAG:-}
+PREV_BACKEND_IMAGE=${PREV_BACKEND_IMAGE:-}
+PREV_FRONTEND_IMAGE=${PREV_FRONTEND_IMAGE:-}
+DB_BACKUP=${backup_final}
+EOF
+  )
+  atomic_write "$STATE_FILE" "$content"
+
+  return 0
 }
 
 restore_database() {
@@ -134,8 +188,13 @@ restore_database() {
   [[ -f "$backup_file" ]] || { err "Backup file not found: $backup_file"; return 1; }
 
   warn "Restoring database from backup: $backup_file"
-  if cat "$backup_file" | docker exec -i "$DB_CONTAINER" pg_restore \
-      -U "$DB_USER" -d "$DB_NAME" --clean --if-exists; then
+
+  # Try to kill other connections (best-effort; may fail if permissions differ)
+  dc exec -T "$SVC_DB" psql -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 -c \
+    "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${DB_NAME}' AND pid <> pg_backend_pid();" \
+    >/dev/null 2>&1 || true
+
+  if cat "$backup_file" | dc exec -T "$SVC_DB" pg_restore -U "$DB_USER" -d "$DB_NAME" --clean --if-exists; then
     ok "Database restore successful."
     return 0
   else
@@ -148,8 +207,9 @@ wait_for_db() {
   warn "Waiting for database to be ready..."
   local max_wait=60
   local waited=0
+
   while (( waited < max_wait )); do
-    if docker exec "$DB_CONTAINER" pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1; then
+    if dc exec -T "$SVC_DB" pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1; then
       ok "Database is ready."
       return 0
     fi
@@ -157,6 +217,7 @@ wait_for_db() {
     waited=$(( waited + 2 ))
     echo "  ... (${waited}s/${max_wait}s)"
   done
+
   err "Database not ready after ${max_wait}s."
   return 1
 }
@@ -176,18 +237,20 @@ start_infra() {
 pull_images() {
   warn "Pulling new images for APP_TAG=${APP_TAG}"
   export APP_TAG
-  dc pull "$SVC_BACKEND" "$SVC_FRONTEND"
+  # Pull everything that runs your code
+  dc pull "$SVC_BACKEND" "$SVC_CELERY_WORKER" "$SVC_CELERY_BEAT" "$SVC_FRONTEND"
 }
 
 run_migrations() {
-  warn "Running migrations (in running backend container)..."
-  docker exec "$BACKEND_CONTAINER" python manage.py migrate --noinput
+  warn "Running migrations (backend container)..."
+  dc exec -T "$SVC_BACKEND" python manage.py migrate --noinput
   ok "Migrations completed."
 }
 
 collect_static() {
-  warn "Collecting static files (in running backend container)..."
-  docker exec "$BACKEND_CONTAINER" python manage.py collectstatic --noinput || warn "collectstatic failed (continuing)"
+  warn "Collecting static files (backend container)..."
+  dc exec -T "$SVC_BACKEND" python manage.py collectstatic --noinput
+  ok "collectstatic completed."
 }
 
 start_app_services() {
@@ -197,19 +260,55 @@ start_app_services() {
 
 smoke_tests() {
   warn "Smoke tests..."
-  # Validate nginx routing to backend (Origin CA => -k)
-  if ! curl -sk -H "Host: opennoesis.com" --max-time 5 https://127.0.0.1/api/health/ >/dev/null; then
-    err "Backend smoke test failed (nginx -> backend)."
+
+  local code
+
+  # Backend health (nginx -> backend)
+  code="$(curl -sk -o /dev/null -w "%{http_code}" -H "Host: opennoesis.com" --max-time 8 https://127.0.0.1/api/health/ || true)"
+  if [[ "$code" != "200" ]]; then
+    err "Backend smoke test failed (expected 200, got ${code})."
     return 1
   fi
 
-  # Frontend direct (adjust to nginx if/when you proxy it there)
-  if ! curl -sk -H "Host: opennoesis.com" --max-time 5 https://127.0.0.1/ >/dev/null; then
-    err "Frontend smoke test failed (nginx -> frontend)."
+  # Frontend root (nginx -> frontend)
+  code="$(curl -sk -o /dev/null -w "%{http_code}" -H "Host: opennoesis.com" --max-time 8 https://127.0.0.1/ || true)"
+  if [[ "$code" != "200" && "$code" != "304" ]]; then
+    err "Frontend smoke test failed (expected 200/304, got ${code})."
     return 1
   fi
 
   ok "Smoke tests passed."
+}
+
+make_rollback_override_file() {
+  # Creates a temporary compose override that pins images to previous image refs.
+  # This avoids relying on tag extraction.
+  local override="$PROJECT_DIR/.rollback-images.override.yml"
+
+  source "$STATE_FILE" >/dev/null 2>&1 || true
+
+  if [[ -z "${PREV_BACKEND_IMAGE:-}" && -z "${PREV_FRONTEND_IMAGE:-}" ]]; then
+    warn "No previous image refs found; not creating rollback override file."
+    return 1
+  fi
+
+  warn "Creating rollback image override file: $override"
+
+  # Pin backend and frontend. If celery uses the same image as backend, pin those too.
+  cat > "$override" <<EOF
+services:
+  ${SVC_BACKEND}:
+    image: ${PREV_BACKEND_IMAGE}
+  ${SVC_CELERY_WORKER}:
+    image: ${PREV_BACKEND_IMAGE}
+  ${SVC_CELERY_BEAT}:
+    image: ${PREV_BACKEND_IMAGE}
+  ${SVC_FRONTEND}:
+    image: ${PREV_FRONTEND_IMAGE}
+EOF
+
+  EXTRA_COMPOSE_FILE="$override"
+  return 0
 }
 
 rollback() {
@@ -220,30 +319,37 @@ rollback() {
     return 1
   fi
 
-  # shellcheck disable=SC1090
   source "$STATE_FILE" || true
 
-  # Restore DB if we have a backup
+  # Restore DB if we have a verified backup
   if [[ -n "${DB_BACKUP:-}" && -f "${DB_BACKUP:-}" ]]; then
     restore_database "$DB_BACKUP" || err "DB restore failed; continuing rollback of containers anyway."
+  else
+    warn "No DB backup recorded; skipping DB restore."
   fi
 
   stop_app_services
   start_infra
 
-  if [[ -n "${PREV_APP_TAG:-}" ]]; then
-    warn "Reverting APP_TAG to previous tag: ${PREV_APP_TAG}"
-    export APP_TAG="$PREV_APP_TAG"
-    dc pull "$SVC_BACKEND" "$SVC_FRONTEND" || true
-    start_app_services
+  # Preferred rollback: pin to previous image refs via override file
+  if make_rollback_override_file; then
+    warn "Starting services with pinned previous images..."
+    dc up -d "${SVC_APP[@]}"
   else
-    warn "No previous tag detected. Attempting best-effort restart of existing containers."
-    start_app_services
+    # Fallback: try previous tags (only if present and you deploy by tag)
+    if [[ -n "${PREV_BACKEND_TAG:-}" && -n "${PREV_FRONTEND_TAG:-}" && "${PREV_BACKEND_TAG}" == "${PREV_FRONTEND_TAG}" ]]; then
+      warn "Reverting APP_TAG to previous tag: ${PREV_BACKEND_TAG}"
+      export APP_TAG="$PREV_BACKEND_TAG"
+      dc pull "${SVC_APP[@]}" || true
+      dc up -d "${SVC_APP[@]}"
+    else
+      warn "No reliable previous tag/image pin available. Attempting best-effort restart with whatever images are present."
+      dc up -d "${SVC_APP[@]}"
+    fi
   fi
 
   if smoke_tests; then
     ok "Rollback successful."
-    disable_maintenance
     return 0
   fi
 
@@ -251,19 +357,40 @@ rollback() {
   return 1
 }
 
-on_error() {
+on_err() {
   err "Deployment failed (line $1)."
   rollback || true
   exit 1
 }
-trap 'on_error $LINENO' ERR
+trap 'on_err $LINENO' ERR
+
+on_exit() {
+  # Only disable maintenance if deployment succeeded AND marker exists.
+  if [[ "${DEPLOY_SUCCESS}" == "1" ]]; then
+    if [[ -f "$MAINT_FLAG" ]]; then
+      disable_maintenance || true
+    fi
+  else
+    # Failure path: keep maintenance on (do not try to disable).
+    if [[ -f "$MAINT_FLAG" ]]; then
+      warn "Leaving maintenance mode ON due to failed/partial deployment."
+    fi
+  fi
+}
+trap 'on_exit' EXIT
 
 main() {
+  require_cmd docker
+  require_cmd nginx
+  require_cmd systemctl
+  require_cmd curl
+
   require_env
 
   cd "$PROJECT_DIR"
+
   mkdir -p "$BACKUP_DIR"
-  chmod 700 "$BACKUP_DIR" || true
+  chmod 700 "$BACKUP_DIR"
 
   warn "Starting deployment with APP_TAG=${APP_TAG}"
   enable_maintenance
@@ -285,7 +412,6 @@ main() {
   warn "Starting backend container (only)..."
   dc up -d "$SVC_BACKEND"
 
-  # Apply schema + collect static inside the running backend container
   run_migrations
   collect_static
 
@@ -293,10 +419,10 @@ main() {
   warn "Starting remaining app services..."
   dc up -d "$SVC_CELERY_WORKER" "$SVC_CELERY_BEAT" "$SVC_FRONTEND"
 
-  # Smoke tests (includes nginx->backend)
   smoke_tests
 
-  disable_maintenance
+  # Success: allow EXIT trap to disable maintenance
+  DEPLOY_SUCCESS=1
 
   # Keep only last 10 backups
   warn "Cleaning old backups (keeping last 10)..."
