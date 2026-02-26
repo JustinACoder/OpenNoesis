@@ -8,9 +8,9 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    <div className="h-dvh flex flex-col overflow-hidden">
       {/* Fixed Header */}
-      <header className="fixed top-0 left-0 right-0 z-50">
+      <header className="sticky top-0 shrink-0 z-50 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <ClickableLogo />
@@ -26,10 +26,10 @@ export default function AuthLayout({
         </div>
       </header>
 
-      {/* Main Content with top padding to account for fixed header */}
-      <main className="min-h-screen flex items-center justify-center bg-background px-4 pt-16">
+      {/* Main Content - scrollable if needed */}
+      <main className="flex-1 flex items-center justify-center bg-background px-4 overflow-y-auto">
         {children}
       </main>
-    </>
+    </div>
   );
 }

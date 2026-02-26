@@ -3,8 +3,6 @@ import yaml
 import sys
 import argparse
 import requests
-import subprocess
-import time
 from urllib.parse import urlparse
 
 def load_openapi_file(source):
@@ -62,30 +60,16 @@ def merge_openapi_schemas(schema1, schema2):
         "security": schema1.get("security", []) + schema2.get("security", []),
     }
 
-def start_django_server():
-    """Start Django server with stdout/stderr forwarded to the main process."""
-    return subprocess.Popen(
-        ["python", "manage.py", "runserver"],
-        stdout=sys.stdout,
-        stderr=sys.stderr
-    )
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Merge two OpenAPI schemas into one.")
     parser.add_argument("schema1", help="Path or URL to the first OpenAPI schema (JSON or YAML)")
     parser.add_argument("schema2", help="Path or URL to the second OpenAPI schema (JSON or YAML)")
     parser.add_argument("-o", "--output", default="combined_openapi.json", help="Output file path (default: combined_openapi.json)")
-    parser.add_argument("--runserver", action="store_true", help="Start the Django server before fetching OpenAPI schemas")
 
     args = parser.parse_args()
 
     server_process = None
     try:
-        if args.runserver:
-            print("🚀 Starting Django server...")
-            server_process = start_django_server()
-            time.sleep(10)  # Optional: wait for startup; consider improving with health checks
-
         schema1 = load_openapi_file(args.schema1)
         schema2 = load_openapi_file(args.schema2)
         merged_schema = merge_openapi_schemas(schema1, schema2)
@@ -97,8 +81,3 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"❌ Error: {e}")
         sys.exit(1)
-    finally:
-        if server_process:
-            print("🛑 Stopping Django server...")
-            server_process.terminate()
-            server_process.wait()

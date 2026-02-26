@@ -12,13 +12,13 @@ class InviteSchema(ModelSchema):
     debate: DebatePreviewSchema
     creator: UserPreviewSchema
 
-    class Config:
+    class Meta:
         model = Invite
-        model_fields = '__all__'
+        fields = '__all__'
 
 class InviteUseSchema(ModelSchema):
     user: UserPreviewSchema
 
-    class Config:
+    class Meta:
         model = InviteUse
-        model_fields = '__all__'
+        fields = '__all__'

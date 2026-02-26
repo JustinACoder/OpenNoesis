@@ -6,16 +6,26 @@ async function getServerCookieStore() {
   return cookies();
 }
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+function getApiUrl() {
+  if (isServer) return process.env.DOCKER_API_URL;
+  return process.env.NEXT_PUBLIC_API_URL || "";
+}
 
 /* ---------------- CSRF Handling ---------------- */
 async function queryServerForCSRFCookie(): Promise<string | undefined> {
   try {
-    const res = await fetch(apiUrl + "/set-csrf-token", {
+    const headers = new Headers();
+
+    if (isServer) {
+      headers.set("X-Forwarded-Proto", "https"); // If we are not on the server, this is overridden by nginx
+    }
+
+    const res = await fetch(getApiUrl() + "/api/set-csrf-token", {
       method: "GET",
       credentials: "include",
+      headers: headers,
     });
-    if (!res.ok) throw new Error("Failed to fetch CSRF token");
+    if (!res.ok) throw new Error("Response not OK");
     const json = await res.json();
     return json.csrftoken || undefined;
   } catch (err) {
@@ -86,9 +96,14 @@ export const customFetch = async <T>(
     if (token) headers.set("X-CSRFToken", token);
   }
 
+  // Add the X-Forwarded-Proto header if we are on the server
+  if (isServer) {
+    headers.set("X-Forwarded-Proto", "https"); // If we are not on the server, this is overridden by nginx
+  }
+
   // Perform fetch
-  const requestUrl = url.startsWith("http") ? url : apiUrl + url;
-  //console.log("Options passed to customFetch:", options);
+  const requestUrl = url.startsWith("http") ? url : getApiUrl() + url;
+  //console.log("Fecthing URL:", requestUrl);
   const allOptions = {
     ...options,
     headers,

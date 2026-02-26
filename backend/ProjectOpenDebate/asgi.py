@@ -9,6 +9,11 @@ https://docs.djangoproject.com/en/5.0/howto/deployment/asgi/
 
 import os
 from django.core.asgi import get_asgi_application
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ProjectOpenDebate.settings")
+
+django_asgi_app = get_asgi_application()
+
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 from django.urls import re_path
@@ -18,10 +23,8 @@ from pairing.consumers import PairingConsumer
 from notifications.consumers import NotificationConsumer
 from .demultiplexer import AsyncJsonWebsocketDemultiplexer
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ProjectOpenDebate.settings')
-
 application = ProtocolTypeRouter({
-    "http": get_asgi_application(),
+    "http": django_asgi_app,
     "websocket": AuthMiddlewareStack(
         URLRouter([
             re_path("^ws/$", AsyncJsonWebsocketDemultiplexer.as_asgi(

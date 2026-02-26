@@ -7,7 +7,6 @@ import {
   UseMutationResult,
   useQueryClient,
 } from "@tanstack/react-query";
-import { AxiosRequestConfig } from "axios";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -27,7 +26,7 @@ export function useOptimisticMutation<
         TVariables,
         { previousData?: TData }
       >;
-      request?: AxiosRequestConfig;
+      request?: RequestInit;
     },
     queryClient?: QueryClient,
   ) => UseMutationResult<TResponse, TError, TVariables>,
@@ -107,4 +106,9 @@ export function useOptimisticMutation<
       },
     },
   });
+}
+
+export function getUrlParam(name: string): string | null {
+  if (typeof window === "undefined") return null;
+  return new URLSearchParams(window.location.search).get(name);
 }

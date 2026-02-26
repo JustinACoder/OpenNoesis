@@ -44,10 +44,12 @@ def create_active_pairing_request(user: User, debate_id: int, desired_stance: Li
     """
     debate = get_object_or_404(Debate, id=debate_id)
 
-    # Check if the user already has an active pairing request
-    if user.pairingrequest_set.filter(
+    # Check if the user already has an active (non-expired) pairing request
+    if PairingRequest.objects.filter(
+            user=user,
             debate=debate,
-            status=PairingRequest.Status.ACTIVE
+            status=PairingRequest.Status.ACTIVE,
+            is_expired=False
     ).exists():
         return False
 

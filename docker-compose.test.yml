@@ -1,0 +1,52 @@
+# Usage: docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from backend
+name: opennoesis-test
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: debate_db
+      POSTGRES_USER: debate_user
+      POSTGRES_PASSWORD: debate_password
+    networks:
+      - debate-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: [ "redis-server", "--appendonly", "no" ]
+    networks:
+      - debate-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: builder
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    environment:
+      DJANGO_SETTINGS_MODULE: ProjectOpenDebate.test_settings
+    volumes:
+      - ./backend:/app
+    networks:
+      - debate-network
+    command: [ "python", "manage.py", "test" ]
+
+networks:
+  debate-network:
+    driver: bridge

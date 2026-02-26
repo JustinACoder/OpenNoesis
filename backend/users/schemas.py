@@ -10,9 +10,9 @@ UserModel = get_user_model()
 class PrivateUserSchema(ModelSchema):
     bio: str = Field(None, alias='profile.bio')
 
-    class Config:
+    class Meta:
         model = UserModel
-        model_fields = ['id', 'username', 'email', 'date_joined', 'is_staff']
+        fields = ['id', 'username', 'email', 'date_joined', 'is_staff']
 
 
 class ProfileEditInputSchema(ModelSchema):
@@ -24,20 +24,20 @@ class ProfileEditInputSchema(ModelSchema):
             raise ValueError("bio must be at most 2048 characters")
         return v
 
-    class Config:
+    class Meta:
         model = Profile
-        model_exclude = ['id', 'user']
+        exclude = ['id', 'user']
 
 
 class PublicUserSchema(ModelSchema):
     bio: str = Field(None, alias='profile.bio')
 
-    class Config:
+    class Meta:
         model = UserModel
-        model_fields = ['id', 'username', 'date_joined', 'is_staff']
+        fields = ['id', 'username', 'date_joined', 'is_staff']
 
 
 class UserPreviewSchema(ModelSchema):
-    class Config:
+    class Meta:
         model = UserModel
-        model_fields = ['id', 'username']
+        fields = ['id', 'username']

@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import WebSocketManager, { WebSocketMessage } from "./websocketManager";
 import { toast } from "sonner";
 import { useAuthState } from "@/providers/authProvider";
+import { useEvent } from "@/lib/hooks/useEvent";
 
 interface UseWebSocketOptions {
   stream?: string;
@@ -20,13 +21,29 @@ export function useWebSocket({
   onError,
   autoConnect = true,
 }: UseWebSocketOptions) {
-  const manager = useRef(WebSocketManager.getInstance());
+  console.log("useWebSocket called");
+  // Lazy singleton initialization - only calls getInstance once
+  const managerRef = useRef<WebSocketManager | null>(null);
+  const getManager = useCallback(() => {
+    if (managerRef.current === null) {
+      managerRef.current = WebSocketManager.getInstance();
+    }
+    return managerRef.current;
+  }, []);
+
   const cleanupFns = useRef<Array<() => void>>([]);
+  // Initialize with current status - getInstance() is idempotent so this is safe
   const [connectionStatus, setConnectionStatus] = useState<
     "disconnected" | "connecting" | "connected" | "disconnecting"
-  >(manager.current.getStatus());
+  >(() => WebSocketManager.getInstance().getStatus());
   const [hasAttemptedConnection, setHasAttemptedConnection] = useState(false);
   const { authStatus } = useAuthState();
+
+  // Stable callback references that always call the latest version
+  const handleMessage = useEvent(onMessage);
+  const handleConnect = useEvent(onConnect);
+  const handleDisconnect = useEvent(onDisconnect);
+  const handleError = useEvent(onError);
 
   useEffect(() => {
     if (authStatus !== "authenticated") {
@@ -34,68 +51,64 @@ export function useWebSocket({
       return;
     }
 
-    // Register handlers
-    if (onMessage) {
-      if (stream) {
-        // Use stream-specific handler
-        cleanupFns.current.push(
-          manager.current.addStreamHandler(stream, onMessage),
-        );
-      } else {
-        // Use general message handler
-        cleanupFns.current.push(manager.current.addMessageHandler(onMessage));
-      }
-    }
+    const mgr = getManager();
 
-    if (onConnect) {
+    // Register handlers (useEvent safely handles undefined callbacks)
+    if (stream) {
       cleanupFns.current.push(
-        manager.current.subscribe("connected", onConnect),
+        mgr.addStreamHandler(stream, handleMessage),
+      );
+    } else {
+      cleanupFns.current.push(
+        mgr.addMessageHandler(handleMessage),
       );
     }
 
-    if (onDisconnect) {
-      cleanupFns.current.push(
-        manager.current.subscribe("disconnected", onDisconnect),
-      );
-    }
+    cleanupFns.current.push(
+      mgr.subscribe("connected", handleConnect),
+    );
 
-    if (onError) {
-      cleanupFns.current.push(manager.current.subscribe("error", onError));
-    }
+    cleanupFns.current.push(
+      mgr.subscribe("disconnected", handleDisconnect),
+    );
+
+    cleanupFns.current.push(
+      mgr.subscribe("error", handleError),
+    );
 
     // Always subscribe to update local status
     cleanupFns.current.push(
-      manager.current.subscribe("connected", () =>
+      mgr.subscribe("connected", () =>
         setConnectionStatus("connected"),
       ),
     );
     cleanupFns.current.push(
-      manager.current.subscribe("disconnected", () =>
+      mgr.subscribe("disconnected", () =>
         setConnectionStatus("disconnected"),
       ),
     );
     cleanupFns.current.push(
-      manager.current.subscribe("error", () =>
+      mgr.subscribe("error", () =>
         toast.error(
           `Oops! There was an error when communicating with the server. If you are experiencing issues, please try refreshing the page.`,
         ),
       ),
     );
     cleanupFns.current.push(
-      manager.current.subscribe("connecting", () => {
+      mgr.subscribe("connecting", () => {
         setConnectionStatus("connecting");
         setHasAttemptedConnection(true);
       }),
     );
     cleanupFns.current.push(
-      manager.current.subscribe("disconnecting", () =>
+      mgr.subscribe("disconnecting", () =>
         setConnectionStatus("disconnecting"),
       ),
     );
 
     // Auto-connect if enabled
     if (autoConnect) {
-      manager.current.connect();
+      mgr.connect();
     }
 
     // Cleanup function
@@ -103,29 +116,22 @@ export function useWebSocket({
       cleanupFns.current.forEach((cleanup) => cleanup());
       cleanupFns.current = [];
     };
-  }, [
-    stream,
-    onMessage,
-    onConnect,
-    onDisconnect,
-    onError,
-    autoConnect,
-    authStatus,
-  ]);
+  }, [getManager, stream, autoConnect, authStatus, handleMessage, handleConnect, handleDisconnect, handleError]);
 
   const connect = useCallback(() => {
-    manager.current.connect();
-  }, []);
+    getManager().connect();
+  }, [getManager]);
 
   const disconnect = useCallback(() => {
-    manager.current.disconnect();
-  }, []);
+    getManager().disconnect();
+  }, [getManager]);
 
   const send = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (data: any) => {
-      manager.current.send(data, stream);
+      getManager().send(data, stream);
     },
-    [stream],
+    [getManager, stream],
   );
 
   return {

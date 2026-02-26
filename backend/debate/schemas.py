@@ -53,9 +53,9 @@ class DebateFullSchema(ModelSchema):
     user_has_requested_for: bool = Field(False, alias='has_requested_for')
     user_has_requested_against: bool = Field(False, alias='has_requested_against')
 
-    class Config:
+    class Meta:
         model = Debate
-        model_exclude = ['search_vector', 'vote']
+        exclude = ['search_vector', 'vote']
 
 
 class DebateSchema(DebateFullSchema):
@@ -83,12 +83,12 @@ class CommentSchema(ModelSchema):
     vote_count: int = 0
     user_vote: VoteDirectionEnum = VoteDirectionEnum.UNSET
 
-    class Config:
+    class Meta:
         model = Comment
-        model_fields = '__all__'
+        fields = '__all__'
 
 
 class StanceSchema(ModelSchema):
-    class Config:
+    class Meta:
         model = Stance
-        model_fields = '__all__'
+        fields = '__all__'

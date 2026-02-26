@@ -167,7 +167,7 @@ export const ChatMessageGroups: React.FC<ChatMessageGroupsProps> = ({
                 <div className={cn("max-w-xs lg:max-w-md xl:max-w-lg")}>
                   <div
                     className={cn(
-                      "px-4 py-3 rounded-3xl w-fit ml-auto",
+                      "px-4 py-3 rounded-3xl ml-auto",
                       isOwnMessage
                         ? "bg-blue-500 text-white"
                         : "bg-gray-100 text-gray-900",

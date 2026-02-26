@@ -1,0 +1,115 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: debate-db
+    restart: unless-stopped
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backups:/backups
+    networks:
+      - debate-network
+    env_file:
+      - ./backend/.env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: debate-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    networks:
+      - debate-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    container_name: debate-backend
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/staticfiles:/app/staticfiles
+    networks:
+      - debate-network
+    env_file:
+      - ./backend/.env
+    command: ["daphne", "-b", "0.0.0.0", "-p", "8000", "ProjectOpenDebate.asgi:application"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  celery-worker:
+    container_name: debate-celery-worker
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    networks:
+      - debate-network
+    env_file:
+      - ./backend/.env
+    stop_grace_period: 10m
+    command: ["celery", "-A", "ProjectOpenDebate", "worker", "-l", "info"]
+    healthcheck:
+      test: ["CMD", "celery", "-A", "ProjectOpenDebate", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  celery-beat:
+    container_name: debate-celery-beat
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    networks:
+      - debate-network
+    env_file:
+      - ./backend/.env
+    stop_grace_period: 10m
+    command: ["celery", "-A", "ProjectOpenDebate", "beat", "-l", "info"]
+
+  frontend:
+    container_name: debate-frontend
+    restart: unless-stopped
+    depends_on:
+        backend:
+            condition: service_healthy
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "3000:3000"
+    networks:
+      - debate-network
+    env_file:
+      - ./frontend/.env
+
+networks:
+  debate-network:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:

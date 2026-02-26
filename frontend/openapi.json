@@ -382,6 +382,23 @@
               "type": "integer"
             },
             "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            },
+            "required": false
           }
         ],
         "responses": {
@@ -563,6 +580,23 @@
               "type": "integer"
             },
             "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            },
+            "required": false
           }
         ],
         "responses": {
@@ -601,6 +635,23 @@
               "minimum": 1,
               "title": "Page",
               "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
             },
             "required": false
           }
@@ -643,6 +694,23 @@
               "type": "integer"
             },
             "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            },
+            "required": false
           }
         ],
         "responses": {
@@ -683,6 +751,23 @@
               "type": "integer"
             },
             "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            },
+            "required": false
           }
         ],
         "responses": {
@@ -721,6 +806,23 @@
               "minimum": 1,
               "title": "Page",
               "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
             },
             "required": false
           }
@@ -770,6 +872,23 @@
               "minimum": 1,
               "title": "Page",
               "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
             },
             "required": false
           }
@@ -844,8 +963,15 @@
             "in": "query",
             "name": "user_id",
             "schema": {
-              "title": "User Id",
-              "type": "integer"
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
             },
             "required": false
           },
@@ -857,6 +983,23 @@
               "minimum": 1,
               "title": "Page",
               "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
             },
             "required": false
           }
@@ -906,6 +1049,23 @@
               "minimum": 1,
               "title": "Page",
               "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
             },
             "required": false
           }
@@ -1202,6 +1362,23 @@
               "minimum": 1,
               "title": "Page",
               "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
             },
             "required": false
           }
@@ -1612,6 +1789,33 @@
           }
         },
         "description": "Get the current user object no matter if authenticated or not.",
+        "tags": [
+          "General"
+        ]
+      }
+    },
+    "/api/health": {
+      "get": {
+        "operationId": "ProjectOpenDebate_api_health_check",
+        "summary": "Health Check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "description": "Health check endpoint to verify the application is running correctly.\nChecks database connectivity.",
         "tags": [
           "General"
         ]
@@ -3608,7 +3812,7 @@
       }
     },
     "/_allauth/app/v1/tokens/refresh": {
-      "get": {
+      "post": {
         "tags": [
           "Tokens"
         ],
@@ -3718,6 +3922,18 @@
             "minimum": 1,
             "title": "Page",
             "type": "integer"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Size"
           }
         },
         "title": "Input",
@@ -4221,9 +4437,9 @@
             "title": "Vote Score",
             "type": "integer"
           },
-          "num_votes": {
+          "vote_count": {
             "default": 0,
-            "title": "Num Votes",
+            "title": "Vote Count",
             "type": "integer"
           },
           "user_vote": {
@@ -4278,10 +4494,6 @@
             "title": "Title",
             "type": "string"
           },
-          "description": {
-            "title": "Description",
-            "type": "string"
-          },
           "date": {
             "format": "date-time",
             "title": "Date",
@@ -4307,7 +4519,6 @@
         },
         "required": [
           "title",
-          "description",
           "date",
           "slug",
           "description_preview"
@@ -4371,9 +4582,9 @@
             "title": "Vote Score",
             "type": "integer"
           },
-          "num_votes": {
+          "vote_count": {
             "default": 0,
-            "title": "Num Votes",
+            "title": "Vote Count",
             "type": "integer"
           },
           "user_vote": {
@@ -4474,9 +4685,9 @@
             "title": "Vote Score",
             "type": "integer"
           },
-          "num_votes": {
+          "vote_count": {
             "default": 0,
-            "title": "Num Votes",
+            "title": "Vote Count",
             "type": "integer"
           },
           "user_vote": {
@@ -4628,6 +4839,7 @@
             "type": "string"
           },
           "info_args": {
+            "additionalProperties": true,
             "default": {},
             "title": "Info Args",
             "type": "object"
@@ -7781,20 +7993,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "type": "object",
-              "properties": {
-                "data": {
-                  "$ref": "#/components/schemas/ReauthenticationResponse"
-                },
-                "status": {
-                  "type": "integer",
-                  "example": 200
-                }
-              },
-              "required": [
-                "data",
-                "status"
-              ]
+              "$ref": "#/components/schemas/ReauthenticationResponse"
             },
             "examples": {
               "reauthentication_required": {

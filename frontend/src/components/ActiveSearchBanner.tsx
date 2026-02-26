@@ -5,6 +5,7 @@ import styles from "@/styles/pairingBanner.module.css";
 import { Button } from "@/components/ui/button";
 import { usePairing, PairingBannerStatus } from "@/lib/hooks/pairingHook";
 import { usePairingApiCancelPairing } from "@/lib/api/pairing";
+import { ElapsedTimer } from "@/components/ElapsedTimer";
 
 const STATUS_CLASSES: Record<PairingBannerStatus, string> = {
   active: `${styles.pairingBanner} ${styles.searching}`,
@@ -17,20 +18,12 @@ const ActiveSearchBanner = () => {
   // Unified hook replaces prior logic
   const {
     status: connectionStatus,
-    elapsedSeconds,
     pairingRequest,
     forceClosePairingBanner,
   } = usePairing();
   const { mutateAsync: cancelPairing } = usePairingApiCancelPairing();
 
   if (!connectionStatus) return null;
-
-  // Format elapsed time as MM:SS
-  const formatElapsedTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
-  };
 
   const cancelPairingHandler = async () => {
     if (
@@ -69,9 +62,7 @@ const ActiveSearchBanner = () => {
             <strong>{pairingRequest.debate.title}</strong>
           </span>
           <span className="m-0 inline sm:hidden">Searching...</span>
-          <span className="elapsed-time">
-            {formatElapsedTime(elapsedSeconds)}
-          </span>
+          <ElapsedTimer key={pairingRequest.created_at} createdAt={pairingRequest.created_at} />
         </div>
       )}
 

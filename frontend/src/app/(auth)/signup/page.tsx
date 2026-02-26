@@ -28,7 +28,8 @@ import { usePostAllauthClientV1AuthSignup } from "@/lib/api/authentication-accou
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { getUrlParam } from "@/lib/utils";
 
 const formSchema = z
   .object({
@@ -52,9 +53,7 @@ const formSchema = z
   });
 
 export default function SignUpPage() {
-  const searchParams = useSearchParams();
   const router = useRouter();
-  const nextUrl = searchParams.get("next") || "/";
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -118,6 +117,7 @@ export default function SignUpPage() {
         },
         onSuccess: () => {
           setHasSignedUp(true);
+          const nextUrl = getUrlParam("next") || "/";
           router.push(nextUrl);
         },
       },

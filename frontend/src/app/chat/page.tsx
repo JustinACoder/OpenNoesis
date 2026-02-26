@@ -41,7 +41,7 @@ const ChatPage = async () => {
               <ol className="list-decimal list-inside">
                 <li>
                   Find a debate that interests you in the{" "}
-                  <Link href={"/explore"}>Explore</Link> section
+                  <Link href={"/"}>Explore</Link> section
                 </li>
                 <li>Choose your stance (For or Against)</li>
                 <li>Click on &#34;Debate Now&#34; and search for a match</li>

@@ -1,4 +1,3 @@
-import { projectOpenDebateApiGetCurrentUserObject } from "@/lib/api/general";
 import React from "react";
 import BottomNavigation from "@/components/navigation/BottomNavigation";
 import SearchBar from "@/components/navigation/SearchBar";
@@ -16,6 +15,7 @@ import NavigationActions from "@/components/navigation/NavigationActions";
 import links from "./links";
 import { Footer } from "@/components/Footer";
 import ActiveSearchBanner from "@/components/ActiveSearchBanner";
+import { ClientAuthGate } from "@/components/ClientAuthGate";
 
 const HeaderLinks = () => {
   return (
@@ -53,14 +53,16 @@ export const NavigationOverlay = async ({
   header_full_width = false,
   children,
 }: NavigationOverlayProps) => {
-  const user = await projectOpenDebateApiGetCurrentUserObject();
-
   return (
     <NavigationProvider>
       <MobileSearchOverlay />
-      <div className="h-screen flex flex-col overflow-hidden">
-        {/* Render the top header */}
-        <header className="flex z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      {/*
+        Use h-dvh (dynamic viewport height) for better mobile support.
+        This accounts for mobile browser chrome (address bar, etc.)
+      */}
+      <div className="h-dvh flex flex-col overflow-hidden">
+        {/* Render the top header - sticky so it stays visible during scroll */}
+        <header className="sticky top-0 flex shrink-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div
             className={`${header_full_width ? "w-full" : "container mx-auto"} flex h-16 items-center justify-between px-2`}
           >
@@ -77,23 +79,32 @@ export const NavigationOverlay = async ({
           </div>
         </header>
 
-        {user.is_authenticated && <ActiveSearchBanner />}
+        <ClientAuthGate>
+          <ActiveSearchBanner />
+        </ClientAuthGate>
 
         {/* Render the children components */}
         <div
-          className={`flex flex-col flex-1 ${main_y_scroll ? "overflow-y-auto" : "overflow-hidden"}`}
+          className={`flex flex-col flex-1 min-h-0 ${main_y_scroll ? "overflow-y-auto" : "overflow-hidden"}`}
         >
-          <main className={main_y_scroll ? "" : "flex-1 min-h-0"}>
+          <main className={main_y_scroll ? "flex-1" : "flex-1 min-h-0"}>
             {children}
           </main>
-          {show_footer && <Footer />}
+          {/* Footer: hidden on mobile when bottom navigation is shown, visible on desktop */}
+          {show_footer && (
+            <div className={hide_bottom_menu ? "" : "hidden md:block"}>
+              <Footer />
+            </div>
+          )}
         </div>
 
-        {/* Render the bottom navigation bar if the user is authenticated */}
-        {user.is_authenticated && !hide_bottom_menu && (
-          <div className="md:hidden flex">
-            <BottomNavigation />
-          </div>
+        {/* Render the bottom navigation bar on mobile if the user is authenticated */}
+        {!hide_bottom_menu && (
+          <ClientAuthGate>
+            <div className="md:hidden flex shrink-0 pb-[env(safe-area-inset-bottom)]">
+              <BottomNavigation />
+            </div>
+          </ClientAuthGate>
         )}
       </div>
     </NavigationProvider>

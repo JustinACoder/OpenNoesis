@@ -1,0 +1,48 @@
+# Development environment override
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# Or use the helper script: ./dev.sh
+name: opennoesis-dev
+
+services:
+  backend: &backend_dev
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: builder
+    user: root
+    volumes:
+      - ./backend:/app
+    command: [ "python", "manage.py", "runserver", "0.0.0.0:8000" ]
+    environment: &django_env
+      DJANGO_SETTINGS_MODULE: ProjectOpenDebate.settings
+      PYTHONUNBUFFERED: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+
+  celery-worker:
+    <<: *backend_dev
+    command: [ "celery", "-A", "ProjectOpenDebate", "worker", "-l", "debug", "--pool=solo" ]
+    environment: *django_env
+
+  celery-beat:
+    <<: *backend_dev
+    command: [ "celery", "-A", "ProjectOpenDebate", "beat", "-l", "debug" ]
+    environment: *django_env
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost:8000/ws/}
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+      - frontend-next-cache:/app/.next
+    environment:
+      NODE_ENV: development
+      WATCHPACK_POLLING: "true"
+
+volumes:
+  frontend-node-modules:
+  frontend-next-cache:

@@ -1,0 +1,19 @@
+# Development Dockerfile for Next.js frontend
+FROM node:24-alpine
+
+WORKDIR /app
+
+RUN apk add --no-cache git
+
+# Install deps first (cache-friendly)
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Get arg
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_WS_URL
+ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
+
+EXPOSE 3000
+CMD ["npm", "run", "dev"]

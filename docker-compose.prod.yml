@@ -1,0 +1,14 @@
+name: opennoesis-prod
+
+services:
+  backend:
+    image: ghcr.io/justinacoder/debate-backend:${APP_TAG:-latest}
+
+  frontend:
+    image: ghcr.io/justinacoder/debate-frontend:${APP_TAG:-latest}
+
+  celery-worker:
+    image: ghcr.io/justinacoder/debate-backend:${APP_TAG:-latest}
+
+  celery-beat:
+    image: ghcr.io/justinacoder/debate-backend:${APP_TAG:-latest}

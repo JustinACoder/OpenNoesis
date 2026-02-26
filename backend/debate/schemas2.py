@@ -6,6 +6,6 @@ from users.schemas import UserPreviewSchema
 
 class DebatePreviewSchema(ModelSchema):
     author: Optional[UserPreviewSchema] = None
-    class Config:
+    class Meta:
         model = Debate
-        model_fields = ['id', 'title', 'slug']
+        fields = ['id', 'title', 'slug']

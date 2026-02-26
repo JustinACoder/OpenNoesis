@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { Calendar, User, Shield } from "lucide-react";
 import { Box } from "@/components/ui/box";
 import UserAvatar from "@/components/UserAvatar";
-import { Footer } from "@/components/Footer";
 import NavigationOverlay from "@/components/navigation/NavigationOverlay";
 import { usersApiGetPublicUserProfileByUsername } from "@/lib/api/users";
 import ParticipatingDebateList from "@/app/u/[username]/components/ParticipatingDebateList";

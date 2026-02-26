@@ -11,28 +11,24 @@ import DebateSection from "@/components/DebateSection";
 import { Loader2 } from "lucide-react";
 
 export default async function HomePage() {
-  console.time("HomePage Get debates");
-
   // Parallel fetching to speed up SSR
   const [trending, popular, controversial, recent, random] = await Promise.all([
     debateApiTrendingDebates(undefined, {
-      next: { revalidate: 3600 },
+      next: { revalidate: 60 },
     }),
     debateApiPopularDebates(undefined, {
-      next: { revalidate: 3600 },
+      next: { revalidate: 60 },
     }),
     debateApiControversialDebates(undefined, {
-      next: { revalidate: 3600 },
+      next: { revalidate: 60 },
     }),
     debateApiRecentDebates(undefined, {
-      next: { revalidate: 3600 },
+      next: { revalidate: 60 },
     }),
     debateApiRandomDebates(undefined, {
-      next: { revalidate: 3600 },
+      next: { revalidate: 60 },
     }),
   ]);
-
-  console.timeEnd("HomePage Get debates");
 
   const sections = [
     { title: "Trending Debates", items: trending.items },
@@ -45,13 +41,13 @@ export default async function HomePage() {
   return (
     <NavigationOverlay>
       <div className="container mx-auto px-4 py-8 space-y-12">
-        {/* The popular debates are rendered immediately for SEO */}
+        {/* The trending debates are rendered immediately for SEO */}
         <section>
           <h2 className="text-2xl font-semibold mb-6">{sections[0].title}</h2>
           <DebateSection debates={sections[0].items} />
         </section>
 
-        {sections.map(({ title, items }) => (
+        {sections.slice(1).map(({ title, items }) => (
           <section key={title}>
             <h2 className="text-2xl font-semibold mb-6">{title}</h2>
             <Suspense

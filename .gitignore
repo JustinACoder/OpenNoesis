@@ -1,2 +1,19 @@
-.github
+# IDE
 .idea
+.vscode
+
+# Deployment
+.deploy_state
+backups/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Other
+myscripts/
+
+# Envs
+.env
+.env.*
+!.env.example

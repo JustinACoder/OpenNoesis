@@ -47,7 +47,7 @@ export const DiscussionPageClientWrapper = ({
         <div
           className={`
           ${showMobileDiscussionList ? "hidden" : "flex"}
-          flex-1 flex-col h-full
+          flex-1 flex-col h-full min-w-0
         `}
         >
           {/* Mobile header */}

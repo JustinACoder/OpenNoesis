@@ -22,11 +22,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { useSearchParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, CheckCircle } from "lucide-react";
 import { usePostAllauthClientV1AuthPasswordReset } from "@/lib/api/authentication-password-reset";
+import { getUrlParam } from "@/lib/utils";
 
 const formSchema = z
   .object({
@@ -41,9 +42,7 @@ const formSchema = z
   });
 
 export default function ResetPasswordPage() {
-  const searchParams = useSearchParams();
   const router = useRouter();
-  const key = searchParams.get("token");
   const [errorMessages, setErrors] = useState<string[]>([]);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
 
@@ -57,20 +56,27 @@ export default function ResetPasswordPage() {
   const { mutate: resetPassword, isPending } =
     usePostAllauthClientV1AuthPasswordReset();
 
-  if (!key) {
-    router.push("/");
-    return null; // Redirect if no key is provided
-  }
+  useEffect(() => {
+    const key = getUrlParam("token");
+    if (!key) {
+      router.push("/");
+    }
+  }, [router]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     setErrors([]);
     setIsSuccess(false);
+    const key = getUrlParam("token");
+    if (!key) {
+      setErrors(["Invalid or missing password reset token."]);
+      return;
+    }
 
     resetPassword(
       {
         client: "browser",
         data: {
-          key: key!, // Non-null assertion since we check for key above
+          key: key, // Non-null assertion since we check for key above
           password: values.password,
         },
       },

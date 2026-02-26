@@ -2,17 +2,19 @@ export interface WebSocketMessage {
   status: "success" | "error";
   event_type?: string;
   message?: string;
-  data?: any;
-  [key: string]: any;
+  data?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  [key: string]: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
 type MessageHandler = (payload: WebSocketMessage) => void;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type EventHandler = (...args: any[]) => void;
 
 class WebSocketManager {
   private static instance: WebSocketManager;
   private ws: WebSocket | null = null;
-  private url: string = "ws://localhost:8000/ws/";
+  private url: string =
+    process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/ws/";
   private reconnectTimeout: NodeJS.Timeout | null = null;
   private messageHandlers: Set<MessageHandler> = new Set();
   private streamHandlers: Map<string, Set<MessageHandler>> = new Map();
@@ -29,7 +31,7 @@ class WebSocketManager {
       WebSocketManager.instance = new WebSocketManager();
       console.log("WebSocketManager instance created");
     } else {
-      console.log("WebSocketManager instance reused");
+      console.debug("WebSocketManager instance reused");
     }
     return WebSocketManager.instance;
   }
@@ -169,6 +171,7 @@ class WebSocketManager {
     this.reconnectAttempts = 0;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   send(data: any, stream?: string): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
       let message;
@@ -241,6 +244,7 @@ class WebSocketManager {
   }
 
   // Emit custom events
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   emit(event: string, ...args: any[]): void {
     const handlers = this.eventSubscribers.get(event);
     if (handlers) {

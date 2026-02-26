@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, Home, MessageCircle, Settings } from "lucide-react";
+import { Bell, Compass, MessageCircle, Settings } from "lucide-react";
 import React from "react";
 import UserAvatar from "@/components/UserAvatar";
 import UnreadNotifBadgeCount from "@/components/navigation/UnreadNotifBadgeCount";
@@ -10,14 +10,14 @@ const BottomNavigation = async () => {
   const user = await projectOpenDebateApiGetCurrentUserObject();
 
   return (
-    <div className="z-50 border-t w-full">
+    <div className="z-50 border-t w-full bg-background">
       <div className="grid grid-cols-5 h-16">
         <Link
           href="/"
           className="flex flex-col items-center justify-center space-y-1 hover:bg-accent transition-colors"
         >
-          <Home className="h-5 w-5" />
-          <span className="text-xs">Home</span>
+          <Compass className="h-5 w-5" />
+          <span className="text-xs">Explore</span>
         </Link>
         <Link
           href="/notifications"
