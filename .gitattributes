@@ -1,0 +1,2 @@
+# Default: normalize everything to LF in the repo
+* text=auto eol=lf

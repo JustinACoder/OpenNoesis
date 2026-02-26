@@ -1,0 +1,17 @@
+# Usage: docker compose -f docker-compose.build.yml build
+
+services:
+  backend:
+    image: ghcr.io/justinacoder/debate-backend:${APP_TAG:-latest}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+
+  frontend:
+    image: ghcr.io/justinacoder/debate-frontend:${APP_TAG:-latest}
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-}
