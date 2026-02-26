@@ -14,11 +14,11 @@ fi
 
 echo ""
 echo "Building production containers..."
-docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.build.yml build
+docker compose --env-file .env.prod -f docker-compose.build.yml build
 
 echo ""
 echo "Pushing production images to registry..."
-docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.build.yml push
+docker compose --env-file .env.prod -f docker-compose.build.yml push
 
 echo ""
 echo "✅ Production images built and pushed successfully!"

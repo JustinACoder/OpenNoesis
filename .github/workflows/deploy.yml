@@ -6,7 +6,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  COMPOSE_FILES: -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.build.yml
 
 jobs:
   build:
@@ -46,8 +45,8 @@ jobs:
           NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || '' }}
           NEXT_PUBLIC_WS_URL: ${{ vars.NEXT_PUBLIC_WS_URL }}
         run: |
-          docker compose ${{ env.COMPOSE_FILES }} build
-          docker compose ${{ env.COMPOSE_FILES }} push
+          docker compose -f docker-compose.build.yml build
+          docker compose -f docker-compose.build.yml push
 
       - name: Tag and push latest
         env:
@@ -99,4 +98,4 @@ jobs:
             cd /opt/opennoesis
             git fetch origin master
             git reset --hard origin/master
-            APP_TAG=${{ needs.build.outputs.app_tag }} ./deploy.sh
+            APP_TAG=${{ needs.build.outputs.app_tag }} sudo ./deploy.sh

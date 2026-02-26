@@ -8,6 +8,8 @@ services:
       - ./backups:/backups
     networks:
       - debate-network
+    env_file:
+      - ./backend/.env
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
@@ -43,6 +45,8 @@ services:
       - ./backend/staticfiles:/app/staticfiles
     networks:
       - debate-network
+    env_file:
+      - ./backend/.env
     command: ["daphne", "-b", "0.0.0.0", "-p", "8000", "ProjectOpenDebate.asgi:application"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
@@ -61,6 +65,8 @@ services:
         condition: service_healthy
     networks:
       - debate-network
+    env_file:
+      - ./backend/.env
     stop_grace_period: 10m
     command: ["celery", "-A", "ProjectOpenDebate", "worker", "-l", "info"]
     healthcheck:
@@ -80,6 +86,8 @@ services:
         condition: service_healthy
     networks:
       - debate-network
+    env_file:
+      - ./backend/.env
     stop_grace_period: 10m
     command: ["celery", "-A", "ProjectOpenDebate", "beat", "-l", "info"]
 
@@ -95,6 +103,8 @@ services:
       - "3000:3000"
     networks:
       - debate-network
+    env_file:
+      - ./frontend/.env
 
 networks:
   debate-network:
