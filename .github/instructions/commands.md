@@ -65,7 +65,14 @@ This is the pipeline to update frontend API hooks after backend changes:
 ### Backend
 
 ```bash
-docker exec debate-backend python manage.py test
+# Full suite in isolated Docker test stack
+./test.sh
+
+# Targeted tests in isolated Docker test stack
+./test.sh debate.tests.DebateCreationEndpointsTest
+
+# You can pass multiple targets too
+./test.sh debate.tests users.tests
 ```
 
 ---
@@ -119,4 +126,3 @@ docker compose logs -f backend
 docker compose logs -f frontend
 docker compose logs -f celery-worker
 ```
-

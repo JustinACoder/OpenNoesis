@@ -1,6 +1,7 @@
 from ninja import ModelSchema
 from typing import Optional
 from ninja import Schema, Field
+from pydantic import field_validator
 from debate.enums import VoteDirectionEnum, StanceDirectionEnum
 from debate.models import Debate, Comment, Stance
 from users.schemas import UserPreviewSchema
@@ -35,6 +36,22 @@ class StanceInputSchema(Schema):
 
 class DebateWithStanceInputSchema(Schema):
     user_id: int = Field(None, description="User ID to retrieve debates for, if not provided, retrieves for the authenticated user")
+
+class DebateCreateInputSchema(Schema):
+    title: str = Field(..., min_length=8, max_length=100)
+    description: str = Field(..., min_length=30, max_length=8000)
+
+    @field_validator("title")
+    def validate_title_after_trimming(cls, value: str) -> str:
+        if len(value.strip()) < 8:
+            raise ValueError("title must contain at least 8 non-whitespace characters")
+        return value
+
+    @field_validator("description")
+    def validate_description_after_trimming(cls, value: str) -> str:
+        if len(value.strip()) < 30:
+            raise ValueError("description must contain at least 30 non-whitespace characters")
+        return value
 
 class DebateFullSchema(ModelSchema):
     author: Optional[UserPreviewSchema] = None  # Can be None if the debate was created by the system

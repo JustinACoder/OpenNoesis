@@ -125,6 +125,83 @@ class DebateListingEndpointsTest(DebateApiTestBase):
         self.assertTrue(len(response.json()["items"]) > 0)
 
 
+class DebateCreationEndpointsTest(DebateApiTestBase):
+    def test_create_debate_authenticated(self):
+        client = self.authenticate_user1()
+        response = client.post(
+            reverse_lazy_api("create_debate"),
+            {
+                "title": "Should public schools ban mobile phones?",
+                "description": "Smartphones can disrupt focus in class, but they can also support learning in emergencies and research tasks.",
+            },
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["author"]["id"], self.user1.id)
+        self.assertEqual(payload["title"], "Should public schools ban mobile phones?")
+        self.assertEqual(payload["description"], "Smartphones can disrupt focus in class, but they can also support learning in emergencies and research tasks.")
+        self.assertIn("slug", payload)
+        self.assertTrue(Debate.objects.filter(slug=payload["slug"], author=self.user1).exists())
+
+    def test_create_debate_unauthenticated(self):
+        response = self.client.post(
+            reverse_lazy_api("create_debate"),
+            {
+                "title": "Should AI tutors replace homework?",
+                "description": "Homework teaches consistency, but adaptive AI tutors might provide more personalized and actionable feedback to students.",
+            },
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 401)
+
+    def test_create_debate_title_conflict(self):
+        client = self.authenticate_user2()
+        response = client.post(
+            reverse_lazy_api("create_debate"),
+            {
+                "title": self.debate1.title,
+                "description": "Different description but same title should be rejected because titles are unique.",
+            },
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 409)
+
+    def test_create_debate_trims_input(self):
+        client = self.authenticate_user1()
+        response = client.post(
+            reverse_lazy_api("create_debate"),
+            {
+                "title": "   Are cities safer with more CCTV cameras?   ",
+                "description": "   Surveillance can improve investigations, but it may also reduce privacy and be unevenly deployed across neighborhoods.   ",
+            },
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["title"], "Are cities safer with more CCTV cameras?")
+        self.assertEqual(payload["description"], "Surveillance can improve investigations, but it may also reduce privacy and be unevenly deployed across neighborhoods.")
+
+    def test_create_debate_rejects_whitespace_only_payload(self):
+        client = self.authenticate_user1()
+        response = client.post(
+            reverse_lazy_api("create_debate"),
+            {
+                "title": "        ",
+                "description": "                              ",
+            },
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertFalse(Debate.objects.filter(title="").exists())
+        self.assertFalse(Debate.objects.filter(slug="").exists())
+
+
 class DebateDetailEndpointsTest(DebateApiTestBase):
     def test_get_debate_detail(self):
         response = self.client.get(reverse_lazy_api("get_debate", debate_slug=self.debate1.slug))

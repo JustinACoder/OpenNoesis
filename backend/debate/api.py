@@ -1,8 +1,10 @@
 from typing import List
 
+from django.db import IntegrityError
 from django.db.models import Q, F, Subquery, OuterRef
 from django.db.models.functions import Coalesce
 from ninja import Router
+from ninja.errors import HttpError
 from ninja.pagination import PageNumberPagination, paginate
 from ninja.security import django_auth
 from django.shortcuts import get_object_or_404
@@ -17,6 +19,7 @@ from .schemas import (
     StanceSchema,
     StanceDirectionEnum, DebateFullSchema,
     CommentInputSchema, VoteInputSchema, StanceInputSchema, DebateWithStanceInputSchema,
+    DebateCreateInputSchema,
 )
 from .services import (
     DebateService,
@@ -27,6 +30,20 @@ from .services import (
 
 User = get_user_model()
 router = Router(auth=optional_django_auth)
+
+
+@router.post("", response=DebateFullSchema, auth=django_auth)
+def create_debate(request, debate_data: DebateCreateInputSchema):
+    """Create a new debate."""
+    user = request.auth
+    try:
+        return DebateService.create_debate(
+            user=user,
+            title=debate_data.title,
+            description=debate_data.description,
+        )
+    except IntegrityError:
+        raise HttpError(409, "A debate with this title already exists.")
 
 
 @router.get("/trending", response=List[DebateSchema])

@@ -565,6 +565,44 @@
         ]
       }
     },
+    "/api/debates": {
+      "post": {
+        "operationId": "debate_api_create_debate",
+        "summary": "Create Debate",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DebateFullSchema"
+                }
+              }
+            }
+          }
+        },
+        "description": "Create a new debate.",
+        "tags": [
+          "Debate"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DebateCreateInputSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ]
+      }
+    },
     "/api/debates/trending": {
       "get": {
         "operationId": "debate_api_trending_debates",
@@ -4420,6 +4458,144 @@
         "title": "InviteUseSchema",
         "type": "object"
       },
+      "DebateFullSchema": {
+        "properties": {
+          "author": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserPreviewSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "vote_score": {
+            "default": 0,
+            "title": "Vote Score",
+            "type": "integer"
+          },
+          "vote_count": {
+            "default": 0,
+            "title": "Vote Count",
+            "type": "integer"
+          },
+          "user_vote": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VoteDirectionEnum"
+              }
+            ],
+            "default": 0
+          },
+          "num_for": {
+            "default": 0,
+            "title": "Num For",
+            "type": "integer"
+          },
+          "num_against": {
+            "default": 0,
+            "title": "Num Against",
+            "type": "integer"
+          },
+          "user_stance": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StanceDirectionEnum"
+              }
+            ],
+            "default": 0
+          },
+          "user_has_requested_for": {
+            "default": false,
+            "title": "User Has Requested For",
+            "type": "boolean"
+          },
+          "user_has_requested_against": {
+            "default": false,
+            "title": "User Has Requested Against",
+            "type": "boolean"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "ID"
+          },
+          "title": {
+            "maxLength": 100,
+            "title": "Title",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "date": {
+            "format": "date-time",
+            "title": "Date",
+            "type": "string"
+          },
+          "slug": {
+            "maxLength": 100,
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "description",
+          "date",
+          "slug"
+        ],
+        "title": "DebateFullSchema",
+        "type": "object"
+      },
+      "StanceDirectionEnum": {
+        "enum": [
+          1,
+          0,
+          -1
+        ],
+        "title": "StanceDirectionEnum",
+        "type": "integer"
+      },
+      "VoteDirectionEnum": {
+        "enum": [
+          -1,
+          0,
+          1
+        ],
+        "title": "VoteDirectionEnum",
+        "type": "integer"
+      },
+      "DebateCreateInputSchema": {
+        "properties": {
+          "title": {
+            "maxLength": 100,
+            "minLength": 8,
+            "title": "Title",
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 8000,
+            "minLength": 30,
+            "title": "Description",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "description"
+        ],
+        "title": "DebateCreateInputSchema",
+        "type": "object"
+      },
       "DebateSchema": {
         "properties": {
           "author": {
@@ -4545,122 +4721,6 @@
           "count"
         ],
         "title": "PagedDebateSchema",
-        "type": "object"
-      },
-      "StanceDirectionEnum": {
-        "enum": [
-          1,
-          0,
-          -1
-        ],
-        "title": "StanceDirectionEnum",
-        "type": "integer"
-      },
-      "VoteDirectionEnum": {
-        "enum": [
-          -1,
-          0,
-          1
-        ],
-        "title": "VoteDirectionEnum",
-        "type": "integer"
-      },
-      "DebateFullSchema": {
-        "properties": {
-          "author": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/UserPreviewSchema"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "vote_score": {
-            "default": 0,
-            "title": "Vote Score",
-            "type": "integer"
-          },
-          "vote_count": {
-            "default": 0,
-            "title": "Vote Count",
-            "type": "integer"
-          },
-          "user_vote": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/VoteDirectionEnum"
-              }
-            ],
-            "default": 0
-          },
-          "num_for": {
-            "default": 0,
-            "title": "Num For",
-            "type": "integer"
-          },
-          "num_against": {
-            "default": 0,
-            "title": "Num Against",
-            "type": "integer"
-          },
-          "user_stance": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/StanceDirectionEnum"
-              }
-            ],
-            "default": 0
-          },
-          "user_has_requested_for": {
-            "default": false,
-            "title": "User Has Requested For",
-            "type": "boolean"
-          },
-          "user_has_requested_against": {
-            "default": false,
-            "title": "User Has Requested Against",
-            "type": "boolean"
-          },
-          "id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "ID"
-          },
-          "title": {
-            "maxLength": 100,
-            "title": "Title",
-            "type": "string"
-          },
-          "description": {
-            "title": "Description",
-            "type": "string"
-          },
-          "date": {
-            "format": "date-time",
-            "title": "Date",
-            "type": "string"
-          },
-          "slug": {
-            "maxLength": 100,
-            "title": "Slug",
-            "type": "string"
-          }
-        },
-        "required": [
-          "title",
-          "description",
-          "date",
-          "slug"
-        ],
-        "title": "DebateFullSchema",
         "type": "object"
       },
       "StanceInputSchema": {

@@ -1,4 +1,6 @@
-# Usage: docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from backend
+# Usage:
+#  - Full suite: docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from backend
+#  - Targeted: TEST_ARGS="debate.tests.DebateCreationEndpointsTest" docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from backend
 name: opennoesis-test
 
 services:
@@ -41,11 +43,12 @@ services:
         condition: service_healthy
     environment:
       DJANGO_SETTINGS_MODULE: ProjectOpenDebate.test_settings
+      TEST_ARGS: ${TEST_ARGS:-}
     volumes:
       - ./backend:/app
     networks:
       - debate-network
-    command: [ "python", "manage.py", "test" ]
+    command: [ "sh", "-c", "python manage.py test $${TEST_ARGS:-}" ]
 
 networks:
   debate-network:
