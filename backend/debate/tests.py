@@ -201,6 +201,20 @@ class DebateCreationEndpointsTest(DebateApiTestBase):
         self.assertFalse(Debate.objects.filter(title="").exists())
         self.assertFalse(Debate.objects.filter(slug="").exists())
 
+    def test_create_debate_rejects_title_short_after_whitespace_normalization(self):
+        client = self.authenticate_user1()
+        response = client.post(
+            reverse_lazy_api("create_debate"),
+            {
+                "title": "a       b",
+                "description": "This description is intentionally long enough to satisfy minimum requirements.",
+            },
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertFalse(Debate.objects.filter(title="a       b", author=self.user1).exists())
+
 
 class DebateDetailEndpointsTest(DebateApiTestBase):
     def test_get_debate_detail(self):

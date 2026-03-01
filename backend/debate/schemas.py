@@ -1,3 +1,5 @@
+import re
+
 from ninja import ModelSchema
 from typing import Optional
 from ninja import Schema, Field
@@ -41,16 +43,21 @@ class DebateCreateInputSchema(Schema):
     title: str = Field(..., min_length=8, max_length=100)
     description: str = Field(..., min_length=30, max_length=8000)
 
+    @staticmethod
+    def _normalize_whitespace(value: str) -> str:
+        # Collapse all whitespace runs to a single space for length checks.
+        return re.sub(r"\s+", " ", value).strip()
+
     @field_validator("title")
     def validate_title_after_trimming(cls, value: str) -> str:
-        if len(value.strip()) < 8:
-            raise ValueError("title must contain at least 8 non-whitespace characters")
+        if len(cls._normalize_whitespace(value)) < 8:
+            raise ValueError("title must contain at least 8 characters after whitespace normalization")
         return value
 
     @field_validator("description")
     def validate_description_after_trimming(cls, value: str) -> str:
-        if len(value.strip()) < 30:
-            raise ValueError("description must contain at least 30 non-whitespace characters")
+        if len(cls._normalize_whitespace(value)) < 30:
+            raise ValueError("description must contain at least 30 characters after whitespace normalization")
         return value
 
 class DebateFullSchema(ModelSchema):

@@ -33,15 +33,25 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 
+const normalizeWhitespace = (value: string) => value.replace(/\s+/g, " ").trim();
+
 const createDebateSchema = z.object({
   title: z
     .string()
     .min(8, "Use at least 8 characters in the title.")
-    .max(100, "Title must be 100 characters or less."),
+    .max(100, "Title must be 100 characters or less.")
+    .refine(
+      (value) => normalizeWhitespace(value).length >= 8,
+      "Use at least 8 characters in the title after whitespace normalization.",
+    ),
   description: z
     .string()
     .min(30, "Add at least 30 characters of context.")
-    .max(8000, "Description must be 8000 characters or less."),
+    .max(8000, "Description must be 8000 characters or less.")
+    .refine(
+      (value) => normalizeWhitespace(value).length >= 30,
+      "Add at least 30 characters of context after whitespace normalization.",
+    ),
   hasSearchedForDuplicates: z.boolean().refine((value) => value, {
     message: "Please search first to avoid creating duplicate debates.",
   }),
@@ -100,7 +110,7 @@ export function CreateDebateForm() {
     control: form.control,
     name: "title",
   });
-  const titleValue = (watchedTitle || "").trim();
+  const titleValue = normalizeWhitespace(watchedTitle || "");
   const titleEndsWithQuestionMark = titleValue.endsWith("?");
   const shouldSearchForSimilar = titleValue.length >= 8;
   const searchUrl = `/search?query=${encodeURIComponent(titleValue)}`;
