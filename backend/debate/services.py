@@ -38,6 +38,15 @@ class DebateService:
             **debate_identifier
         )
 
+    @staticmethod
+    def create_debate(user: User, title: str, description: str) -> Debate:
+        """Create a new debate authored by the authenticated user."""
+        return Debate.objects.create(
+            title=title.strip(),
+            description=description.strip(),
+            author=user,
+        )
+
 
 class CommentService:
     @staticmethod

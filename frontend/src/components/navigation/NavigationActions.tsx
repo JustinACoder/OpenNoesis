@@ -9,6 +9,7 @@ import {
   Search,
   Send,
   Settings,
+  SquarePen,
   User,
 } from "lucide-react";
 import Link from "next/link";
@@ -71,9 +72,31 @@ const NavigationActions = () => {
         <Search className="h-5 w-5" />
         <span className="sr-only">Search</span>
       </Button>
+      <Button variant="default" size="icon" className="md:hidden" asChild>
+        <Link
+          href={
+            authStatus === "authenticated"
+              ? "/debates/create"
+              : "/login?next=%2Fdebates%2Fcreate"
+          }
+        >
+          <SquarePen className="h-4 w-4" />
+          <span className="sr-only">Create Debate</span>
+        </Link>
+      </Button>
 
       {authStatus == "authenticated" ? (
         <div className="hidden md:flex items-center space-x-4">
+          <Button asChild>
+            <Link
+              href="/debates/create"
+              className="inline-flex items-center gap-2"
+            >
+              <SquarePen className="h-4 w-4" />
+              Create Debate
+            </Link>
+          </Button>
+
           {/* Notifications */}
           <Button variant="ghost" size="icon" className="relative" asChild>
             <Link href="/notifications">

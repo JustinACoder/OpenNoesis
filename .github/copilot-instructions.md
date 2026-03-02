@@ -172,7 +172,8 @@ docker exec debate-backend python manage.py migrate
 docker exec debate-backend python manage.py makemigrations
 docker exec debate-backend python manage.py createsuperuser
 docker exec -it debate-backend python manage.py shell_plus
-docker exec debate-backend pytest
+./test.sh
+./test.sh debate.tests.DebateCreationEndpointsTest
 ```
 
 **Frontend Commands:**
@@ -259,4 +260,3 @@ The `deploy` job uses a GitHub Actions **environment** called `production` with 
 
 **Frontend** (`frontend/.env`):
 - `DOCKER_API_URL`: Server-side API base (e.g., `http://backend:8000`)
-
