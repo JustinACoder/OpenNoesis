@@ -284,7 +284,7 @@ export default function ProfileSettingsPage() {
           <CardContent>
             <div className="flex items-center justify-between">
               <span className="font-medium">••••••••••••</span>
-              <Link href="/change-password/">
+              <Link href="/change-password">
                 <Button variant="outline" size="sm" asChild>
                   Change Password
                 </Button>

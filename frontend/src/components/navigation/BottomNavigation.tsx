@@ -28,7 +28,7 @@ const BottomNavigation = async () => {
           <UnreadNotifBadgeCount />
         </Link>
         <Link
-          href="/chat/"
+          href="/chat"
           className="flex flex-col items-center justify-center space-y-1 hover:bg-accent transition-colors relative"
         >
           <MessageCircle className="h-5 w-5" />
@@ -36,7 +36,7 @@ const BottomNavigation = async () => {
           <UnreadMessagesBadgeCount />
         </Link>
         <Link
-          href="/settings/"
+          href="/settings"
           className="flex flex-col items-center justify-center space-y-1 hover:bg-accent transition-colors"
         >
           <Settings className="h-5 w-5" />
