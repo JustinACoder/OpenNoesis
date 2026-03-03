@@ -5,13 +5,17 @@ import { DebateCard } from "@/components/DebateCard";
 import { AlertCircleIcon, LoaderCircle } from "lucide-react";
 import { useDebateApiGetDebatesWithUserStance } from "@/lib/api/debate";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { PublicUserSchema } from "@/lib/models";
+import { PagedDebateSchema, PublicUserSchema } from "@/lib/models";
 
 interface ParticipatingDebateListProps {
   user: PublicUserSchema;
+  initialDebates: PagedDebateSchema;
 }
 
-const ParticipatingDebateList = ({ user }: ParticipatingDebateListProps) => {
+const ParticipatingDebateList = ({
+  user,
+  initialDebates,
+}: ParticipatingDebateListProps) => {
   const {
     data: userDebates,
     error,
@@ -19,6 +23,12 @@ const ParticipatingDebateList = ({ user }: ParticipatingDebateListProps) => {
   } = useDebateApiGetDebatesWithUserStance({
     page: 1,
     user_id: user.id!, // Since the user should always be non-anonymous, we can assert that user.id is defined
+  }, {
+    query: {
+      initialData: initialDebates,
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+    },
   });
 
   if (isPending) {

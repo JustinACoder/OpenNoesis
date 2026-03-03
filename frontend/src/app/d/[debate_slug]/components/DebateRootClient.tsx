@@ -10,6 +10,7 @@ Tl;dr: this is SSR, dont worry about the "use client" directive.
  */
 
 import { Box } from "@/components/ui/box";
+import Link from "next/link";
 import { DebateVote } from "./DebateVote";
 import { StanceDistribution } from "./StanceDistribution";
 import { JoinTheDebate } from "./JoinTheDebate";
@@ -85,9 +86,21 @@ const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
                 <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight flex-1">
                   {debate.title}
                 </h1>
-                <time dateTime={debate.date} className="text-sm text-gray-400">
-                  {formattedDate}
-                </time>
+                <div className="text-sm text-gray-400">
+                  <time dateTime={debate.date}>{formattedDate}</time>
+                  {debate.author?.username ? (
+                    <>
+                      {" "}
+                      · by{" "}
+                      <Link
+                        href={`/u/${encodeURIComponent(debate.author.username)}`}
+                        className="text-gray-300 hover:text-white underline underline-offset-2"
+                      >
+                        {debate.author.username}
+                      </Link>
+                    </>
+                  ) : null}
+                </div>
               </div>
 
               {/* Description */}

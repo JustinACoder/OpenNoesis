@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
 import NavigationOverlay from "@/components/navigation/NavigationOverlay";
 import { AuthRequiredSSR } from "@/components/AuthRedirectsSSR";
 import { CreateDebateForm } from "@/app/debates/create/components/CreateDebateForm";
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
 
 export default async function CreateDebatePage() {
   return (

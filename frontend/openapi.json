@@ -954,6 +954,38 @@
         ]
       }
     },
+    "/api/debates/sitemap-candidates": {
+      "get": {
+        "operationId": "debate_api_sitemap_candidates",
+        "summary": "Sitemap Candidates",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DebateSitemapSchema"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get debates eligible for sitemap indexing (max 2000).",
+        "tags": [
+          "Debate"
+        ],
+        "security": [
+          {
+            "OptionalDjangoAuth": []
+          }
+        ]
+      }
+    },
     "/api/debates/slug/{debate_slug}": {
       "get": {
         "operationId": "debate_api_get_debate",
@@ -4721,6 +4753,29 @@
           "count"
         ],
         "title": "PagedDebateSchema",
+        "type": "object"
+      },
+      "DebateSitemapSchema": {
+        "properties": {
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "total_stances": {
+            "default": 0,
+            "title": "Total Stances",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "slug",
+          "date"
+        ],
+        "title": "DebateSitemapSchema",
         "type": "object"
       },
       "StanceInputSchema": {
