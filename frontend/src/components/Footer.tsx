@@ -2,6 +2,13 @@ import Link from "next/link";
 import { SiteLogo } from "@/components/SiteLogo";
 
 export function Footer() {
+  const footerLinks = [
+    { label: "About", href: "/about" },
+    { label: "Community Guidelines", href: "#" },
+    { label: "Terms", href: "#" },
+    { label: "Contact", href: "#" },
+  ];
+
   return (
     <footer className="bg-gray-900 border-t border-gray-800 mt-12">
       {/* Brand */}
@@ -14,13 +21,11 @@ export function Footer() {
 
       <div className="border-t border-gray-800 py-4">
         <nav className="container mx-auto px-4 flex flex-wrap gap-4 text-sm text-gray-400">
-          {["About", "Community Guidelines", "Terms", "Contact"].map(
-            (label) => (
-              <Link key={label} href="#" className="hover:text-primary">
-                {label}
-              </Link>
-            ),
-          )}
+          {footerLinks.map((link) => (
+            <Link key={link.label} href={link.href} className="hover:text-primary">
+              {link.label}
+            </Link>
+          ))}
         </nav>
       </div>
     </footer>
