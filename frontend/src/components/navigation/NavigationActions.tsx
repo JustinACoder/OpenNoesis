@@ -9,6 +9,7 @@ import {
   Search,
   Send,
   Settings,
+  SquarePen,
   User,
 } from "lucide-react";
 import Link from "next/link";
@@ -71,9 +72,31 @@ const NavigationActions = () => {
         <Search className="h-5 w-5" />
         <span className="sr-only">Search</span>
       </Button>
+      <Button variant="default" size="icon" className="md:hidden" asChild>
+        <Link
+          href={
+            authStatus === "authenticated"
+              ? "/debates/create"
+              : "/login?next=%2Fdebates%2Fcreate"
+          }
+        >
+          <SquarePen className="h-4 w-4" />
+          <span className="sr-only">Create Debate</span>
+        </Link>
+      </Button>
 
       {authStatus == "authenticated" ? (
         <div className="hidden md:flex items-center space-x-4">
+          <Button asChild>
+            <Link
+              href="/debates/create"
+              className="inline-flex items-center gap-2"
+            >
+              <SquarePen className="h-4 w-4" />
+              Create Debate
+            </Link>
+          </Button>
+
           {/* Notifications */}
           <Button variant="ghost" size="icon" className="relative" asChild>
             <Link href="/notifications">
@@ -85,7 +108,7 @@ const NavigationActions = () => {
 
           {/* Messages */}
           <Button variant="ghost" size="icon" className="relative" asChild>
-            <Link href="/chat/">
+            <Link href="/chat">
               <MessageCircle className="h-5 w-5" />
               <UnreadMessagesBadgeCount />
               <span className="sr-only">Messages</span>
@@ -121,13 +144,13 @@ const NavigationActions = () => {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href={`/my-invites/`} className="flex items-center">
+                <Link href={`/my-invites`} className="flex items-center">
                   <Send className="mr-2 h-4 w-4" />
                   <span>My Invites</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/settings/" className="flex items-center">
+                <Link href="/settings" className="flex items-center">
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
                 </Link>
@@ -215,7 +238,7 @@ const NavigationActions = () => {
                   <UnreadNotifBadgeCount simpleSecondary={true} />
                 </Link>
                 <Link
-                  href="/chat/"
+                  href="/chat"
                   className="flex items-center justify-between p-2 rounded-lg hover:bg-accent transition-colors"
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -226,7 +249,7 @@ const NavigationActions = () => {
                   <UnreadMessagesBadgeCount simpleSecondary={true} />
                 </Link>
                 <Link
-                  href="/my-invites/"
+                  href="/my-invites"
                   className="flex items-center justify-between p-2 rounded-lg hover:bg-accent transition-colors"
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -236,7 +259,7 @@ const NavigationActions = () => {
                   </div>
                 </Link>
                 <Link
-                  href="/settings/"
+                  href="/settings"
                   className="flex items-center space-x-2 p-2 rounded-lg hover:bg-accent transition-colors"
                   onClick={() => setMobileMenuOpen(false)}
                 >

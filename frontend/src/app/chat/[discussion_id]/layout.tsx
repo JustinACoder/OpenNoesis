@@ -1,7 +1,15 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { projectOpenDebateApiGetCurrentUserObject } from "@/lib/api/general";
 import { DiscussionPageClientWrapper } from "./components/DiscussionPageClientWrapper";
 import NavigationOverlay from "@/components/navigation/NavigationOverlay";
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
 
 interface DiscussionPageProps {
   params: Promise<{ discussion_id: string }>;

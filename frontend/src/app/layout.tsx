@@ -7,6 +7,7 @@ import { getProjectOpenDebateApiGetCurrentUserObjectQueryOptions } from "@/lib/a
 import { dehydrate, QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { getGetAllauthClientV1AuthSessionQueryOptions } from "@/lib/api/authentication-current-session";
+import { getSiteUrl } from "@/lib/seo";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,8 +20,28 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OpenNoesis",
-  description: "Expanding minds through thoughtful debate",
+  metadataBase: new URL(getSiteUrl()),
+  applicationName: "OpenNoesis",
+  title: {
+    default: "OpenNoesis",
+    template: "%s | OpenNoesis",
+  },
+  description:
+    "Explore thoughtful debates, compare viewpoints, and challenge ideas on OpenNoesis.",
+  openGraph: {
+    type: "website",
+    url: "/",
+    siteName: "OpenNoesis",
+    title: "OpenNoesis",
+    description:
+      "Explore thoughtful debates, compare viewpoints, and challenge ideas on OpenNoesis.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "OpenNoesis",
+    description:
+      "Explore thoughtful debates, compare viewpoints, and challenge ideas on OpenNoesis.",
+  },
 };
 
 export const viewport: Viewport = {

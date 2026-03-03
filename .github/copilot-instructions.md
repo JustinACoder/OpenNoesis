@@ -2,7 +2,7 @@
 
 > **⚠️ Self-Updating Document**: If you learn—explicitly or implicitly—that any information in this document is outdated, incorrect, or incomplete, update this document immediately to reflect the current state of the project.
 
-ProjectOpenDebate is a real-time debate platform with a Django + Channels backend and Next.js 15 frontend.
+OpenNoesis is a real-time debate platform with a Django + Channels backend and Next.js 15 frontend.
 
 ---
 
@@ -12,12 +12,12 @@ Read the relevant files based on your task:
 
 | File | When to Read |
 |------|-------------|
-| [backend-patterns.md](./instructions/backend-patterns.md) | When working on Django, APIs, services, models |
-| [frontend-patterns.md](./instructions/frontend-patterns.md) | When working on Next.js, React, UI components |
-| [websocket-patterns.md](./instructions/websocket-patterns.md) | When working on real-time features |
-| [commands.md](./instructions/commands.md) | When running dev/build/deploy commands |
-| [workflows.md](./instructions/workflows.md) | When adding new features end-to-end |
-| [infrastructure-patterns.md](./instructions/infrastructure-patterns.md) | When modifying Docker, compose files, deploy/rollback scripts, nginx |
+| [backend-patterns.instructions.md](./instructions/backend-patterns.instructions.md) | When working on Django, APIs, services, models |
+| [frontend-patterns.instructions.md](./instructions/frontend-patterns.instructions.md) | When working on Next.js, React, UI components |
+| [websocket-patterns.instructions.md](./instructions/websocket-patterns.instructions.md) | When working on real-time features |
+| [commands.instructions.md](./instructions/commands.instructions.md) | When running dev/build/deploy commands |
+| [workflows.instructions.md](./instructions/workflows.instructions.md) | When adding new features end-to-end |
+| [infrastructure-patterns.instructions.md](./instructions/infrastructure-patterns.instructions.md) | When modifying Docker, compose files, deploy/rollback scripts, nginx |
 
 ---
 
@@ -172,7 +172,8 @@ docker exec debate-backend python manage.py migrate
 docker exec debate-backend python manage.py makemigrations
 docker exec debate-backend python manage.py createsuperuser
 docker exec -it debate-backend python manage.py shell_plus
-docker exec debate-backend pytest
+./test.sh
+./test.sh debate.tests.DebateCreationEndpointsTest
 ```
 
 **Frontend Commands:**
@@ -259,4 +260,3 @@ The `deploy` job uses a GitHub Actions **environment** called `production` with 
 
 **Frontend** (`frontend/.env`):
 - `DOCKER_API_URL`: Server-side API base (e.g., `http://backend:8000`)
-

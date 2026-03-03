@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model
-from django.db.models import QuerySet
+from django.db.models import QuerySet, F
+from django.db.models.functions import Length, Trim
 from django.shortcuts import get_object_or_404
+from django.contrib.auth.models import AnonymousUser
 
 from pairing.models import PairingRequest
 from .models import Debate, Comment, Vote
@@ -36,6 +38,41 @@ class DebateService:
         return get_object_or_404(
             DebateService.get_debate_queryset(user),
             **debate_identifier
+        )
+
+    @staticmethod
+    def create_debate(user: User, title: str, description: str) -> Debate:
+        """Create a new debate authored by the authenticated user."""
+        return Debate.objects.create(
+            title=title.strip(),
+            description=description.strip(),
+            author=user,
+        )
+
+    @staticmethod
+    def get_sitemap_debates(limit: int = 2000):
+        """
+        Return debates eligible for sitemap indexing.
+
+        Inclusion rules:
+        - Description has at least ~200 words (approximated with character count)
+        Ordered by total stances descending.
+        """
+        if limit <= 0:
+            return Debate.objects.none()
+        limit = min(limit, 2000)
+        minimum_description_characters = 1200
+
+        return (
+            Debate.objects.get_queryset()
+            .with_stance(AnonymousUser())
+            .annotate(total_stances=F('num_for') + F('num_against'))
+            .annotate(description_length=Length(Trim(F('description'))))
+            .filter(
+                description_length__gte=minimum_description_characters,
+            )
+            .order_by('-total_stances', '-date')
+            .values('slug', 'date', 'total_stances')[:limit]
         )
 
 
