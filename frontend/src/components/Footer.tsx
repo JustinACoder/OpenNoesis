@@ -4,6 +4,7 @@ import { SiteLogo } from "@/components/SiteLogo";
 export function Footer() {
   const footerLinks = [
     { label: "About", href: "/about" },
+    { label: "Privacy", href: "/privacy" },
     { label: "Community Guidelines", href: "#" },
     { label: "Terms", href: "#" },
     { label: "Contact", href: "#" },
