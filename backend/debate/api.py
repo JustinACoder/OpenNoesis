@@ -20,6 +20,7 @@ from .schemas import (
     StanceDirectionEnum, DebateFullSchema,
     CommentInputSchema, VoteInputSchema, StanceInputSchema, DebateWithStanceInputSchema,
     DebateCreateInputSchema,
+    DebateSitemapSchema,
 )
 from .services import (
     DebateService,
@@ -87,6 +88,12 @@ def search_debates(request, query: str):
     """Search for debates."""
     user = request.auth
     return DebateService.get_debate_queryset(user).search(query)
+
+
+@router.get("/sitemap-candidates", response=List[DebateSitemapSchema])
+def sitemap_candidates(request):
+    """Get debates eligible for sitemap indexing (max 2000)."""
+    return DebateService.get_sitemap_debates(limit=2000)
 
 
 @router.get("/slug/{slug:debate_slug}", response=DebateFullSchema)

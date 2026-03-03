@@ -116,3 +116,9 @@ class StanceSchema(ModelSchema):
     class Meta:
         model = Stance
         fields = '__all__'
+
+
+class DebateSitemapSchema(Schema):
+    slug: str
+    date: str
+    total_stances: int = 0

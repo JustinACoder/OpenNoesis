@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import {
   debateApiTrendingDebates,
   debateApiPopularDebates,
@@ -12,6 +13,27 @@ import { Loader2, SquarePen } from "lucide-react";
 import Link from "next/link";
 import { projectOpenDebateApiGetCurrentUserObject } from "@/lib/api/general";
 import { Button } from "@/components/ui/button";
+
+export const metadata: Metadata = {
+  title: "Explore Debates",
+  description:
+    "Discover trending, popular, and recent debates. Compare ideas and join the conversation on OpenNoesis.",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "Explore Debates | OpenNoesis",
+    description:
+      "Discover trending, popular, and recent debates. Compare ideas and join the conversation on OpenNoesis.",
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Explore Debates | OpenNoesis",
+    description:
+      "Discover trending, popular, and recent debates. Compare ideas and join the conversation on OpenNoesis.",
+  },
+};
 
 export default async function HomePage() {
   // Parallel fetching to speed up SSR

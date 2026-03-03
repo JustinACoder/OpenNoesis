@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { projectOpenDebateApiGetCurrentUserObject } from "@/lib/api/general";
 import { discussionApiGetMostRecentDiscussion } from "@/lib/api/discussions";
@@ -6,6 +7,13 @@ import Link from "next/link";
 import NavigationOverlay from "@/components/navigation/NavigationOverlay";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { DiscussionSchema } from "@/lib/models";
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
 
 const ChatPage = async () => {
   // Check authentication in SSR

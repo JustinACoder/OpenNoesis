@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Calendar, User, Shield } from "lucide-react";
 import { Box } from "@/components/ui/box";
@@ -7,12 +8,31 @@ import { usersApiGetPublicUserProfileByUsername } from "@/lib/api/users";
 import ParticipatingDebateList from "@/app/u/[username]/components/ParticipatingDebateList";
 import { projectOpenDebateApiGetCurrentUserObject } from "@/lib/api/general";
 import { redirect } from "next/navigation";
+import { cache } from "react";
+import { debateApiGetDebatesWithUserStance } from "@/lib/api/debate";
+import { sanitizeTextForMeta } from "@/lib/seo";
 
 interface UserPageProps {
   params: Promise<{
     username: string;
   }>;
 }
+
+const getUserProfilePageData = cache(async (username: string) => {
+  const user = await usersApiGetPublicUserProfileByUsername(username).catch(() => {
+    notFound();
+  });
+
+  const debates = await debateApiGetDebatesWithUserStance({
+    page: 1,
+    user_id: user.id!,
+  }).catch(() => ({
+    count: 0,
+    items: [],
+  }));
+
+  return { user, debates };
+});
 
 const redirectToUserProfile = async () => {
   const currentUser = await projectOpenDebateApiGetCurrentUserObject();
@@ -25,6 +45,60 @@ const redirectToUserProfile = async () => {
   }
 };
 
+export async function generateMetadata({
+  params,
+}: UserPageProps): Promise<Metadata> {
+  const { username } = await params;
+
+  if (username === "me") {
+    return {
+      title: "My Profile",
+      robots: {
+        index: false,
+        follow: true,
+      },
+    };
+  }
+
+  try {
+    const { user } = await getUserProfilePageData(username);
+    const description = user.bio
+      ? sanitizeTextForMeta(user.bio)
+      : `${user.username}'s profile and recent debate activity on OpenNoesis.`;
+
+    return {
+      title: `${user.username}`,
+      description,
+      alternates: {
+        canonical: `/u/${encodeURIComponent(user.username)}`,
+      },
+      openGraph: {
+        type: "profile",
+        title: `${user.username} | OpenNoesis`,
+        description,
+        url: `/u/${encodeURIComponent(user.username)}`,
+      },
+      twitter: {
+        card: "summary",
+        title: `${user.username} | OpenNoesis`,
+        description,
+      },
+      robots: {
+        index: false,
+        follow: true,
+      },
+    };
+  } catch {
+    return {
+      title: "User Not Found",
+      robots: {
+        index: false,
+        follow: true,
+      },
+    };
+  }
+}
+
 export default async function UserPage({ params }: UserPageProps) {
   const { username } = await params;
 
@@ -34,13 +108,7 @@ export default async function UserPage({ params }: UserPageProps) {
     // No need to return anything here, redirect() internally throws an error that triggers a redirect
   }
 
-  // Get user data using the new username endpoint
-  const user = await usersApiGetPublicUserProfileByUsername(username).catch(
-    (error) => {
-      console.log(error);
-      notFound();
-    },
-  );
+  const { user, debates } = await getUserProfilePageData(username);
 
   const joinDate = user.date_joined
     ? new Date(user.date_joined).toLocaleDateString(undefined, {
@@ -110,7 +178,7 @@ export default async function UserPage({ params }: UserPageProps) {
               taken a stance.
             </p>
           </div>
-          <ParticipatingDebateList user={user} />
+          <ParticipatingDebateList user={user} initialDebates={debates} />
         </section>
       </div>
     </NavigationOverlay>

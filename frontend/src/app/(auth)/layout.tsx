@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
 import type React from "react";
 import Link from "next/link";
 import ClickableLogo from "@/components/ClickableLogo";
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
 
 export default function AuthLayout({
   children,
