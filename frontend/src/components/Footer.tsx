@@ -1,5 +1,13 @@
 import Link from "next/link";
 import { SiteLogo } from "@/components/SiteLogo";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export function Footer() {
   const footerLinks = [
@@ -7,7 +15,6 @@ export function Footer() {
     { label: "Privacy", href: "/privacy" },
     { label: "Community Guidelines", href: "/community-guidelines" },
     { label: "Terms", href: "/terms" },
-    { label: "Contact", href: "#" },
   ];
 
   return (
@@ -27,6 +34,38 @@ export function Footer() {
               {link.label}
             </Link>
           ))}
+          <Dialog>
+            <DialogTrigger asChild>
+              <button
+                type="button"
+                className="cursor-pointer hover:text-primary"
+              >
+                Contact
+              </button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Contact</DialogTitle>
+                <DialogDescription className="space-y-3">
+                  <span className="block">
+                    Happy you want to connect. My name is Justin Renaud.
+                  </span>
+                  <span className="block">
+                    Reach out on{" "}
+                    <a
+                      href="https://www.linkedin.com/in/just-renaud/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline underline-offset-4 hover:text-foreground"
+                    >
+                      LinkedIn
+                    </a>{" "}
+                    or by email at justin [dot] tovich [at] gmail [dot] com.
+                  </span>
+                </DialogDescription>
+              </DialogHeader>
+            </DialogContent>
+          </Dialog>
         </nav>
       </div>
     </footer>
