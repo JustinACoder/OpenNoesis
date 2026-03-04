@@ -4762,6 +4762,7 @@
             "type": "string"
           },
           "date": {
+            "format": "date-time",
             "title": "Date",
             "type": "string"
           },
