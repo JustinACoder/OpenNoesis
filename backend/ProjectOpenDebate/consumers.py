@@ -2,6 +2,9 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from django.db import transaction
 from channels.db import database_sync_to_async
 import functools
+from time import perf_counter
+
+from ProjectOpenDebate.common.metrics import observe_ws_event
 
 
 def get_user_group_name(consumer_class_name: str, user_id: int):
@@ -21,6 +24,7 @@ def atomic_async(func):
 class EventRouterMixin:
     """Mixin that routes events to their respective handler methods based on event_type"""
     event_handlers: dict[str, str] = {}
+    stream_name: str = "unknown"
 
     async def receive_json(self, content, **kwargs):
         """
@@ -28,22 +32,36 @@ class EventRouterMixin:
         """
         event_type = content.get('event_type')
         handler_name = self.event_handlers.get(event_type)
+        start = perf_counter()
+        status = 'success'
+        self._event_had_error = False
 
         if not handler_name or not hasattr(self, handler_name):
             print(f'Invalid event_type (content: {content})')
-            return await self.send_error(f'Invalid event_type: {event_type}')
+            status = 'error'
+            await self.send_error(f'Invalid event_type: {event_type}')
+            observe_ws_event(self.stream_name, 'unknown', status, perf_counter() - start)
+            return
 
         data = content.get('data', {})
         try:
             await getattr(self, handler_name)(data)
         except Exception as e:
+            status = 'error'
             print(f'Error handling event {event_type}: {e}')
             await self.send_error(f'An error occurred while processing the request ({str(e)})', details=str(e))
+        else:
+            if self._event_had_error:
+                status = 'error'
+        finally:
+            observe_ws_event(self.stream_name, event_type or 'unknown', status, perf_counter() - start)
+            self._event_had_error = False
 
     async def send_error(self, message: str, **extra):
         """
         Sends an error message to the client.
         """
+        self._event_had_error = True
         payload = {'status': 'error', 'message': message, **extra}
         print(f'Sending error: {payload}')
         await self.send_json(payload)

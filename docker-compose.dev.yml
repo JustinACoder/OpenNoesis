@@ -12,11 +12,16 @@ services:
     user: root
     volumes:
       - ./backend:/app
-    command: [ "python", "manage.py", "runserver", "0.0.0.0:8000" ]
+    command: ["sh", "/app/scripts/run_with_prometheus_multiproc.sh", "python", "manage.py", "runserver", "0.0.0.0:8000"]
     environment: &django_env
       DJANGO_SETTINGS_MODULE: ProjectOpenDebate.settings
       PYTHONUNBUFFERED: "1"
       PYTHONDONTWRITEBYTECODE: "1"
+
+
+  alloy:
+    profiles:
+      - production-only
 
   celery-worker:
     <<: *backend_dev

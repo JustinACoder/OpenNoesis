@@ -15,6 +15,8 @@ PROJECT_DIR="/opt/opennoesis"
 BACKUP_DIR="$PROJECT_DIR/backups"
 STATE_FILE="$PROJECT_DIR/.deploy_state"
 MAINT_FLAG="/etc/nginx/maintenance.on"
+NGINX_SITE_PATH="/etc/nginx/sites-available/opennoesis"
+NGINX_BACKUP_PATH="${NGINX_SITE_PATH}.deploy.bak"
 
 # ----- Compose files (prod) -----
 COMPOSE_FILES=(
@@ -41,6 +43,7 @@ err()  { echo -e "${RED}$1${NC}" >&2; }
 # ----- Compose service names -----
 SVC_DB="db"
 SVC_REDIS="redis"
+SVC_ALLOY="alloy"
 SVC_BACKEND="backend"
 SVC_CELERY_WORKER="celery-worker"
 SVC_CELERY_BEAT="celery-beat"
@@ -56,6 +59,7 @@ DB_USER="debate_user"
 # State flags
 DEPLOY_SUCCESS=0
 ROLLBACK_SUCCESS=0
+DEPLOY_STATE_SAVED=0
 
 require_cmd() {
   local cmd="$1"
@@ -71,6 +75,61 @@ require_env() {
     err "Usage: APP_TAG=<tag> $0"
     exit 1
   fi
+}
+
+sync_nginx_config() {
+  local src="$PROJECT_DIR/nginx.conf"
+  local dest="$NGINX_SITE_PATH"
+  local backup="$NGINX_BACKUP_PATH"
+  local staged
+  local had_backup=0
+
+  [[ -f "$src" ]] || { err "Nginx source config not found: $src"; return 1; }
+
+  warn "Syncing nginx config from repo..."
+  staged="$(mktemp "${dest}.XXXXXX")"
+  cp "$src" "$staged"
+  chmod 644 "$staged"
+
+  if [[ -f "$dest" ]]; then
+    cp "$dest" "$backup"
+    had_backup=1
+  fi
+
+  cp "$staged" "$dest"
+  rm -f "$staged"
+
+  if nginx -t && systemctl reload nginx; then
+    ok "Nginx config synced and reloaded (backup kept until deploy success)."
+    return 0
+  fi
+
+  err "Nginx config test failed after sync. Restoring previous config..."
+  if [[ "$had_backup" == "1" ]]; then
+    cp "$backup" "$dest"
+    nginx -t
+    systemctl reload nginx
+    rm -f "$backup" || true
+  fi
+
+  return 1
+}
+
+restore_nginx_config() {
+  if [[ ! -f "$NGINX_BACKUP_PATH" ]]; then
+    warn "No nginx backup found; skipping nginx config restore."
+    return 0
+  fi
+
+  warn "Restoring previous nginx config..."
+  cp "$NGINX_BACKUP_PATH" "$NGINX_SITE_PATH"
+  nginx -t
+  systemctl reload nginx
+  ok "Nginx config restored from backup."
+}
+
+cleanup_nginx_backup() {
+  rm -f "$NGINX_BACKUP_PATH" || true
 }
 
 enable_maintenance() {
@@ -208,6 +267,10 @@ stop_app_services() {
   warn "Stopping app services (keeping db/redis)..."
   dc stop "${SVC_APP[@]}" >/dev/null 2>&1 || true
   dc rm -f "${SVC_APP[@]}" >/dev/null 2>&1 || true
+
+  # Alloy is non-critical; stop/remove best-effort without affecting deploy flow.
+  dc stop "$SVC_ALLOY" >/dev/null 2>&1 || true
+  dc rm -f "$SVC_ALLOY" >/dev/null 2>&1 || true
 }
 
 start_infra() {
@@ -290,12 +353,20 @@ EOF
 rollback() {
   err "Rolling back..."
 
+  if [[ "$DEPLOY_STATE_SAVED" != "1" ]]; then
+    err "Rollback state was not captured in this deploy attempt; refusing to use stale state file."
+    restore_nginx_config || true
+    return 1
+  fi
+
   if [[ ! -f "$STATE_FILE" ]]; then
     err "No state file; cannot rollback safely. Keeping maintenance mode ON."
     return 1
   fi
 
   source "$STATE_FILE" || true
+
+  restore_nginx_config || err "Nginx config restore failed; continuing rollback of containers anyway."
 
   # Restore DB if we have a verified backup
   if [[ -n "${DB_BACKUP:-}" && -f "${DB_BACKUP:-}" ]]; then
@@ -325,6 +396,11 @@ rollback() {
   fi
 
   if smoke_tests; then
+    warn "Starting Alloy after rollback (non-critical)..."
+    if ! dc up -d "$SVC_ALLOY"; then
+      warn "Alloy failed to start after rollback; keeping app services available."
+    fi
+
     ok "Rollback successful."
     ROLLBACK_SUCCESS=1
     return 0
@@ -374,9 +450,11 @@ main() {
   chmod 700 "$BACKUP_DIR"
 
   warn "Starting deployment with APP_TAG=${APP_TAG}"
+  sync_nginx_config
   enable_maintenance
 
   save_state
+  DEPLOY_STATE_SAVED=1
 
   start_infra
 
@@ -401,6 +479,13 @@ main() {
   dc up -d --wait "$SVC_CELERY_WORKER" "$SVC_CELERY_BEAT" "$SVC_FRONTEND"
 
   smoke_tests
+
+  warn "Starting Alloy (non-critical monitoring sidecar)..."
+  if ! dc up -d "$SVC_ALLOY"; then
+    warn "Alloy failed to start; deployment will continue without blocking user-facing recovery."
+  fi
+
+  cleanup_nginx_backup
 
   # Success: allow EXIT trap to disable maintenance
   DEPLOY_SUCCESS=1

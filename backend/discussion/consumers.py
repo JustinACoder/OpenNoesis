@@ -11,6 +11,7 @@ class DiscussionConsumer(CustomBaseConsumer):
     """
     This consumer handles the WebSocket connection for all operations related to discussions.
     """
+    stream_name = 'discussion'
     event_handlers = {
         'new_message': 'handle_new_message',
         'read_messages': 'handle_read_messages',

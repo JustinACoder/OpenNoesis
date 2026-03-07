@@ -18,6 +18,7 @@ Read the relevant files based on your task:
 | [commands.instructions.md](./instructions/commands.instructions.md) | When running dev/build/deploy commands |
 | [workflows.instructions.md](./instructions/workflows.instructions.md) | When adding new features end-to-end |
 | [infrastructure-patterns.instructions.md](./instructions/infrastructure-patterns.instructions.md) | When modifying Docker, compose files, deploy/rollback scripts, nginx |
+| [monitoring-patterns.instructions.md](./instructions/monitoring-patterns.instructions.md) | When adding or modifying metrics and monitoring infrastructure |
 
 ---
 
