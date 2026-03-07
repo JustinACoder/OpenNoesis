@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 
 from ninja import ModelSchema
 from typing import Optional
@@ -120,5 +121,5 @@ class StanceSchema(ModelSchema):
 
 class DebateSitemapSchema(Schema):
     slug: str
-    date: str
+    date: datetime
     total_stances: int = 0

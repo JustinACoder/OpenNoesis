@@ -1,4 +1,5 @@
 from pathlib import Path
+from datetime import timedelta
 from celery.schedules import crontab
 from django.contrib import messages
 import os
@@ -45,6 +46,7 @@ INSTALLED_APPS = [
     'django_celery_results',
     'django_celery_beat',
     'django_ses',
+    'post_office',
     'debate.apps.DebateConfig',
     'users.apps.UsersConfig',
     'discussion.apps.DiscussionConfig',
@@ -197,6 +199,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Allauth settings
 HEADLESS_ONLY = True
+ACCOUNT_ADAPTER = "ProjectOpenDebate.account_adapter.PostOfficeAccountAdapter"
 ACCOUNT_EMAIL_SUBJECT_PREFIX = f'[{env("EMAIL_PREFIX", default="OpenNoesis")}] '
 ACCOUNT_LOGIN_METHODS = {'email', 'username'}
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
@@ -229,18 +232,36 @@ HEADLESS_FRONTEND_URLS = {
 }
 
 # Email backend settings
+# django-post-office must be Django's EMAIL_BACKEND.
+EMAIL_BACKEND = "post_office.EmailBackend"
+# Delivery transport used by django-post-office's default backend alias.
 # Use 'django_ses.SESBackend' for AWS SES via HTTP (bypasses SMTP port restrictions)
 # Use 'django.core.mail.backends.smtp.EmailBackend' for traditional SMTP
-EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
+POST_OFFICE_DEFAULT_DELIVERY_BACKEND = env(
+    "EMAIL_BACKEND",
+    default="django.core.mail.backends.smtp.EmailBackend",
+)
 
-# SMTP settings (used when EMAIL_BACKEND is smtp.EmailBackend)
+# Post Office queue settings
+POST_OFFICE = {
+    "CELERY_ENABLED": True,
+    "MAX_RETRIES": 3,
+    "RETRY_INTERVAL": timedelta(minutes=1),
+    "BACKENDS": {
+        "default": POST_OFFICE_DEFAULT_DELIVERY_BACKEND,
+    },
+    "LOG_LEVEL": 1,
+}
+
+# SMTP settings (used when POST_OFFICE default delivery backend is smtp.EmailBackend)
 EMAIL_HOST = env("EMAIL_HOST", default="smtp.gmail.com")
 EMAIL_PORT = env.int("EMAIL_PORT", default=587)
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT", default=5)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 
-# AWS SES settings (used when EMAIL_BACKEND is django_ses.SESBackend)
+# AWS SES settings (used when POST_OFFICE default delivery backend is django_ses.SESBackend)
 AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
 AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")
 AWS_SES_REGION_NAME = env("AWS_SES_REGION_NAME", default="us-east-1")
@@ -263,6 +284,10 @@ CELERY_BEAT_SCHEDULE = {
     "passive_pairing": {
         "task": "pairing.tasks.try_pairing_passive_requests",
         "schedule": crontab(minute="0"),
+    },
+    "send-queued-mail": {
+        "task": "post_office.tasks.send_queued_mail",
+        "schedule": crontab(minute="*/10"),
     },
 }
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1  # Default is 4, but 1 is recommended with long running tasks

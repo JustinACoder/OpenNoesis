@@ -28,6 +28,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     curl \
+    supervisor \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the virtualenv from builder
@@ -38,9 +39,11 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY . .
 
 # Create a non-root user and switch to it
-RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+RUN useradd -m -u 1000 appuser \
+    && mkdir -p /run/daphne \
+    && chown -R appuser:appuser /app /run/daphne
 USER appuser
 
 EXPOSE 8000
 
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "ProjectOpenDebate.asgi:application"]
+CMD ["supervisord", "-c", "/app/supervisord.daphne.conf"]
