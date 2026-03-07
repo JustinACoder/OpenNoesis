@@ -27,6 +27,7 @@ if SECRET_KEY == default_unsafe_secret:
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=[]) + ['localhost', '127.0.0.1', '[::1]']
 
 INSTALLED_APPS = [
+    'django_prometheus',
     'daphne',
     'channels',
     'django_extensions',
@@ -58,6 +59,7 @@ INSTALLED_APPS = [
 ASGI_APPLICATION = 'ProjectOpenDebate.asgi.application'
 
 MIDDLEWARE = [
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -67,6 +69,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
     'allauth.account.middleware.AccountMiddleware',
+    'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
 if ENV == "prod":
@@ -127,7 +130,7 @@ if db_password == "debate_password":
     print("WARNING: Using default database password. This is unsafe for production.")
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
+        'ENGINE': 'django_prometheus.db.backends.postgresql',
         'NAME': env("POSTGRES_DB", default="debate_db"),
         'USER': env("POSTGRES_USER", default="debate_user"),
         'PASSWORD': db_password,
@@ -138,6 +141,10 @@ DATABASES = {
         }
     }
 }
+
+PROMETHEUS_MULTIPROC_DIR = env("PROMETHEUS_MULTIPROC_DIR", default="/tmp/django_prometheus_multiproc")
+# Keep this as a safety net for processes that do not start through the wrapper script.
+os.makedirs(PROMETHEUS_MULTIPROC_DIR, exist_ok=True)
 
 # Channel layer definitions
 redis_host = env('REDIS_HOST', default='redis')

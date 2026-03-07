@@ -23,6 +23,7 @@ api.add_router('', general_router, tags=['General'])
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path("api/", include("django_prometheus.urls")),
     path('api/', api.urls),
     path("_allauth/", include("allauth.headless.urls")),
     path("accounts/", include("allauth.urls")), # For social login

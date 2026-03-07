@@ -7,6 +7,7 @@ from ninja.security import django_auth
 from ninja import PatchDict
 
 from ProjectOpenDebate.auth import optional_django_auth
+from ProjectOpenDebate.common.metrics import monitor_api_operation
 from .schemas import PublicUserSchema, PrivateUserSchema, ProfileEditInputSchema
 
 User = get_user_model()
@@ -38,6 +39,7 @@ def get_private_user_profile(request):
 
 
 @router.patch("/me", response={204: None})
+@monitor_api_operation("user.profile.update")
 def update_private_user_profile(request, payload: PatchDict[ProfileEditInputSchema]):
     """
     Update the authenticated user's profile.

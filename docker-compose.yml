@@ -31,6 +31,21 @@ services:
       timeout: 3s
       retries: 10
 
+  alloy:
+    image: grafana/alloy:latest
+    container_name: debate-alloy
+    restart: unless-stopped
+    command: ["run", "--server.http.listen-addr=0.0.0.0:12345", "/etc/alloy/config.alloy"]
+    environment:
+      GRAFANA_CLOUD_PROMETHEUS_URL: ${GRAFANA_CLOUD_PROMETHEUS_URL:-}
+      GRAFANA_CLOUD_PROMETHEUS_USERNAME: ${GRAFANA_CLOUD_PROMETHEUS_USERNAME:-}
+      GRAFANA_CLOUD_PROMETHEUS_PASSWORD: ${GRAFANA_CLOUD_PROMETHEUS_PASSWORD:-}
+    mem_limit: 256m
+    volumes:
+      - ./monitoring/alloy/config.alloy:/etc/alloy/config.alloy:ro
+    networks:
+      - debate-network
+
   backend:
     container_name: debate-backend
     restart: unless-stopped
@@ -40,13 +55,15 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./backend/staticfiles:/app/staticfiles
     networks:
       - debate-network
     env_file:
       - ./backend/.env
+    environment:
+      PROMETHEUS_MULTIPROC_DIR: ${PROMETHEUS_MULTIPROC_DIR:-/tmp/django_prometheus_multiproc}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
@@ -94,8 +111,8 @@ services:
     container_name: debate-frontend
     restart: unless-stopped
     depends_on:
-        backend:
-            condition: service_healthy
+      backend:
+        condition: service_healthy
     environment:
       - NODE_ENV=production
     ports:
