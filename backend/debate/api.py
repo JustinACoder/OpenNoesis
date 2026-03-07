@@ -12,6 +12,7 @@ from django.contrib.auth import get_user_model
 
 from ProjectOpenDebate.auth import optional_django_auth
 from ProjectOpenDebate.common.utils import CursorPagination
+from ProjectOpenDebate.common.metrics import monitor_api_operation
 from .models import Debate
 from .schemas import (
     DebateSchema,
@@ -34,6 +35,7 @@ router = Router(auth=optional_django_auth)
 
 
 @router.post("", response=DebateFullSchema, auth=django_auth)
+@monitor_api_operation("debate.create")
 def create_debate(request, debate_data: DebateCreateInputSchema):
     """Create a new debate."""
     user = request.auth
@@ -157,6 +159,7 @@ def get_debate_suggestions(request, debate_slug: str):
 
 
 @router.patch("/slug/{slug:debate_slug}/stance", response={204: None}, auth=django_auth)
+@monitor_api_operation("debate.set_stance")
 def set_stance(request, debate_slug: str, stance_data: StanceInputSchema):
     """Set a user's stance on a debate."""
     user = request.auth
@@ -173,6 +176,7 @@ def get_debate_comments(request, debate_slug: str):
 
 
 @router.post("/slug/{slug:debate_slug}/comment", response=CommentSchema, auth=django_auth)
+@monitor_api_operation("debate.comment.create")
 def create_comment(request, debate_slug: str, comment_data: CommentInputSchema):
     """Create a new comment for a debate."""
     user = request.auth
@@ -182,6 +186,7 @@ def create_comment(request, debate_slug: str, comment_data: CommentInputSchema):
 
 
 @router.patch("/slug/{slug:debate_slug}/vote", response={204: None}, auth=django_auth)
+@monitor_api_operation("debate.vote")
 def vote_on_debate(request, debate_slug: str, vote_data: VoteInputSchema):
     """Register a vote on a debate."""
     user = request.auth
@@ -190,6 +195,7 @@ def vote_on_debate(request, debate_slug: str, vote_data: VoteInputSchema):
 
 
 @router.patch("/slug/{slug:debate_slug}/comments/{comment_id}/vote", response={204: None}, auth=django_auth)
+@monitor_api_operation("debate.comment.vote")
 def vote_on_comment(request, debate_slug: str, comment_id: int, vote_data: VoteInputSchema):
     """Register a vote on a comment."""
     user = request.auth

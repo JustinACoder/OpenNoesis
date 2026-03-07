@@ -4,6 +4,7 @@ from ninja import Router
 from ninja.errors import HttpError
 from ninja.security import django_auth
 
+from ProjectOpenDebate.common.metrics import monitor_api_operation
 from .models import PairingRequest
 from .schemas import PairingRequestInputSchema, CurrentActivePairingRequest
 from .services import create_passive_pairing_request, create_active_pairing_request, cancel_pairing_request
@@ -12,6 +13,7 @@ from .services import create_passive_pairing_request, create_active_pairing_requ
 router = Router(auth=django_auth)
 
 @router.post("/request", response={204: None})
+@monitor_api_operation("pairing.request")
 def request_pairing(request, data: PairingRequestInputSchema):
     """
     Request pairing for the current user.
@@ -27,6 +29,7 @@ def request_pairing(request, data: PairingRequestInputSchema):
     return 204, None
 
 @router.post("/cancel/{int:pairing_request_id}", response={204: None})
+@monitor_api_operation("pairing.cancel")
 def cancel_pairing(request, pairing_request_id: int):
     """
     Cancel a pairing request for the current user.

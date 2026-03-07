@@ -7,6 +7,7 @@ class PairingConsumer(CustomBaseConsumer):
     """
     This consumer handles the WebSocket connection for pairing users together.
     """
+    stream_name = 'pairing'
     event_handlers = {
         'keepalive': 'handle_keepalive',
     }

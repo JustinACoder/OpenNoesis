@@ -8,6 +8,7 @@ class NotificationConsumer(CustomBaseConsumer):
     """
     This consumer handles the WebSocket connection for sending and reading Notifications.
     """
+    stream_name = 'notification'
     event_handlers = {
         'set_read': 'handle_set_read',
     }

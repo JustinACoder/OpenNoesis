@@ -1,0 +1,23 @@
+prometheus.scrape "backend" {
+  targets = [
+    {
+      __address__ = "backend:8000",
+      job         = "backend",
+    },
+  ]
+
+  metrics_path    = "/api/metrics"
+
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+prometheus.remote_write "grafana_cloud" {
+  endpoint {
+    url = sys.env("GRAFANA_CLOUD_PROMETHEUS_URL")
+
+    basic_auth {
+      username = sys.env("GRAFANA_CLOUD_PROMETHEUS_USERNAME")
+      password = sys.env("GRAFANA_CLOUD_PROMETHEUS_PASSWORD")
+    }
+  }
+}

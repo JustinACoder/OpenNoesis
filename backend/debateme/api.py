@@ -7,6 +7,7 @@ from ninja.errors import HttpError
 from django.http import Http404
 
 from ProjectOpenDebate.auth import optional_django_auth
+from ProjectOpenDebate.common.metrics import monitor_api_operation
 from .schemas import InviteSchema, InviteUseSchema, CreateInviteSchema
 from .services import InviteService, DisallowedActionError
 
@@ -24,6 +25,7 @@ def list_invites(request):
 
 
 @router.post("", response=InviteSchema)
+@monitor_api_operation("invite.create")
 def create_invite(request, invite_data: CreateInviteSchema):
     """
     Create a new invite for a specific debate.
@@ -41,6 +43,7 @@ def view_invite(request, invite_code: str):
 
 
 @router.post("/{invite_code}/accept", response=InviteUseSchema)
+@monitor_api_operation("invite.accept")
 def accept_invite(request, invite_code: str):
     """
     Accept an invite and start a discussion.
@@ -54,6 +57,7 @@ def accept_invite(request, invite_code: str):
 
 
 @router.delete("/{invite_code}", response={204: None})
+@monitor_api_operation("invite.delete")
 def delete_invite(request, invite_code: str):
     """
     Delete an invite created by the authenticated user.
