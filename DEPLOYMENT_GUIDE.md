@@ -928,7 +928,7 @@ Multi-stage build:
 - Runs `collectstatic` during build
 - Creates non-root user (appuser)
 - Exposes port 8000
-- CMD: `daphne -b 0.0.0.0 -p 8000 ProjectOpenDebate.asgi:application`
+- CMD: `supervisord -c /app/supervisord.daphne.conf` (spawns multiple Daphne workers with `--fd 0`)
 
 ### frontend/Dockerfile
 
@@ -1059,4 +1059,3 @@ docker compose logs -f [service-name]
 ---
 
 **Need help?** Check logs with `docker compose logs` or review GitHub Actions output.
-

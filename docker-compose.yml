@@ -47,7 +47,6 @@ services:
       - debate-network
     env_file:
       - ./backend/.env
-    command: ["daphne", "-b", "0.0.0.0", "-p", "8000", "ProjectOpenDebate.asgi:application"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
