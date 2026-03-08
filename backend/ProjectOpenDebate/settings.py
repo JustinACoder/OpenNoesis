@@ -285,7 +285,7 @@ AWS_SES_REGION_NAME = env("AWS_SES_REGION_NAME", default="us-east-1")
 AWS_SES_REGION_ENDPOINT = env("AWS_SES_REGION_ENDPOINT", default=f"email.{AWS_SES_REGION_NAME}.amazonaws.com")
 
 EMAIL_SUBJECT_PREFIX = env("EMAIL_SUBJECT_PREFIX", default='[OpenNoesis] ')
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@opennoesis.com")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="OpenNoesis <noreply@opennoesis.com>")
 
 # Admins
 ADMINS = [
