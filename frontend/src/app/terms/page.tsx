@@ -37,6 +37,19 @@ export default function TermsPage() {
           </section>
 
           <section className="space-y-4">
+            <h2 className="text-2xl font-semibold">Temporary Pricing Notice</h2>
+            <p className="text-muted-foreground">
+              At this time, AI discussion features are free and available
+              without usage limits.
+            </p>
+            <p className="text-muted-foreground">
+              We may introduce paid plans in the future. If that changes, we
+              will provide advance notice before new limits or pricing take
+              effect.
+            </p>
+          </section>
+
+          <section className="space-y-4">
             <h2 className="text-2xl font-semibold">Eligibility</h2>
             <p className="text-muted-foreground">
               You must be at least 13 years old to use OpenNoesis. If you are under the age of

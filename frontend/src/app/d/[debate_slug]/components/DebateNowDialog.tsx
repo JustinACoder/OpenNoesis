@@ -42,6 +42,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AiBadge } from "@/components/AiBadge";
 import { OPENNOESIS_AI_DISPLAY_NAME } from "@/lib/ai";
+import styles from "./DebateNowDialog.module.css";
 
 interface DebateNowDialogProps {
   debate: DebateFullSchema;
@@ -273,6 +274,15 @@ const DebateNowDialog = ({ debate }: DebateNowDialogProps) => {
                   </div>
                 </Label>
               </RadioGroup>
+
+              <div
+                className={`${styles.premiumNotice} mt-3 flex items-center gap-2 rounded-md border px-3 py-2.5 text-xs leading-snug`}
+              >
+                <span className="inline-flex shrink-0 items-center rounded-sm border border-amber-300/35 bg-amber-300/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-200">
+                  Limited-time
+                </span>
+                <span>All AI debate features are currently free with no usage limits.</span>
+              </div>
             </div>
           )}
 
