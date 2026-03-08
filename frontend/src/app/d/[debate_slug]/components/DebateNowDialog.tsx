@@ -51,11 +51,14 @@ interface DebateNowDialogProps {
 const DebateNowDialog = ({ debate }: DebateNowDialogProps) => {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const userStance = debate.user_stance || 0;
+  const defaultOpponentStance =
+    (userStance === 1 ? -1 : 1) as PairingRequestInputSchemaDesiredStance;
+  const [opponentStanceOverride, setOpponentStanceOverride] =
+    useState<PairingRequestInputSchemaDesiredStance | null>(null);
+  const opponentStance =
+    opponentStanceOverride ?? defaultOpponentStance;
+
   const [debateMode, setDebateMode] = useState<"human" | "ai">("human");
-  const [opponentStance, setOpponentStance] =
-    useState<PairingRequestInputSchemaDesiredStance>(
-      userStance === 1 ? -1 : 1,
-    );
   const [searchType, setSearchType] =
     useState<PairingRequestInputSchemaPairingType>("active");
   const [isOpen, setIsOpen] = useState(false);
@@ -111,11 +114,14 @@ const DebateNowDialog = ({ debate }: DebateNowDialogProps) => {
     setIsOpen(open);
     if (open) {
       setCurrentStep(1);
+      setOpponentStanceOverride(null);
     }
   };
 
   const handleOpponentStanceChange = (value: string) => {
-    setOpponentStance(value === "for" ? 1 : -1);
+    const newStance =
+      (value === "for" ? 1 : -1) as PairingRequestInputSchemaDesiredStance;
+    setOpponentStanceOverride(newStance);
   };
 
   const handleSearchTypeChange = (
