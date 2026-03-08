@@ -6,7 +6,7 @@ import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+  "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
   {
     variants: {
       variant: {
@@ -50,6 +50,22 @@ const getLoaderSize = (size?: "default" | "sm" | "lg" | "icon" | null) => {
   }
 };
 
+type ButtonBaseProps = React.ComponentProps<"button"> &
+  VariantProps<typeof buttonVariants>;
+
+type ButtonAsChildProps = Omit<ButtonBaseProps, "children"> & {
+  asChild: true;
+  isLoading?: never;
+  children: React.ReactElement;
+};
+
+type ButtonDefaultProps = ButtonBaseProps & {
+  asChild?: false;
+  isLoading?: boolean;
+};
+
+type ButtonProps = ButtonAsChildProps | ButtonDefaultProps;
+
 function Button({
   className,
   variant,
@@ -57,15 +73,19 @@ function Button({
   asChild = false,
   isLoading = false,
   ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean;
-    isLoading?: boolean;
-  }) {
-  const Comp = asChild ? Slot : "button";
+}: ButtonProps) {
+  if (asChild) {
+    return (
+      <Slot
+        data-slot="button"
+        className={cn(buttonVariants({ variant, size, className }))}
+        {...props}
+      />
+    );
+  }
 
   return (
-    <Comp
+    <button
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
@@ -76,7 +96,7 @@ function Button({
         )}
         {props.children}
       </div>
-    </Comp>
+    </button>
   );
 }
 
