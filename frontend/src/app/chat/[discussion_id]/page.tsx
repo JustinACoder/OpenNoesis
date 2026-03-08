@@ -244,7 +244,6 @@ const ChatConversation = () => {
       {/* Messages */}
       <div
         className="flex-1 overflow-y-auto px-6 space-y-4 flex flex-col-reverse pt-4"
-        style={{ scrollbarColor: "var(--secondary) transparent" }}
         ref={containerRef}
       >
         <div ref={messagesEndRef} />
