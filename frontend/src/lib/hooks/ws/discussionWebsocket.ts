@@ -28,9 +28,24 @@ export interface NewMessageData {
   message: MessageSchema;
 }
 
+export interface AIMessageChunkData {
+  discussion_id: number;
+  isin_archived_discussion: boolean;
+  delta: string;
+  current_text: string;
+}
+
+export interface AIMessageThinkingData {
+  discussion_id: number;
+  isin_archived_discussion: boolean;
+  is_thinking: boolean;
+}
+
 interface UseDiscussionWebSocketOptions {
   discussionId: number; // Required to send messages to specific discussion, doesn't affect receiving
   onNewMessage?: (message: NewMessageData) => void;
+  onAiMessageChunk?: (chunk: AIMessageChunkData) => void;
+  onAiMessageThinking?: (data: AIMessageThinkingData) => void;
   onMessageRead?: (messageId: string, userId: string) => void;
   onConnect?: () => void;
   onDisconnect?: () => void;
@@ -102,6 +117,15 @@ class DiscussionWebSocketManager {
       case "new_discussion":
         this.handleNewDiscussion(data);
         this.wsManager.emit(`discussion:newDiscussion`, data);
+        break;
+
+      case "ai_message_chunk":
+        this.wsManager.emit(`discussion:aiMessageChunk`, data);
+        break;
+
+      case "ai_message_thinking":
+        this.wsManager.emit(`discussion:aiMessageThinking`, data);
+        break;
     }
   }
 
@@ -273,6 +297,8 @@ class DiscussionWebSocketManager {
 export function useDiscussionWebSocket({
   discussionId,
   onNewMessage,
+  onAiMessageChunk,
+  onAiMessageThinking,
   onMessageRead,
   onConnect,
   onDisconnect,
@@ -310,12 +336,26 @@ export function useDiscussionWebSocket({
       );
     }
 
+    if (onAiMessageChunk) {
+      cleanupFns.current.push(
+        wsManager.current.subscribe(`discussion:aiMessageChunk`, onAiMessageChunk),
+      );
+    }
+    if (onAiMessageThinking) {
+      cleanupFns.current.push(
+        wsManager.current.subscribe(
+          `discussion:aiMessageThinking`,
+          onAiMessageThinking,
+        ),
+      );
+    }
+
     // Cleanup
     return () => {
       cleanupFns.current.forEach((cleanup) => cleanup());
       cleanupFns.current = [];
     };
-  }, [onNewMessage, onMessageRead]);
+  }, [onNewMessage, onAiMessageChunk, onAiMessageThinking, onMessageRead]);
 
   // Discussion-specific send methods
   const sendMessage = useCallback(

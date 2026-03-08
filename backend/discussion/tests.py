@@ -1,14 +1,19 @@
-from django.test import Client
+from django.test import Client, override_settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.conf import settings
+from unittest.mock import patch
+import hashlib
 
 from ProjectOpenDebate.common.base_tests import BaseTestCase
 from ProjectOpenDebate.common.utils import reverse_lazy_api
 from debate.models import Debate
 from debate.schemas import StanceDirectionEnum
-from discussion.models import Discussion, Message, ReadCheckpoint
+from discussion.models import Discussion, Message, ReadCheckpoint, DiscussionAIConfig
+from discussion.ai import ensure_ai_bot_user, generate_ai_reply_stream
 from discussion.schemas import ArchiveStatusInputSchema
 from discussion.services import DiscussionService
+from discussion.tasks import generate_ai_reply_for_message
 from pairing.models import PairingRequest
 
 User = get_user_model()
@@ -175,6 +180,272 @@ class DiscussionListingEndpointsTest(DiscussionApiTestBase):
     def test_get_most_recent_discussion_unauthenticated(self):
         response = self.client.get(reverse_lazy_api("get_most_recent_discussion"))
         self.assertEqual(response.status_code, 401)  # Should require authentication
+
+
+class AIDiscussionEndpointsTest(DiscussionApiTestBase):
+    @override_settings(OPENAI_API_KEY="test-key")
+    def test_start_ai_discussion_success(self):
+        self.debate1.stance_set.create(user=self.user1, stance=1)
+        client = self.authenticate_user1()
+        response = client.post(
+            reverse_lazy_api("start_ai_discussion"),
+            data={"debate_id": self.debate1.id, "desired_stance": -1},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        created_discussion_id = response.json()["id"]
+
+        created_discussion = Discussion.objects.get(id=created_discussion_id)
+        self.assertEqual(created_discussion.participant1_id, self.user1.id)
+        self.assertTrue(DiscussionAIConfig.objects.filter(discussion=created_discussion).exists())
+
+    @override_settings(OPENAI_API_KEY="test-key")
+    def test_start_ai_discussion_requires_stance(self):
+        client = self.authenticate_user1()
+        response = client.post(
+            reverse_lazy_api("start_ai_discussion"),
+            data={"debate_id": self.debate1.id, "desired_stance": -1},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("set your stance", response.json()["detail"])
+
+    def test_start_ai_discussion_unauthenticated(self):
+        response = self.client.post(
+            reverse_lazy_api("start_ai_discussion"),
+            data={"debate_id": self.debate1.id, "desired_stance": -1},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 401)
+
+    @override_settings(OPENAI_API_KEY="")
+    def test_start_ai_discussion_returns_503_when_ai_unavailable(self):
+        self.debate1.stance_set.create(user=self.user1, stance=1)
+        client = self.authenticate_user1()
+        response = client.post(
+            reverse_lazy_api("start_ai_discussion"),
+            data={"debate_id": self.debate1.id, "desired_stance": -1},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(DiscussionAIConfig.objects.count(), 0)
+
+
+class AIBotProvisioningTest(DiscussionApiTestBase):
+    def test_ensure_ai_bot_user_normalizes_existing_account(self):
+        existing, _ = User.objects.get_or_create(
+            username=settings.AI_BOT_USERNAME,
+            defaults={
+                "email": "taken@example.com",
+                "is_staff": True,
+                "is_superuser": False,
+                "is_active": True,
+            },
+        )
+        existing.email = "taken@example.com"
+        existing.is_staff = True
+        existing.is_superuser = False
+        existing.is_active = True
+        existing.set_password("secret123")
+        existing.save(update_fields=["email", "is_staff", "is_superuser", "is_active", "password"])
+        self.assertTrue(existing.has_usable_password())
+
+        ai_user = ensure_ai_bot_user()
+        self.assertEqual(ai_user.id, existing.id)
+        self.assertEqual(ai_user.email, settings.AI_BOT_EMAIL)
+        self.assertFalse(ai_user.is_staff)
+        self.assertFalse(ai_user.is_superuser)
+        self.assertTrue(ai_user.is_active)
+        self.assertFalse(ai_user.has_usable_password())
+
+
+class AITaskBehaviorTest(DiscussionApiTestBase):
+    def _create_ai_discussion_and_trigger(self, text: str) -> tuple[Discussion, User, Message]:
+        ai_user = ensure_ai_bot_user()
+        debate = Debate.objects.create(
+            title="AI Task Debate",
+            description="Verify AI task behavior",
+            author=self.user1,
+        )
+        discussion = Discussion.objects.create(
+            debate=debate,
+            participant1=self.user1,
+            participant2=ai_user,
+        )
+        discussion.create_read_checkpoints()
+        DiscussionAIConfig.objects.create(
+            discussion=discussion,
+            bot_user=ai_user,
+            ai_stance=-1,
+            model=settings.OPENAI_MODEL,
+        )
+        trigger_message = Message.objects.create(
+            discussion=discussion,
+            author=self.user1,
+            text=text,
+        )
+        return discussion, ai_user, trigger_message
+
+    @patch("discussion.tasks.generate_ai_reply_stream")
+    @patch("discussion.tasks._broadcast_ai_thinking")
+    @patch("discussion.tasks._broadcast_ai_chunk")
+    def test_ai_task_uses_trigger_message_text(
+        self,
+        _mock_chunk,
+        _mock_thinking,
+        mock_generate,
+    ):
+        discussion, ai_user, trigger_message = self._create_ai_discussion_and_trigger("first user message")
+        mock_generate.return_value = (None, None)
+
+        result = generate_ai_reply_for_message.run(trigger_message.id)
+
+        self.assertEqual(result, "advanced_no_ai_reply_text=1")
+        self.assertEqual(Message.objects.filter(discussion=discussion, author=ai_user).count(), 0)
+        mock_generate.assert_called_once()
+        self.assertEqual(
+            mock_generate.call_args.kwargs["trigger_user_message"],
+            "first user message",
+        )
+        config = DiscussionAIConfig.objects.get(discussion=discussion)
+        self.assertEqual(config.last_trigger_message_id, trigger_message.id)
+
+    @patch("discussion.tasks.generate_ai_reply_stream")
+    @patch("discussion.tasks._broadcast_ai_thinking")
+    @patch("discussion.tasks._broadcast_ai_chunk")
+    def test_ai_task_clears_thinking_on_generation_exception(
+        self,
+        _mock_chunk,
+        mock_thinking,
+        mock_generate,
+    ):
+        _discussion, _ai_user, trigger_message = self._create_ai_discussion_and_trigger("boom")
+        mock_generate.side_effect = RuntimeError("forced failure")
+
+        with self.assertRaises(RuntimeError):
+            generate_ai_reply_for_message.run(trigger_message.id)
+
+        self.assertGreaterEqual(mock_thinking.call_count, 2)
+        self.assertTrue(mock_thinking.call_args_list[0].args[2])
+        self.assertFalse(mock_thinking.call_args_list[-1].args[2])
+
+    @patch("discussion.tasks.generate_ai_reply_stream")
+    @patch("discussion.tasks._broadcast_ai_thinking")
+    @patch("discussion.tasks._broadcast_ai_chunk")
+    def test_ai_task_processes_pending_messages_sequentially_even_if_trigger_is_newest(
+        self,
+        _mock_chunk,
+        _mock_thinking,
+        mock_generate,
+    ):
+        discussion, ai_user, first_message = self._create_ai_discussion_and_trigger("first")
+        second_message = Message.objects.create(
+            discussion=discussion,
+            author=self.user1,
+            text="second",
+        )
+
+        def _mock_reply(ai_config, trigger_user_message, on_delta=None):
+            return (f"reply:{trigger_user_message}", f"resp:{trigger_user_message}")
+
+        mock_generate.side_effect = _mock_reply
+
+        # Simulate out-of-order processing where the newer trigger executes first.
+        result = generate_ai_reply_for_message.run(second_message.id)
+        self.assertIn("sent_ai_messages=2", result)
+
+        ai_messages = list(
+            Message.objects.filter(discussion=discussion, author=ai_user).order_by("id")
+        )
+        self.assertEqual(len(ai_messages), 2)
+        self.assertEqual([m.text for m in ai_messages], ["reply:first", "reply:second"])
+
+        # Running the older trigger afterwards should find nothing pending.
+        second_result = generate_ai_reply_for_message.run(first_message.id)
+        self.assertEqual(second_result, "skipped_no_pending_user_message")
+
+    @patch("discussion.tasks.generate_ai_reply_stream")
+    @patch("discussion.tasks._broadcast_ai_thinking")
+    @patch("discussion.tasks._broadcast_ai_chunk")
+    def test_ai_task_advances_cursor_on_empty_reply_and_continues(
+        self,
+        _mock_chunk,
+        _mock_thinking,
+        mock_generate,
+    ):
+        discussion, ai_user, first_message = self._create_ai_discussion_and_trigger("first")
+        second_message = Message.objects.create(
+            discussion=discussion,
+            author=self.user1,
+            text="second",
+        )
+
+        def _mock_reply(ai_config, trigger_user_message, on_delta=None):
+            if trigger_user_message == "first":
+                return (None, "resp:first")
+            return ("reply:second", "resp:second")
+
+        mock_generate.side_effect = _mock_reply
+
+        result = generate_ai_reply_for_message.run(second_message.id)
+        self.assertIn("sent_ai_messages=1", result)
+        self.assertIn("skipped_no_ai_reply_text=1", result)
+
+        ai_messages = list(
+            Message.objects.filter(discussion=discussion, author=ai_user).order_by("id")
+        )
+        self.assertEqual(len(ai_messages), 1)
+        self.assertEqual(ai_messages[0].text, "reply:second")
+
+        config = DiscussionAIConfig.objects.get(discussion=discussion)
+        self.assertEqual(config.last_trigger_message_id, second_message.id)
+        self.assertEqual(config.last_openai_response_id, "resp:second")
+
+
+class AIClientRequestTest(DiscussionApiTestBase):
+    @override_settings(OPENAI_API_KEY="test-key")
+    @patch("discussion.ai._build_system_prompt", return_value="prompt")
+    @patch("discussion.ai.OpenAI")
+    def test_generate_ai_reply_stream_sends_hashed_safety_identifier(
+        self,
+        mock_openai,
+        _mock_prompt,
+    ):
+        ai_user = ensure_ai_bot_user()
+        debate = Debate.objects.create(
+            title="AI Safety Debate",
+            description="Check safety identifier",
+            author=self.user1,
+        )
+        discussion = Discussion.objects.create(
+            debate=debate,
+            participant1=self.user1,
+            participant2=ai_user,
+        )
+        ai_config = DiscussionAIConfig.objects.create(
+            discussion=discussion,
+            bot_user=ai_user,
+            ai_stance=-1,
+            model=settings.OPENAI_MODEL,
+        )
+
+        mock_client = mock_openai.return_value
+        mock_stream = mock_client.responses.stream.return_value.__enter__.return_value
+        mock_stream.__iter__.return_value = iter([])
+        mock_final_response = type("FinalResponse", (), {"output_text": "ok", "id": "resp_1"})()
+        mock_stream.get_final_response.return_value = mock_final_response
+
+        response_text, response_id = generate_ai_reply_stream(ai_config, "hello")
+
+        self.assertEqual(response_text, "ok")
+        self.assertEqual(response_id, "resp_1")
+        expected_identifier = hashlib.sha256(
+            f"opennoesis-user:{self.user1.id}".encode("utf-8")
+        ).hexdigest()
+        self.assertEqual(
+            mock_client.responses.stream.call_args.kwargs["safety_identifier"],
+            expected_identifier,
+        )
 
 
 class DiscussionDetailEndpointsTest(DiscussionApiTestBase):

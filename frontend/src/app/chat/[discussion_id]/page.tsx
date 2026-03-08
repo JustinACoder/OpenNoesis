@@ -12,6 +12,8 @@ import UserAvatar from "@/components/UserAvatar";
 import { Send, Loader2, AlertCircle, CircleCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
+  AIMessageChunkData,
+  AIMessageThinkingData,
   NewMessageData,
   useDiscussionWebSocket,
 } from "@/lib/hooks/ws/discussionWebsocket";
@@ -19,6 +21,10 @@ import { PagedMessageSchema } from "@/lib/models";
 import { useAuthState } from "@/providers/authProvider";
 import { useParams } from "next/navigation";
 import { ChatMessageGroups } from "@/app/chat/[discussion_id]/components/ChatMessageGroups";
+import { AiBadge } from "@/components/AiBadge";
+import { getParticipantDisplayName, OPENNOESIS_AI_DISPLAY_NAME } from "@/lib/ai";
+
+const AI_RESPONSE_TIMEOUT_MS = 20_000;
 
 const ChatConversation = () => {
   const { discussion_id: discussionIdString } = useParams<{
@@ -27,8 +33,22 @@ const ChatConversation = () => {
   const discussionId = parseInt(discussionIdString, 10); // this should always be valid here as the root layout already checks it
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [isAiThinking, setIsAiThinking] = useState(false);
+  const [isAwaitingAiResponse, setIsAwaitingAiResponse] = useState(false);
+  const [aiResponseTimedOut, setAiResponseTimedOut] = useState(false);
+  const [streamingAiText, setStreamingAiText] = useState("");
+  const [streamingAiStartedAt, setStreamingAiStartedAt] = useState<
+    string | null
+  >(null);
+  const [failedAiDraftText, setFailedAiDraftText] = useState("");
+  const [failedAiDraftStartedAt, setFailedAiDraftStartedAt] = useState<
+    string | null
+  >(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const loadOnIntersectionTargetRef = useRef<HTMLDivElement>(null);
+  const aiResponseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const streamingAiTextRef = useRef("");
+  const streamingAiStartedAtRef = useRef<string | null>(null);
   const { user } = useAuthState();
   if (!user)
     throw new Error("User must be authenticated to view ChatConversation");
@@ -47,10 +67,54 @@ const ChatConversation = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
+  const {
+    data: discussion,
+    isLoading: discussionLoading,
+    error: discussionError,
+  } = useDiscussionApiGetDiscussion(discussionId);
+
+  const clearAiResponseTimeout = useCallback(() => {
+    if (aiResponseTimeoutRef.current) {
+      clearTimeout(aiResponseTimeoutRef.current);
+      aiResponseTimeoutRef.current = null;
+    }
+  }, []);
+
+  const moveStreamingDraftToFailed = useCallback(() => {
+    const currentText = streamingAiTextRef.current;
+    if (!currentText) return;
+    setFailedAiDraftText(currentText);
+    setFailedAiDraftStartedAt(
+      streamingAiStartedAtRef.current ?? new Date().toISOString(),
+    );
+    setStreamingAiText("");
+    setStreamingAiStartedAt(null);
+  }, []);
+
+  const startAiResponseTimeout = useCallback(() => {
+    clearAiResponseTimeout();
+    aiResponseTimeoutRef.current = setTimeout(() => {
+      setIsAwaitingAiResponse(false);
+      setIsAiThinking(false);
+      setAiResponseTimedOut(true);
+      moveStreamingDraftToFailed();
+    }, AI_RESPONSE_TIMEOUT_MS);
+  }, [clearAiResponseTimeout, moveStreamingDraftToFailed]);
+
   const onNewMessage = useCallback(
     (message: NewMessageData) => {
-      // For now, ignore messages that are not for the current discussion
       if (message.message.discussion !== discussionId) return;
+
+      if (streamingAiTextRef.current && message.message.author !== currentUserId) {
+        setStreamingAiText("");
+        setStreamingAiStartedAt(null);
+        setFailedAiDraftText("");
+        setFailedAiDraftStartedAt(null);
+        setIsAiThinking(false);
+        setIsAwaitingAiResponse(false);
+        setAiResponseTimedOut(false);
+        clearAiResponseTimeout();
+      }
 
       if (!messagesEndRef.current) {
         console.warn(
@@ -60,32 +124,74 @@ const ChatConversation = () => {
       }
 
       if (message.message.author !== currentUserId) {
-        // Only mark as read if the message is from the other user
-        // If it's from the current user, it is already read by definition
-        // (Actually, the backend marks it as read immediately when sending)
-        // (The frontend is designed to always mark your own messages as read immediately)
+        setIsAwaitingAiResponse(false);
+        setAiResponseTimedOut(false);
+        setFailedAiDraftText("");
+        setFailedAiDraftStartedAt(null);
+        clearAiResponseTimeout();
         markMessagesAsReadRef.current();
       }
 
-      // ScrollTop is 0 when we are at the bottom because of flex-col-reverse
       const containerScrollPosition =
         messagesEndRef.current.parentElement?.parentElement?.scrollTop ?? 0;
       if (containerScrollPosition < 200) {
         scrollToBottom();
       }
     },
-    [discussionId, currentUserId, scrollToBottom],
+    [
+      clearAiResponseTimeout,
+      currentUserId,
+      discussionId,
+      scrollToBottom,
+    ],
+  );
+
+  const onAiMessageChunk = useCallback(
+    (chunk: AIMessageChunkData) => {
+      if (chunk.discussion_id !== discussionId) return;
+      if (!chunk.current_text) return;
+
+      setIsAwaitingAiResponse(true);
+      setAiResponseTimedOut(false);
+      setFailedAiDraftText("");
+      setFailedAiDraftStartedAt(null);
+      setStreamingAiText(chunk.current_text);
+      setStreamingAiStartedAt((prev) => prev ?? new Date().toISOString());
+      startAiResponseTimeout();
+
+      const containerScrollPosition =
+        messagesEndRef.current?.parentElement?.parentElement?.scrollTop ?? 0;
+      if (containerScrollPosition < 200) {
+        scrollToBottom();
+      }
+    },
+    [discussionId, scrollToBottom, startAiResponseTimeout],
+  );
+
+  const onAiMessageThinking = useCallback(
+    (data: AIMessageThinkingData) => {
+      if (data.discussion_id !== discussionId) return;
+      setIsAiThinking(data.is_thinking);
+      if (!data.is_thinking) {
+        setIsAwaitingAiResponse(false);
+        if (!streamingAiTextRef.current) {
+          clearAiResponseTimeout();
+        }
+      } else {
+        setIsAwaitingAiResponse(true);
+      }
+    },
+    [discussionId, clearAiResponseTimeout],
   );
 
   const { sendMessage, markMessagesAsRead, connectionStatus } =
-    useDiscussionWebSocket({ discussionId, onNewMessage });
+    useDiscussionWebSocket({
+      discussionId,
+      onNewMessage,
+      onAiMessageChunk,
+      onAiMessageThinking,
+    });
   markMessagesAsReadRef.current = markMessagesAsRead;
-
-  const {
-    data: discussion,
-    isLoading: discussionLoading,
-    error: discussionError,
-  } = useDiscussionApiGetDiscussion(discussionId);
 
   const {
     data,
@@ -109,6 +215,13 @@ const ChatConversation = () => {
 
   // This represents the messages from the latest to the oldest
   const messages = data?.pages.flatMap((page) => page.items) ?? [];
+  useEffect(() => {
+    streamingAiTextRef.current = streamingAiText;
+    streamingAiStartedAtRef.current = streamingAiStartedAt;
+  }, [streamingAiText, streamingAiStartedAt]);
+  const isAiTurnInProgress =
+    discussion?.is_ai_discussion &&
+    (isAwaitingAiResponse || isAiThinking || !!streamingAiText);
 
   const containerRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -144,10 +257,20 @@ const ChatConversation = () => {
     [fetchNextPage, hasNextPage, isFetchingNextPage],
   );
 
+  const onUserMessageSent = useCallback(() => {
+    if (!discussion?.is_ai_discussion) return;
+    setAiResponseTimedOut(false);
+    setFailedAiDraftText("");
+    setFailedAiDraftStartedAt(null);
+    setIsAwaitingAiResponse(true);
+    startAiResponseTimeout();
+  }, [discussion?.is_ai_discussion, startAiResponseTimeout]);
+
   const handleSendMessage = useCallback(async () => {
     if (
       !newMessage.trim() ||
       isSending ||
+      isAiTurnInProgress ||
       !discussionId ||
       connectionStatus !== "connected"
     )
@@ -156,6 +279,7 @@ const ChatConversation = () => {
     setIsSending(true);
     try {
       sendMessage(newMessage.trim());
+      onUserMessageSent();
       setNewMessage("");
       setTimeout(() => scrollToBottom(), 100);
     } catch (error) {
@@ -171,6 +295,8 @@ const ChatConversation = () => {
     connectionStatus,
     sendMessage,
     scrollToBottom,
+    isAiTurnInProgress,
+    onUserMessageSent,
   ]);
 
   const handleKeyPress = useCallback(
@@ -188,6 +314,23 @@ const ChatConversation = () => {
       markMessagesAsRead(true);
     }
   }, [discussion?.id, discussion?.is_unread, markMessagesAsRead]);
+
+  useEffect(() => {
+    setIsAwaitingAiResponse(false);
+    setIsAiThinking(false);
+    setAiResponseTimedOut(false);
+    setStreamingAiText("");
+    setStreamingAiStartedAt(null);
+    setFailedAiDraftText("");
+    setFailedAiDraftStartedAt(null);
+    clearAiResponseTimeout();
+  }, [discussionId, clearAiResponseTimeout]);
+
+  useEffect(() => {
+    return () => {
+      clearAiResponseTimeout();
+    };
+  }, [clearAiResponseTimeout]);
 
   // It is possible that the discussion info or the messages are loading
   if (discussionLoading || messagesLoading) {
@@ -225,6 +368,35 @@ const ChatConversation = () => {
   };
 
   const otherParticipant = getOtherParticipant();
+  const participantDisplayName = getParticipantDisplayName(
+    otherParticipant.username,
+    discussion.is_ai_discussion ?? false,
+  );
+  const messagesWithStreaming =
+    streamingAiText && streamingAiStartedAt
+      ? [
+          {
+            id: "streaming-ai",
+            discussion: discussionId,
+            author: otherParticipant.id!,
+            text: streamingAiText,
+            created_at: streamingAiStartedAt,
+          },
+          ...messages,
+        ]
+      : failedAiDraftText
+        ? [
+            {
+              id: "failed-ai-draft",
+              discussion: discussionId,
+              author: otherParticipant.id!,
+              text: failedAiDraftText,
+              created_at:
+                failedAiDraftStartedAt ?? new Date().toISOString(),
+            },
+            ...messages,
+          ]
+        : messages;
 
   return (
     <div className={"flex flex-col overflow-y-auto flex-1"}>
@@ -233,7 +405,19 @@ const ChatConversation = () => {
         <div className="flex items-center space-x-3">
           <UserAvatar user={otherParticipant} size="large" />
           <div>
-            <h3 className="font-medium">{otherParticipant.username}</h3>
+            <div className="flex items-center gap-2">
+              <h3
+                className={cn(
+                  "font-medium",
+                  discussion.is_ai_discussion ? "text-blue-300" : "",
+                )}
+              >
+                {participantDisplayName}
+              </h3>
+              {discussion.is_ai_discussion && (
+                <AiBadge />
+              )}
+            </div>
             <p className="text-sm text-gray-400 truncate max-w-xs">
               {discussion.debate.title}
             </p>
@@ -248,7 +432,16 @@ const ChatConversation = () => {
       >
         <div ref={messagesEndRef} />
 
-        {messages.length === 0 ? (
+        {discussion.is_ai_discussion && isAiThinking && !streamingAiText && (
+          <div className="flex justify-start">
+            <div className="inline-flex items-center gap-2 rounded-2xl bg-gray-100 px-3 py-2 text-xs text-gray-500">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>{OPENNOESIS_AI_DISPLAY_NAME} is thinking...</span>
+            </div>
+          </div>
+        )}
+
+        {messagesWithStreaming.length === 0 ? (
           <div className="text-center py-8 text-gray-400">
             <p className="text-lg font-medium mb-2">Start the conversation</p>
             <p className="text-sm">
@@ -257,7 +450,7 @@ const ChatConversation = () => {
           </div>
         ) : (
           <ChatMessageGroups
-            messages={messages}
+            messages={messagesWithStreaming}
             currentUserId={currentUserId}
             gapMinutes={15}
           />
@@ -297,6 +490,16 @@ const ChatConversation = () => {
             <span>Connected to discussion.</span>
           </div>
         )}
+        {discussion.is_ai_discussion && aiResponseTimedOut && (
+          <p className="text-xs text-amber-500 mb-2">
+            AI did not respond in time. You can send another message.
+          </p>
+        )}
+        {discussion.is_ai_discussion && failedAiDraftText && (
+          <p className="text-xs text-amber-500 mb-2">
+            AI response was interrupted. Partial reply is shown above.
+          </p>
+        )}
         <form className="flex items-end space-x-3" autoComplete={"off"}>
           <Textarea
             value={newMessage}
@@ -311,6 +514,7 @@ const ChatConversation = () => {
             disabled={
               !newMessage.trim() ||
               isSending ||
+              !!isAiTurnInProgress ||
               connectionStatus !== "connected"
             }
             className={cn(

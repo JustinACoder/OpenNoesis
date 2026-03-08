@@ -82,6 +82,25 @@ class Discussion(models.Model):
         return f"Discussion between {self.participant1} and {self.participant2} on \"{self.debate.title}\""
 
 
+class DiscussionAIConfig(models.Model):
+    discussion = models.OneToOneField(Discussion, on_delete=models.CASCADE, related_name='ai_config')
+    bot_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ai_discussion_set')
+    ai_stance = models.SmallIntegerField(choices=[(1, 'FOR'), (-1, 'AGAINST')])
+    model = models.CharField(max_length=128)
+    last_openai_response_id = models.CharField(max_length=255, null=True, blank=True)
+    last_trigger_message = models.ForeignKey(
+        'Message',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='+',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"AI config for discussion {self.discussion_id} using model {self.model}"
+
+
 class Message(models.Model):
     discussion = models.ForeignKey(Discussion, on_delete=models.CASCADE)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)

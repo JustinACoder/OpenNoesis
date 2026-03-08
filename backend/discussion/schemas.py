@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Literal
 from pydantic import BaseModel, constr
 
 from ninja import ModelSchema, Field, Schema
@@ -19,6 +19,12 @@ class ReadMessagesPayload(BaseModel):
 class ArchiveStatusInputSchema(Schema):
     status: bool
 
+
+class StartAIDiscussionInputSchema(Schema):
+    debate_id: int
+    desired_stance: Literal[-1, 1]
+
+
 class MessageSchema(ModelSchema):
     text: str = Field(..., max_length=5000)
     class Meta:
@@ -35,6 +41,7 @@ class DiscussionSchema(ModelSchema):
     is_archived: bool
     is_unread: bool
     latest_activity: datetime
+    is_ai_discussion: bool = False
     inviteuse_id: Optional[int] = Field(None, alias='inviteuse__id')
 
     class Meta:
