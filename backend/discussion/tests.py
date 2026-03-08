@@ -233,14 +233,21 @@ class AIDiscussionEndpointsTest(DiscussionApiTestBase):
 
 class AIBotProvisioningTest(DiscussionApiTestBase):
     def test_ensure_ai_bot_user_normalizes_existing_account(self):
-        existing = User.objects.create_user(
+        existing, _ = User.objects.get_or_create(
             username=settings.AI_BOT_USERNAME,
-            email="taken@example.com",
-            password="secret123",
-            is_staff=True,
-            is_superuser=False,
-            is_active=True,
+            defaults={
+                "email": "taken@example.com",
+                "is_staff": True,
+                "is_superuser": False,
+                "is_active": True,
+            },
         )
+        existing.email = "taken@example.com"
+        existing.is_staff = True
+        existing.is_superuser = False
+        existing.is_active = True
+        existing.set_password("secret123")
+        existing.save(update_fields=["email", "is_staff", "is_superuser", "is_active", "password"])
         self.assertTrue(existing.has_usable_password())
 
         ai_user = ensure_ai_bot_user()

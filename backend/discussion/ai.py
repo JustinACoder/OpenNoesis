@@ -6,6 +6,7 @@ from typing import Callable
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError, transaction
 from openai import OpenAI
 
 from discussion.models import DiscussionAIConfig
@@ -22,7 +23,17 @@ def ensure_ai_bot_user():
         "is_staff": False,
         "is_superuser": False,
     }
-    ai_user, created = User.objects.get_or_create(username=username, defaults=defaults)
+    ai_user = User.objects.filter(username=username).first()
+    created = False
+    if ai_user is None:
+        try:
+            with transaction.atomic():
+                ai_user = User.objects.create(username=username, **defaults)
+                created = True
+        except IntegrityError:
+            # Another worker/process created the user first.
+            ai_user = User.objects.get(username=username)
+
     changed_fields: list[str] = []
 
     if ai_user.email != settings.AI_BOT_EMAIL:
@@ -41,10 +52,9 @@ def ensure_ai_bot_user():
         ai_user.set_unusable_password()
         changed_fields.append("password")
 
-    if created:
-        if "password" not in changed_fields:
-            ai_user.set_unusable_password()
-            changed_fields.append("password")
+    if created and "password" not in changed_fields:
+        ai_user.set_unusable_password()
+        changed_fields.append("password")
 
     if changed_fields:
         ai_user.save(update_fields=changed_fields)
