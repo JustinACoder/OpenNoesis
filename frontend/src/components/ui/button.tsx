@@ -56,9 +56,8 @@ function Button({
   size,
   asChild = false,
   isLoading = false,
-  children,
   ...props
-}: Omit<React.ComponentProps<"button">, "children"> &
+}: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean;
     isLoading?: boolean;
@@ -71,10 +70,12 @@ function Button({
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     >
-      {isLoading && (
-        <LoaderCircle className={cn("animate-spin", getLoaderSize(size))} />
-      )}
-      {children}
+      <div className="flex items-center justify-center gap-2">
+        {isLoading && (
+          <LoaderCircle className={cn("animate-spin", getLoaderSize(size))} />
+        )}
+        {props.children}
+      </div>
     </Comp>
   );
 }
