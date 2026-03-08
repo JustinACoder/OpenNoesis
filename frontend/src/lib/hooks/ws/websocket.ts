@@ -47,7 +47,7 @@ export function useWebSocket({
 
   // Reset connection state when user is not authenticated (e.g. session expired)
   useEffect(() => {
-    if (authStatus === "authenticated") return;
+    if (authStatus !== "unauthenticated") return;
 
     const mgr = getManager();
     mgr.disconnect();
