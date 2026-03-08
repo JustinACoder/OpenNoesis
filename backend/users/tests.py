@@ -175,6 +175,18 @@ class ProfileModelTest(UserApiTestBase):
             self.assertIsInstance(new_user.profile, Profile)
 
 
+class AccountAdapterReservationTest(BaseTestCase):
+    def test_ai_username_is_reserved(self):
+        adapter = PostOfficeAccountAdapter()
+        with self.assertRaises(ValidationError):
+            adapter.clean_username(settings.AI_BOT_USERNAME)
+
+    def test_ai_email_is_reserved(self):
+        adapter = PostOfficeAccountAdapter()
+        with self.assertRaises(ValidationError):
+            adapter.clean_email(settings.AI_BOT_EMAIL)
+
+
 class AuthMetricsSignalTest(BaseTestCase):
     def setUp(self):
         self.factory = RequestFactory()
