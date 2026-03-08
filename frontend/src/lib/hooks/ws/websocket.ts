@@ -45,6 +45,14 @@ export function useWebSocket({
   const handleDisconnect = useEvent(onDisconnect);
   const handleError = useEvent(onError);
 
+  // Reset connection state when user is not authenticated (e.g. session expired)
+  useEffect(() => {
+    if (authStatus === "authenticated") return;
+
+    const mgr = getManager();
+    mgr.disconnect();
+  }, [authStatus, getManager]);
+
   useEffect(() => {
     if (authStatus !== "authenticated") {
       console.warn("WebSocket not connecting: user not authenticated");
@@ -117,6 +125,33 @@ export function useWebSocket({
       cleanupFns.current = [];
     };
   }, [getManager, stream, autoConnect, authStatus, handleMessage, handleConnect, handleDisconnect, handleError]);
+
+  // Attempt to reconnect immediately when the user returns to the tab/window
+  useEffect(() => {
+    if (!autoConnect) return;
+    if (typeof window === "undefined") return;
+
+    const handleFocusOrVisibility = () => {
+      if (authStatus !== "authenticated") return;
+
+      const mgr = getManager();
+      const status = mgr.getStatus();
+      if (status === "disconnected" || status === "disconnecting") {
+        mgr.connect(true);
+      }
+    };
+
+    window.addEventListener("focus", handleFocusOrVisibility);
+    document.addEventListener("visibilitychange", handleFocusOrVisibility);
+
+    return () => {
+      window.removeEventListener("focus", handleFocusOrVisibility);
+      document.removeEventListener(
+        "visibilitychange",
+        handleFocusOrVisibility,
+      );
+    };
+  }, [autoConnect, authStatus, getManager]);
 
   const connect = useCallback(() => {
     getManager().connect();

@@ -47,6 +47,11 @@ class WebSocketManager {
       return;
     }
 
+    if (ignoreReconnectTimeout && this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+
     // If we are currently waiting to reconnect, we can ignore the current request to connect now
     if (this.reconnectTimeout && !ignoreReconnectTimeout) {
       console.log(
@@ -164,6 +169,9 @@ class WebSocketManager {
       this.ws.close();
       this.ws = null;
     }
+
+    this.isConnecting = false;
+    this.emit("disconnected");
 
     this.messageHandlers.clear();
     this.streamHandlers.clear();
