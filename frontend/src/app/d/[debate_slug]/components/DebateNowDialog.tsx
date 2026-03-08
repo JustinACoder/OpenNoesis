@@ -35,8 +35,12 @@ import {
   usePairingApiGetCurrentActivePairing,
   usePairingApiRequestPairing,
 } from "@/lib/api/pairing";
+import { useDiscussionApiStartAiDiscussion } from "@/lib/api/discussions";
 import { useAuthState } from "@/providers/authProvider";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { AiBadge } from "@/components/AiBadge";
+import { OPENNOESIS_AI_DISPLAY_NAME } from "@/lib/ai";
 
 interface DebateNowDialogProps {
   debate: DebateFullSchema;
@@ -44,6 +48,7 @@ interface DebateNowDialogProps {
 
 const DebateNowDialog = ({ debate }: DebateNowDialogProps) => {
   const userStance = debate.user_stance || 0;
+  const [debateMode, setDebateMode] = useState<"human" | "ai">("human");
   const [opponentStance, setOpponentStance] =
     useState<PairingRequestInputSchemaDesiredStance>(
       userStance === 1 ? -1 : 1, // Default to opposite of user's stance
@@ -53,30 +58,49 @@ const DebateNowDialog = ({ debate }: DebateNowDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const { mutateAsync: startPairing, isPending: isPendingPairing } =
     usePairingApiRequestPairing();
+  const { mutateAsync: startAiDiscussion, isPending: isPendingAiDiscussion } =
+    useDiscussionApiStartAiDiscussion();
+  const router = useRouter();
   const { authStatus } = useAuthState();
   const { data: currentActivePairingRequest } =
     usePairingApiGetCurrentActivePairing({
-      query: { enabled: isOpen && authStatus === "authenticated" },
+      query: {
+        enabled:
+          isOpen && authStatus === "authenticated" && debateMode === "human",
+      },
     });
 
   // Check if user has set their stance
   const hasStanceSet = userStance === 1 || userStance === -1;
 
-  const handleStartSearch = async () => {
-    await startPairing({
-      data: {
-        debate_id: debate.id!,
-        desired_stance: opponentStance,
-        pairing_type: searchType,
-      },
-    })
-      .then(() => {
+  const isPending = isPendingPairing || isPendingAiDiscussion;
+
+  const handleStartDebate = async () => {
+    try {
+      if (debateMode === "ai") {
+        const discussion = await startAiDiscussion({
+          data: {
+            debate_id: debate.id!,
+            desired_stance: opponentStance,
+          },
+        });
         setIsOpen(false);
-      })
-      .catch((error) => {
-        console.error("Error starting pairing:", error);
-        toast.error("Failed to start search. Please try again.");
+        router.push(`/chat/${discussion.id}`);
+        return;
+      }
+
+      await startPairing({
+        data: {
+          debate_id: debate.id!,
+          desired_stance: opponentStance,
+          pairing_type: searchType,
+        },
       });
+      setIsOpen(false);
+    } catch (error) {
+      console.error("Error starting debate:", error);
+      toast.error("Failed to start debate. Please try again.");
+    }
   };
 
   const handleOpponentStanceChange = (value: string) => {
@@ -147,7 +171,47 @@ const DebateNowDialog = ({ debate }: DebateNowDialogProps) => {
           {/* Opponent stance selection */}
           <div>
             <div className="mb-3">
-              <h4 className="font-medium text-sm">Find an opponent who:</h4>
+              <h4 className="font-medium text-sm">Who do you want to debate?</h4>
+            </div>
+
+            <RadioGroup
+              value={debateMode}
+              onValueChange={(value) => setDebateMode(value as "human" | "ai")}
+            >
+              <Label
+                htmlFor="human"
+                className="flex items-center space-x-3 p-4 rounded-lg border border-muted hover:border-primary transition-colors cursor-pointer"
+              >
+                <RadioGroupItem value="human" id="human" />
+                <div>
+                  <div className="font-medium text-sm">Another user</div>
+                  <div className="text-xs text-muted-foreground">
+                    Match with a real person via active or passive search
+                  </div>
+                </div>
+              </Label>
+              <Label
+                htmlFor="ai"
+                className="flex items-center space-x-3 p-4 rounded-lg border border-muted hover:border-primary transition-colors cursor-pointer"
+              >
+                <RadioGroupItem value="ai" id="ai" />
+                <div>
+                  <div className="flex items-center gap-2 font-medium text-sm">
+                    <span>{OPENNOESIS_AI_DISPLAY_NAME}</span>
+                    <AiBadge />
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Start instantly with an AI opponent in chat
+                  </div>
+                </div>
+              </Label>
+            </RadioGroup>
+          </div>
+
+          {/* Opponent stance selection */}
+          <div>
+            <div className="mb-3">
+              <h4 className="font-medium text-sm">Opponent stance:</h4>
               <p className="text-xs text-muted-foreground">
                 Choose the stance you want to debate against
               </p>
@@ -206,60 +270,62 @@ const DebateNowDialog = ({ debate }: DebateNowDialogProps) => {
           </div>
 
           {/* Search options */}
-          <div>
-            <div className="mb-3">
-              <h4 className="font-medium text-sm">
-                How would you like to find a match?
-              </h4>
+          {debateMode === "human" && (
+            <div>
+              <div className="mb-3">
+                <h4 className="font-medium text-sm">
+                  How would you like to find a match?
+                </h4>
+              </div>
+
+              <RadioGroup
+                defaultValue="active"
+                onValueChange={handleSearchTypeChange}
+              >
+                {/* Active Search Option */}
+                <Label
+                  htmlFor="active"
+                  className="flex items-center space-x-3 p-4 rounded-lg border border-muted hover:border-primary transition-colors cursor-pointer bg-primary/5 hover:bg-primary/10"
+                >
+                  <RadioGroupItem
+                    value="active"
+                    id="active"
+                    className="data-[state=checked]:border-primary"
+                  />
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/20">
+                    <Zap className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-medium text-sm">Active Search</div>
+                    <div className="text-xs text-muted-foreground">
+                      Stay online for priority matching (faster results)
+                    </div>
+                  </div>
+                </Label>
+
+                {/* Passive Search Option */}
+                <Label
+                  htmlFor="passive"
+                  className="flex items-center space-x-3 p-4 rounded-lg border border-muted hover:border-muted-foreground transition-colors cursor-pointer hover:bg-muted/50"
+                >
+                  <RadioGroupItem
+                    value="passive"
+                    id="passive"
+                    className="data-[state=checked]:border-muted-foreground"
+                  />
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full border border-muted-foreground/20">
+                    <Bell className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-medium text-sm">Passive Search</div>
+                    <div className="text-xs text-muted-foreground">
+                      Get notified when a match is found (may take longer)
+                    </div>
+                  </div>
+                </Label>
+              </RadioGroup>
             </div>
-
-            <RadioGroup
-              defaultValue="active"
-              onValueChange={handleSearchTypeChange}
-            >
-              {/* Active Search Option */}
-              <Label
-                htmlFor="active"
-                className="flex items-center space-x-3 p-4 rounded-lg border border-muted hover:border-primary transition-colors cursor-pointer bg-primary/5 hover:bg-primary/10"
-              >
-                <RadioGroupItem
-                  value="active"
-                  id="active"
-                  className="data-[state=checked]:border-primary"
-                />
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/20">
-                  <Zap className="w-4 h-4 text-primary" />
-                </div>
-                <div className="text-left">
-                  <div className="font-medium text-sm">Active Search</div>
-                  <div className="text-xs text-muted-foreground">
-                    Stay online for priority matching (faster results)
-                  </div>
-                </div>
-              </Label>
-
-              {/* Passive Search Option */}
-              <Label
-                htmlFor="passive"
-                className="flex items-center space-x-3 p-4 rounded-lg border border-muted hover:border-muted-foreground transition-colors cursor-pointer hover:bg-muted/50"
-              >
-                <RadioGroupItem
-                  value="passive"
-                  id="passive"
-                  className="data-[state=checked]:border-muted-foreground"
-                />
-                <div className="flex items-center justify-center w-8 h-8 rounded-full border border-muted-foreground/20">
-                  <Bell className="w-4 h-4 text-muted-foreground" />
-                </div>
-                <div className="text-left">
-                  <div className="font-medium text-sm">Passive Search</div>
-                  <div className="text-xs text-muted-foreground">
-                    Get notified when a match is found (may take longer)
-                  </div>
-                </div>
-              </Label>
-            </RadioGroup>
-          </div>
+          )}
         </div>
 
         <DialogFooter>
@@ -268,17 +334,17 @@ const DebateNowDialog = ({ debate }: DebateNowDialogProps) => {
           </DialogClose>
           <Button
             disabled={
-              isPendingPairing ||
-              !!currentActivePairingRequest ||
+              isPending ||
+              (debateMode === "human" && !!currentActivePairingRequest) ||
               !hasStanceSet ||
               authStatus !== "authenticated"
             }
-            onClick={handleStartSearch}
+            onClick={handleStartDebate}
           >
-            {isPendingPairing ? (
+            {isPending ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              "Start Search"
+              debateMode === "human" ? "Start Search" : "Start AI Debate"
             )}
           </Button>
         </DialogFooter>

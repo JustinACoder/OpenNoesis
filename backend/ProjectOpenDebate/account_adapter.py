@@ -1,10 +1,18 @@
 from allauth.account.adapter import DefaultAccountAdapter
+from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.contrib.sites.shortcuts import get_current_site
 from post_office import mail
 
 
 class PostOfficeAccountAdapter(DefaultAccountAdapter):
     """Queue allauth emails through django-post-office."""
+
+    def clean_email(self, email):
+        cleaned = super().clean_email(email)
+        if cleaned and cleaned.lower() == settings.AI_BOT_EMAIL.lower():
+            raise ValidationError("This email address is reserved.")
+        return cleaned
 
     def send_mail(self, template_prefix: str, email: str, context: dict) -> None:
         request = self.request

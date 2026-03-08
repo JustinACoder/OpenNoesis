@@ -112,6 +112,44 @@
         ]
       }
     },
+    "/api/discussions/ai/start": {
+      "post": {
+        "operationId": "discussion_api_start_ai_discussion",
+        "summary": "Start Ai Discussion",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscussionSchema"
+                }
+              }
+            }
+          }
+        },
+        "description": "Start a new discussion against the AI debater.",
+        "tags": [
+          "Discussions"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartAIDiscussionInputSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ]
+      }
+    },
     "/api/discussions/{discussion_id}": {
       "get": {
         "operationId": "discussion_api_get_discussion",
@@ -4108,6 +4146,11 @@
             "title": "Latest Activity",
             "type": "string"
           },
+          "is_ai_discussion": {
+            "default": false,
+            "title": "Is Ai Discussion",
+            "type": "boolean"
+          },
           "inviteuse_id": {
             "anyOf": [
               {
@@ -4228,6 +4271,28 @@
           "username"
         ],
         "title": "UserPreviewSchema",
+        "type": "object"
+      },
+      "StartAIDiscussionInputSchema": {
+        "properties": {
+          "debate_id": {
+            "title": "Debate Id",
+            "type": "integer"
+          },
+          "desired_stance": {
+            "enum": [
+              -1,
+              1
+            ],
+            "title": "Desired Stance",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "debate_id",
+          "desired_stance"
+        ],
+        "title": "StartAIDiscussionInputSchema",
         "type": "object"
       },
       "MessageSchema": {

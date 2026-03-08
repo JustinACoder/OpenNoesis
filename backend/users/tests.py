@@ -1,9 +1,12 @@
 from django.test import Client
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.core.exceptions import ValidationError
+from django.conf import settings
 
 from ProjectOpenDebate.common.base_tests import BaseTestCase
 from ProjectOpenDebate.common.utils import reverse_lazy_api
+from ProjectOpenDebate.account_adapter import PostOfficeAccountAdapter
 from users.models import Profile
 
 User = get_user_model()
@@ -166,3 +169,15 @@ class ProfileModelTest(UserApiTestBase):
             # Check that profile was created
             self.assertTrue(hasattr(new_user, 'profile'))
             self.assertIsInstance(new_user.profile, Profile)
+
+
+class AccountAdapterReservationTest(BaseTestCase):
+    def test_ai_username_is_reserved(self):
+        adapter = PostOfficeAccountAdapter()
+        with self.assertRaises(ValidationError):
+            adapter.clean_username(settings.AI_BOT_USERNAME)
+
+    def test_ai_email_is_reserved(self):
+        adapter = PostOfficeAccountAdapter()
+        with self.assertRaises(ValidationError):
+            adapter.clean_email(settings.AI_BOT_EMAIL)

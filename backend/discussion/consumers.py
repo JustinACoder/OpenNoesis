@@ -1,11 +1,22 @@
+from asgiref.sync import sync_to_async
 from channels.db import database_sync_to_async
 from django.db.models import Q
 from pydantic import ValidationError
 import json
+import logging
 
 from ProjectOpenDebate.consumers import CustomBaseConsumer
-from .models import Discussion, Message
+from .models import Discussion, Message, DiscussionAIConfig
 from .schemas import MessageSchema, NewMessagePayload, ReadMessagesPayload
+from .tasks import generate_ai_reply_for_message
+
+logger = logging.getLogger(__name__)
+
+
+@sync_to_async(thread_sensitive=False)
+def enqueue_ai_reply_task(message_id: int):
+    generate_ai_reply_for_message.delay(message_id)
+
 
 class DiscussionConsumer(CustomBaseConsumer):
     """
@@ -63,6 +74,24 @@ class DiscussionConsumer(CustomBaseConsumer):
                     'message': message_data,
                 }
             )
+
+        # If this is an AI discussion and the human user sent the message,
+        # enqueue an AI response.
+        ai_config = await DiscussionAIConfig.objects.filter(discussion=discussion).values('bot_user_id').afirst()
+        if ai_config and message_instance.author_id != ai_config['bot_user_id']:
+            logger.info(
+                "Enqueuing AI reply for discussion_id=%s trigger_message_id=%s",
+                discussion.id,
+                message_instance.id,
+            )
+            try:
+                await enqueue_ai_reply_task(message_instance.id)
+            except Exception:
+                logger.exception(
+                    "Failed to enqueue AI reply for discussion_id=%s trigger_message_id=%s",
+                    discussion.id,
+                    message_instance.id,
+                )
 
     async def handle_read_messages(self, data):
         """

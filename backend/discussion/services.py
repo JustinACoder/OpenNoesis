@@ -1,14 +1,20 @@
 from datetime import datetime
 from typing import Optional, Literal
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import Q, F, BooleanField, When, Case, Value, Subquery, OuterRef, QuerySet, Count, Sum
 from django.db.models.functions import Greatest, Coalesce
 from django.shortcuts import get_object_or_404
 
-from discussion.models import Discussion, Message, ReadCheckpoint
+from discussion.ai import get_ai_bot_user
+from discussion.models import Discussion, Message, ReadCheckpoint, DiscussionAIConfig
 
 User = get_user_model()
+
+
+class AIServiceUnavailableError(ValueError):
+    pass
 
 
 class DiscussionService:
@@ -59,6 +65,11 @@ class DiscussionService:
                     Q(participant2=user) & Q(is_archived_for_p2=True),
                     then=Value(True)
                 ),
+                default=Value(False),
+                output_field=BooleanField()
+            ),
+            is_ai_discussion=Case(
+                When(ai_config__isnull=False, then=Value(True)),
                 default=Value(False),
                 output_field=BooleanField()
             ),
@@ -171,3 +182,30 @@ class DiscussionService:
 
         # Return 0 if no unread messages or if the query returned None
         return total_unread or 0
+
+    @staticmethod
+    def create_ai_discussion(user: User, debate_id: int, desired_stance: Literal[-1, 1]) -> Discussion:
+        from debate.models import Debate
+
+        if not settings.OPENAI_API_KEY.strip():
+            raise AIServiceUnavailableError("AI debates are currently unavailable.")
+
+        debate = get_object_or_404(Debate, id=debate_id)
+        user_stance = debate.get_stance(user)
+        if user_stance not in [-1, 1]:
+            raise ValueError("You need to set your stance before debating with AI.")
+
+        ai_user = get_ai_bot_user()
+        discussion = DiscussionService.create_discussion_and_readcheckpoints(
+            debate=debate,
+            participant1=user,
+            participant2=ai_user,
+        )
+        DiscussionAIConfig.objects.create(
+            discussion=discussion,
+            bot_user=ai_user,
+            ai_stance=desired_stance,
+            model=settings.OPENAI_MODEL,
+        )
+        discussion.warn_participants_of_new_discussion()
+        return discussion
