@@ -2,6 +2,7 @@ from datetime import datetime
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 from ProjectOpenDebate.consumers import get_user_group_name
 from channels.layers import get_channel_layer
@@ -82,6 +83,25 @@ class Discussion(models.Model):
         return f"Discussion between {self.participant1} and {self.participant2} on \"{self.debate.title}\""
 
 
+class DiscussionAIConfig(models.Model):
+    discussion = models.OneToOneField(Discussion, on_delete=models.CASCADE, related_name='ai_config')
+    bot_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ai_discussion_set')
+    ai_stance = models.SmallIntegerField(choices=[(1, 'FOR'), (-1, 'AGAINST')])
+    model = models.CharField(max_length=128)
+    last_openai_response_id = models.CharField(max_length=255, null=True, blank=True)
+    last_trigger_message = models.ForeignKey(
+        'Message',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='+',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"AI config for discussion {self.discussion_id} using model {self.model}"
+
+
 class Message(models.Model):
     discussion = models.ForeignKey(Discussion, on_delete=models.CASCADE)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -123,7 +143,11 @@ class ReadCheckpoint(models.Model):
 
         :return: The number of messages that were read
         """
-        last_message_read_created_at = self.last_message_read.created_at if self.last_message_read else datetime.min
+        last_message_read_created_at = (
+            self.last_message_read.created_at
+            if self.last_message_read
+            else timezone.make_aware(datetime.min, timezone.get_default_timezone())
+        )
 
         # Get the new last_message_read_id along with the number of messages that were read
         unread_messages = self.discussion.message_set.filter(created_at__gt=last_message_read_created_at)
@@ -133,7 +157,7 @@ class ReadCheckpoint(models.Model):
             # if read_at is not set, this means that we have opened the discussion for the first time
             # Therefore, we set read_at to the current time
             if self.read_at is None:
-                self.read_at = datetime.now()
+                self.read_at = timezone.now()
                 self.save()
             return 0
 
@@ -149,7 +173,7 @@ class ReadCheckpoint(models.Model):
         :param message: Message
         """
         self.last_message_read = message
-        self.read_at = datetime.now()
+        self.read_at = timezone.now()
         self.save()
 
     def __str__(self):

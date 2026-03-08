@@ -2,12 +2,20 @@ from typing import List, Literal, Optional
 
 from django.shortcuts import get_object_or_404
 from ninja import Router
+from ninja.errors import HttpError
 from ninja.pagination import paginate
 from ninja.security import django_auth
 
 from ProjectOpenDebate.common.utils import CursorPagination
-from discussion.schemas import MessageSchema, DiscussionSchema, ReadCheckpointSchema, ArchiveStatusInputSchema
-from discussion.services import DiscussionService
+from ProjectOpenDebate.common.metrics import monitor_api_operation
+from discussion.schemas import (
+    MessageSchema,
+    DiscussionSchema,
+    ReadCheckpointSchema,
+    ArchiveStatusInputSchema,
+    StartAIDiscussionInputSchema,
+)
+from discussion.services import DiscussionService, AIServiceUnavailableError
 
 # Initialize Ninja API
 router = Router(auth=django_auth)
@@ -32,6 +40,26 @@ def get_most_recent_discussion(request):
         return router.api.create_response(request, {"detail": "No active discussions found"}, status=404)
 
     return discussion
+
+
+@router.post("/ai/start", response=DiscussionSchema)
+@monitor_api_operation("discussion.ai_start")
+def start_ai_discussion(request, data: StartAIDiscussionInputSchema):
+    """
+    Start a new discussion against the AI debater.
+    """
+    try:
+        created_discussion = DiscussionService.create_ai_discussion(
+            user=request.auth,
+            debate_id=data.debate_id,
+            desired_stance=data.desired_stance,
+        )
+    except AIServiceUnavailableError as exc:
+        raise HttpError(503, str(exc))
+    except ValueError as exc:
+        raise HttpError(400, str(exc))
+
+    return get_object_or_404(DiscussionService.get_discussions_for_user(request.auth), pk=created_discussion.id)
 
 
 @router.get("/{int:discussion_id}", response=DiscussionSchema)

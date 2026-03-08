@@ -18,3 +18,4 @@ django-cors-headers~=4.9.0
 django-ses==4.7.0
 django-post-office==3.11.0
 django-prometheus==2.4.1
+openai==2.21.0

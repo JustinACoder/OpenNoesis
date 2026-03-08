@@ -204,6 +204,15 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# AI debate settings
+OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
+OPENAI_MODEL = env("OPENAI_MODEL", default="gpt-5-mini")
+OPENAI_TIMEOUT_SECONDS = env.int("OPENAI_TIMEOUT_SECONDS", default=15)
+AI_CONTEXT_COMPACTION_TRIGGER_TOKENS = env.int("AI_CONTEXT_COMPACTION_TRIGGER_TOKENS", default=8192)
+AI_MAX_OUTPUT_TOKENS = env.int("AI_MAX_OUTPUT_TOKENS", default=512)
+AI_BOT_USERNAME = env("AI_BOT_USERNAME", default="opennoesis_ai")
+AI_BOT_EMAIL = env("AI_BOT_EMAIL", default="ai@opennoesis.local")
+
 # Allauth settings
 HEADLESS_ONLY = True
 ACCOUNT_ADAPTER = "ProjectOpenDebate.account_adapter.PostOfficeAccountAdapter"
@@ -223,6 +232,7 @@ ACCOUNT_USERNAME_BLACKLIST = [
 
     # The 'me' username is used to redirect to the current user's profile
     'me',
+    AI_BOT_USERNAME.lower(),
 ]
 # USERSESSIONS_TRACK_ACTIVITY = True  # See https://docs.allauth.org/en/dev/usersessions/installation.html if you want to track user sessions
 
@@ -275,7 +285,7 @@ AWS_SES_REGION_NAME = env("AWS_SES_REGION_NAME", default="us-east-1")
 AWS_SES_REGION_ENDPOINT = env("AWS_SES_REGION_ENDPOINT", default=f"email.{AWS_SES_REGION_NAME}.amazonaws.com")
 
 EMAIL_SUBJECT_PREFIX = env("EMAIL_SUBJECT_PREFIX", default='[OpenNoesis] ')
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@opennoesis.com")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="OpenNoesis <noreply@opennoesis.com>")
 
 # Admins
 ADMINS = [

@@ -137,6 +137,7 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    scrollbar-color: var(--secondary) transparent;
   }
   html,
   body {

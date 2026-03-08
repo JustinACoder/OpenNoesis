@@ -111,18 +111,16 @@ const InviteSuccessPage = async ({ invite }: InviteSuccessPageProps) => {
                     <InviteActions invite={invite} />
                   </div>
                   <div>
-                    <Link
-                      href={`/d/${invite.debate.slug}`}
-                      target="_blank"
-                      className={"block"}
-                    >
-                      <Button variant={"outline"} className="h-16" asChild>
-                        <div className="flex items-center gap-2">
-                          View Debate
-                          <ExternalLink className="w-4 h-4" />
-                        </div>
-                      </Button>
-                    </Link>
+                    <Button variant={"outline"} className="h-16" asChild>
+                      <Link
+                        href={`/d/${invite.debate.slug}`}
+                        target="_blank"
+                        className="flex items-center gap-2"
+                      >
+                        View Debate
+                        <ExternalLink className="w-4 h-4" />
+                      </Link>
+                    </Button>
                   </div>
                 </div>
                 {user.is_authenticated ? (

@@ -43,6 +43,9 @@ export default function PrivacyPage() {
               <li>Profile data you provide: bio.</li>
               <li>Public debate content: debates, comments, votes, and stances.</li>
               <li>Private discussion data: messages, read states, and discussion metadata.</li>
+              <li>
+                AI discussion data: messages and related context needed to generate AI replies.
+              </li>
               <li>Invite, pairing, and notification metadata needed for platform features.</li>
               <li>Security/session data: framework session and CSRF cookies.</li>
               <li>Infrastructure log data used for operation and security.</li>
@@ -61,6 +64,7 @@ export default function PrivacyPage() {
             <h2 className="text-2xl font-semibold">How We Use Information</h2>
             <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
               <li>To run core features (debates, comments, invites, pairing, discussions).</li>
+              <li>To generate responses when you use AI discussion features.</li>
               <li>To authenticate users and keep accounts secure.</li>
               <li>To send account and security-related emails.</li>
               <li>To deliver notifications and real-time updates.</li>
@@ -81,7 +85,8 @@ export default function PrivacyPage() {
             <p className="text-muted-foreground">
               We do not sell user data. We only share data as needed with infrastructure/service
               providers that run OpenNoesis (including Cloudflare, hosting infrastructure in NYC1,
-              and AWS SES for email), for legal/safety obligations, or during a business transfer.
+              AWS SES for email, and OpenAI for AI discussion processing), for legal/safety
+              obligations, or during a business transfer.
             </p>
           </section>
 
@@ -124,8 +129,8 @@ export default function PrivacyPage() {
             <h2 className="text-2xl font-semibold">Cross-Border Processing</h2>
             <p className="text-muted-foreground">
               Depending on where you are located, our infrastructure providers (including
-              Cloudflare, hosting providers, and AWS SES) may process data outside your province,
-              state, or country.
+              Cloudflare, hosting providers, AWS SES, and OpenAI when AI discussions are used) may
+              process data outside your province, state, or country.
             </p>
           </section>
 

@@ -37,6 +37,19 @@ export default function TermsPage() {
           </section>
 
           <section className="space-y-4">
+            <h2 className="text-2xl font-semibold">Temporary Pricing Notice</h2>
+            <p className="text-muted-foreground">
+              At this time, AI discussion features are free and available
+              without usage limits.
+            </p>
+            <p className="text-muted-foreground">
+              We may introduce paid plans in the future. If that changes, we
+              will provide advance notice before new limits or pricing take
+              effect.
+            </p>
+          </section>
+
+          <section className="space-y-4">
             <h2 className="text-2xl font-semibold">Eligibility</h2>
             <p className="text-muted-foreground">
               You must be at least 13 years old to use OpenNoesis. If you are under the age of
@@ -66,12 +79,24 @@ export default function TermsPage() {
               <li>Public comments</li>
               <li>Voting and stance participation</li>
               <li>Private 1-on-1 discussions</li>
+              <li>AI-assisted 1-on-1 discussions</li>
               <li>Pairing and invite-based matching</li>
               <li>Notifications</li>
             </ul>
             <p className="text-muted-foreground">
               Features may change over time. We may add, remove, pause, or modify features without
               guaranteeing advance notice.
+            </p>
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="text-2xl font-semibold">AI Discussions</h2>
+            <p className="text-muted-foreground">
+              If you start a discussion with an AI opponent, messages in that discussion are sent
+              to our AI processing provider (OpenAI) to generate responses and run the feature.
+            </p>
+            <p className="text-muted-foreground">
+              Do not include highly sensitive personal information in AI discussions.
             </p>
           </section>
 

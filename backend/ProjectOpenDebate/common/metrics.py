@@ -32,6 +32,12 @@ WS_EVENT_DURATION_SECONDS = Histogram(
 )
 
 
+def record_api_operation(operation: str, status: str, duration_seconds: float = 0.0) -> None:
+    """Records API operation success/error and latency metrics."""
+    API_OPERATION_TOTAL.labels(operation=operation, status=status).inc()
+    API_OPERATION_DURATION_SECONDS.labels(operation=operation, status=status).observe(duration_seconds)
+
+
 def monitor_api_operation(operation: str):
     """Decorator for recording operation-level API success/error and latency metrics."""
 
@@ -47,8 +53,7 @@ def monitor_api_operation(operation: str):
                 raise
             finally:
                 duration = perf_counter() - start
-                API_OPERATION_TOTAL.labels(operation=operation, status=status).inc()
-                API_OPERATION_DURATION_SECONDS.labels(operation=operation, status=status).observe(duration)
+                record_api_operation(operation=operation, status=status, duration_seconds=duration)
 
         return wrapper
 
