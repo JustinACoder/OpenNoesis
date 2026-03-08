@@ -114,7 +114,6 @@ export const DiscussionList = ({
   return (
     <div
       className={"flex flex-col overflow-y-auto p-2 shadow-xl h-full flex-1"}
-      style={{ scrollbarColor: "var(--secondary) transparent" }}
       onScroll={handleScroll}
     >
       <div className="p-4">
