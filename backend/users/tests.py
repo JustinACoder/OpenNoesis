@@ -1,10 +1,14 @@
-from django.test import Client
+from allauth.account.models import EmailAddress
+from allauth.account.signals import user_logged_in, user_signed_up
+from django.contrib.sessions.middleware import SessionMiddleware
+from django.test import Client, RequestFactory
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from django.conf import settings
 
 from ProjectOpenDebate.common.base_tests import BaseTestCase
+from ProjectOpenDebate.common.metrics import API_OPERATION_TOTAL
 from ProjectOpenDebate.common.utils import reverse_lazy_api
 from ProjectOpenDebate.account_adapter import PostOfficeAccountAdapter
 from users.models import Profile
@@ -169,6 +173,59 @@ class ProfileModelTest(UserApiTestBase):
             # Check that profile was created
             self.assertTrue(hasattr(new_user, 'profile'))
             self.assertIsInstance(new_user.profile, Profile)
+
+
+class AuthMetricsSignalTest(BaseTestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def _get_metric_count(self, operation: str) -> float:
+        return API_OPERATION_TOTAL.labels(operation=operation, status="success")._value.get()
+
+    def _build_request(self, user: User):
+        request = self.factory.get("/")
+        middleware = SessionMiddleware(lambda req: None)
+        middleware.process_request(request)
+        request.session.save()
+        request.user = user
+        return request
+
+    def test_signup_signal_records_metric(self):
+        user = User.objects.create_user(
+            username='signupuser',
+            email='signup@example.com',
+            password='password123'
+        )
+
+        start_count = self._get_metric_count("auth.signup")
+        request = self._build_request(user)
+        user_signed_up.send(sender=User, request=request, user=user)
+        self.assertEqual(self._get_metric_count("auth.signup"), start_count + 1)
+
+    def test_login_metric_only_counts_verified_email(self):
+        verified_user = User.objects.create_user(
+            username='verifieduser',
+            email='verified@example.com',
+            password='password123'
+        )
+        EmailAddress.objects.create(user=verified_user, email=verified_user.email, verified=True, primary=True)
+
+        start_count = self._get_metric_count("auth.login")
+        verified_request = self._build_request(verified_user)
+        user_logged_in.send(sender=User, request=verified_request, user=verified_user)
+        self.assertEqual(self._get_metric_count("auth.login"), start_count + 1)
+
+        unverified_user = User.objects.create_user(
+            username='unverifieduser',
+            email='unverified@example.com',
+            password='password123'
+        )
+        EmailAddress.objects.create(user=unverified_user, email=unverified_user.email, verified=False, primary=True)
+
+        unverified_start = self._get_metric_count("auth.login")
+        unverified_request = self._build_request(unverified_user)
+        user_logged_in.send(sender=User, request=unverified_request, user=unverified_user)
+        self.assertEqual(self._get_metric_count("auth.login"), unverified_start)
 
 
 class AccountAdapterReservationTest(BaseTestCase):
