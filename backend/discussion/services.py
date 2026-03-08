@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Q, F, BooleanField, When, Case, Value, Subquery, OuterRef, QuerySet, Count, Sum
 from django.db.models.functions import Greatest, Coalesce
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 from discussion.ai import get_ai_bot_user
 from discussion.models import Discussion, Message, ReadCheckpoint, DiscussionAIConfig
@@ -172,7 +173,12 @@ class DiscussionService:
             .annotate(
                 unread_count=Count(
                     'message',
-                    filter=Q(message__created_at__gt=Coalesce(Subquery(last_read_timestamp), datetime.min))
+                    filter=Q(
+                        message__created_at__gt=Coalesce(
+                            Subquery(last_read_timestamp),
+                            timezone.make_aware(datetime.min, timezone.get_default_timezone()),
+                        )
+                    )
                 )
             )
         )
