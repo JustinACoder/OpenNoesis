@@ -131,7 +131,7 @@ export function useWebSocket({
     if (!autoConnect) return;
     if (typeof window === "undefined") return;
 
-    const handleFocusOrVisibility = () => {
+    const attemptReconnect = () => {
       if (authStatus !== "authenticated") return;
 
       const mgr = getManager();
@@ -141,15 +141,21 @@ export function useWebSocket({
       }
     };
 
-    window.addEventListener("focus", handleFocusOrVisibility);
-    document.addEventListener("visibilitychange", handleFocusOrVisibility);
+    const handleFocus = () => {
+      attemptReconnect();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      attemptReconnect();
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      window.removeEventListener("focus", handleFocusOrVisibility);
-      document.removeEventListener(
-        "visibilitychange",
-        handleFocusOrVisibility,
-      );
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [autoConnect, authStatus, getManager]);
 
