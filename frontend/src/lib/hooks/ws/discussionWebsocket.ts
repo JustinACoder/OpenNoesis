@@ -56,6 +56,7 @@ class DiscussionWebSocketManager {
   private openedDiscussionId: number | null = null;
   private wsManager: WebSocketManager;
   private hasInitialized: boolean = false;
+  private discussionHandlerCleanup: (() => void) | null = null;
   private queryClient: QueryClient | null = null;
 
   private constructor() {
@@ -79,12 +80,19 @@ class DiscussionWebSocketManager {
       this.openedDiscussionId = openedDiscussionId;
     }
 
-    if (this.hasInitialized) return;
+    // Always ensure the discussion handler is registered (it may have been cleared on disconnect)
+    if (this.discussionHandlerCleanup) {
+      this.discussionHandlerCleanup();
+      this.discussionHandlerCleanup = null;
+    }
 
     // Set up the single internal handler for discussion messages
-    this.wsManager.addStreamHandler("discussion", (payload) => {
-      this.handleMessage(payload);
-    });
+    this.discussionHandlerCleanup = this.wsManager.addStreamHandler(
+      "discussion",
+      (payload) => {
+        this.handleMessage(payload);
+      },
+    );
 
     this.hasInitialized = true;
   }
@@ -321,6 +329,11 @@ export function useDiscussionWebSocket({
     onDisconnect,
     autoConnect: true,
   });
+
+  // Ensure discussion handler is re-registered after reconnects/auth cycles
+  useEffect(() => {
+    discussionManager.current.initialize(discussionId);
+  }, [connectionStatus, discussionId]);
 
   useEffect(() => {
     // Subscribe to discussion-specific events
