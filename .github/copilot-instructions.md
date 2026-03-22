@@ -34,7 +34,7 @@ Read the relevant files based on your task:
 | Celery + Redis | Async task queue with django-celery-beat |
 | PostgreSQL | Database (GIN indexes, advisory locks, full-text search) |
 | django-allauth | Authentication (headless mode, session-based) |
-| django-ses | AWS SES email via HTTP (bypasses SMTP port restrictions) |
+| django-anymail + Resend + django-post-office | Transactional email via HTTP API with queued delivery |
 
 ### Frontend
 
@@ -256,7 +256,7 @@ The `deploy` job uses a GitHub Actions **environment** called `production` with 
 - `ENV`: `dev` or `prod`
 - `SECRET_KEY`, `POSTGRES_*`, `REDIS_*`
 - `FRONTEND_URL` for allauth email links
-- `EMAIL_*` for SMTP config
+- `RESEND_API_KEY`, `DEFAULT_FROM_EMAIL`, and optional `POST_OFFICE_DELIVERY_BACKEND` for Anymail-based email delivery
 - See `backend/.env.example` for full list
 
 **Frontend** (`frontend/.env`):

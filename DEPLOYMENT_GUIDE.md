@@ -160,12 +160,11 @@ DB_PASSWORD=secure-database-password-here
 REDIS_PASSWORD=secure-redis-password-here
 
 # Email Configuration
-EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USE_TLS=True
-EMAIL_HOST_USER=your-email@gmail.com
-EMAIL_HOST_PASSWORD=your-gmail-app-password
+# Anymail uses Resend's HTTPS API, so it avoids SMTP port restrictions on VPS providers.
+RESEND_API_KEY=re_your_resend_api_key
+DEFAULT_FROM_EMAIL="OpenNoesis <noreply@opennoesis.com>"
+# Optional override if you swap away from Resend later:
+# POST_OFFICE_DELIVERY_BACKEND=anymail.backends.resend.EmailBackend
 
 # Frontend URL
 FRONTEND_URL=https://yourdomain.com
