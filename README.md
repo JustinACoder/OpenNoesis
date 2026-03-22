@@ -6,7 +6,7 @@ OpenNoesis is a real-time debate platform where users can engage in structured d
 
 | Layer | Technologies |
 |-------|-------------|
-| **Backend** | Django 5.2, Django Ninja, Django Channels, Celery, PostgreSQL, Redis |
+| **Backend** | Django 5.2, Django Ninja, Django Channels, Celery, PostgreSQL, Redis, django-anymail, Resend |
 | **Frontend** | Next.js 15, React 19, TypeScript, TanStack Query, shadcn/ui, TailwindCSS |
 
 ## Project Structure

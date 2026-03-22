@@ -85,7 +85,7 @@ export default function PrivacyPage() {
             <p className="text-muted-foreground">
               We do not sell user data. We only share data as needed with infrastructure/service
               providers that run OpenNoesis (including Cloudflare, hosting infrastructure in NYC1,
-              AWS SES for email, and OpenAI for AI discussion processing), for legal/safety
+              Resend for transactional email delivery, and OpenAI for AI discussion processing), for legal/safety
               obligations, or during a business transfer.
             </p>
           </section>
@@ -129,7 +129,7 @@ export default function PrivacyPage() {
             <h2 className="text-2xl font-semibold">Cross-Border Processing</h2>
             <p className="text-muted-foreground">
               Depending on where you are located, our infrastructure providers (including
-              Cloudflare, hosting providers, AWS SES, and OpenAI when AI discussions are used) may
+              Cloudflare, hosting providers, Resend, and OpenAI when AI discussions are used) may
               process data outside your province, state, or country.
             </p>
           </section>
