@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowUp, ArrowDown, Minus, User } from "lucide-react";
 import { DebateSchema, type StanceDirectionEnum } from "@/lib/models";
-import { Box } from "./ui/box";
 
 interface DebateCardProps extends DebateSchema {
   target_user_stance?: StanceDirectionEnum;
@@ -44,52 +43,36 @@ export const DebateCard = (props: DebateCardProps) => {
     return stance === 1 || stance === -1;
   };
 
+  const stanceAccent =
+    user_stance === 1
+      ? "var(--primary)"
+      : user_stance === -1
+        ? "var(--destructive)"
+        : "rgba(255,255,255,0.12)";
+
   return (
     <Link href={`/d/${slug}`} className="block group">
-      <Box
-        className={`overflow-hidden flex flex-col h-full relative ${
-          hasStanceSet(user_stance) ? "border-l-4" : ""
-        }`}
-        style={
-          hasStanceSet(user_stance)
-            ? {
-                borderLeftColor:
-                  user_stance === 1 ? "var(--primary)" : "var(--destructive)",
-              }
-            : {}
-        }
-        hover={true}
+      <article
+        className="relative flex h-full flex-col gap-3"
       >
-        <div className="p-5 space-y-4 flex-1">
-          {/* Top section with badge, target user stance, and vote score */}
-          <div className="flex justify-between items-center">
+        <div
+          className="relative aspect-[2/1] overflow-hidden rounded-2xl border border-border/60 transition-transform duration-300 ease-out group-hover:scale-[1.02]"
+          style={{
+            backgroundImage: `linear-gradient(135deg, color-mix(in oklab, ${stanceAccent} 22%, var(--card)) 0%, color-mix(in oklab, ${stanceAccent} 10%, var(--background)) 100%)`,
+          }}
+        >
+          <div className="absolute inset-0 opacity-70">
+            <div className="absolute -left-10 top-0 h-24 w-24 rounded-full bg-white/8 blur-2xl" />
+            <div className="absolute bottom-0 right-0 h-28 w-28 rounded-full bg-black/12 blur-2xl" />
+          </div>
+          <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3">
+            <span className="rounded-full bg-black/25 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/88 backdrop-blur-sm">
+              Debate
+            </span>
             <div className="flex items-center gap-2">
-              <span className="bg-amber-500 text-gray-900 text-xs font-bold px-2 py-1 rounded">
-                Debate
-              </span>
-              {/* Current user stance indicator (subtle text) */}
-              {hasStanceSet(user_stance) && (
-                <span
-                  className={`text-xs px-2 py-1 rounded-full ${
-                    user_stance === 1
-                      ? "bg-primary/20 text-primary"
-                      : "bg-destructive/20 text-destructive"
-                  }`}
-                >
-                  You: {getStanceText(user_stance)}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Target user stance indicator */}
               {hasStanceSet(target_user_stance) && (
                 <div
-                  className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${
-                    target_user_stance === 1
-                      ? "bg-primary/20 text-primary"
-                      : "bg-destructive/20 text-destructive"
-                  }`}
+                  className="flex items-center gap-1 rounded-full bg-black/25 px-2.5 py-1 text-xs font-medium text-white/88 backdrop-blur-sm"
                   title={
                     target_user_name
                       ? `${target_user_name} is ${getStanceText(target_user_stance)}`
@@ -100,53 +83,66 @@ export const DebateCard = (props: DebateCardProps) => {
                   <span>{getStanceText(target_user_stance)}</span>
                 </div>
               )}
-
-              {/* Vote score */}
-              <div className="flex items-center text-sm text-gray-400 gap-1">
+              <div className="flex items-center gap-1 rounded-full bg-black/25 px-2.5 py-1 text-xs font-medium text-white/88 backdrop-blur-sm">
                 {vote_score > 0 ? (
-                  <ArrowUp className="w-4 h-4" />
+                  <ArrowUp className="w-3.5 h-3.5" />
                 ) : vote_score < 0 ? (
-                  <ArrowDown className="w-4 h-4" />
+                  <ArrowDown className="w-3.5 h-3.5" />
                 ) : (
-                  <Minus className="w-4 h-4" />
+                  <Minus className="w-3.5 h-3.5" />
                 )}
                 <span>{vote_score}</span>
               </div>
             </div>
           </div>
-
-          {/* Title & description */}
-          <div>
-            <h3 className="text-lg font-semibold text-white group-hover:text-primary transition-colors line-clamp-2 text-ellipsis">
-              {title}
-            </h3>
-            <time
-              dateTime={date}
-              className="block text-xs text-gray-400 mt-1 mb-2"
-            >
+          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-3">
+            {hasStanceSet(user_stance) ? (
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-medium backdrop-blur-sm ${
+                  user_stance === 1
+                    ? "bg-primary/20 text-primary-foreground"
+                    : "bg-destructive/20 text-white"
+                }`}
+              >
+                You: {getStanceText(user_stance)}
+              </span>
+            ) : (
+              <span className="text-xs text-white/72">Open discussion</span>
+            )}
+            <time dateTime={date} className="text-xs text-white/72">
               {formattedDate}
             </time>
-            <p className="text-sm text-gray-300 line-clamp-3 text-ellipsis">
+          </div>
+        </div>
+
+        <div className="flex flex-1 flex-col gap-3 px-1">
+          <div className="space-y-2">
+            <h3 className="line-clamp-2 text-lg font-semibold text-foreground text-ellipsis transition-colors group-hover:text-primary">
+              {title}
+            </h3>
+            <p className="line-clamp-3 text-sm leading-6 text-muted-foreground text-ellipsis">
               {description_preview}
             </p>
           </div>
-        </div>
 
-        {/* For/Against progress section with percentage labels */}
-        <div>
-          <div className="flex justify-between text-xs text-gray-400 mb-1">
-            <span className="w-1/2 text-center">{forPercent}% for</span>
-            <span className="w-1/2 text-center">{againstPercent}% against</span>
-          </div>
-          <div className="flex h-1.5 w-full overflow-hidden rounded-full">
-            <div className="bg-primary" style={{ width: `${forPercent}%` }} />
-            <div
-              className="bg-destructive"
-              style={{ width: `${againstPercent}%` }}
-            />
+          <div className="mt-auto space-y-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <span>{forPercent}% for</span>
+              <span>{againstPercent}% against</span>
+              <span>
+                {totalStances} stance{totalStances === 1 ? "" : "s"}
+              </span>
+            </div>
+            <div className="flex h-1.5 w-full overflow-hidden rounded-full">
+              <div className="bg-primary/90" style={{ width: `${forPercent}%` }} />
+              <div
+                className="bg-destructive/90"
+                style={{ width: `${againstPercent}%` }}
+              />
+            </div>
           </div>
         </div>
-      </Box>
+      </article>
     </Link>
   );
 };
