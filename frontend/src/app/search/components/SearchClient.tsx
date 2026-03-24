@@ -13,6 +13,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { Separator } from "@/components/ui/separator";
 import { useDebateApiSearchDebates } from "@/lib/api/debate";
 import { PagedDebateSchema } from "@/lib/models";
 
@@ -57,7 +58,7 @@ const SearchClient = ({
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto max-w-screen-2xl px-4 py-6 sm:px-6 sm:py-8">
       {/* Search Results Header */}
       <div className="mb-8">
         {query ? (
@@ -74,6 +75,7 @@ const SearchClient = ({
           </>
         )}
       </div>
+      <Separator className="mb-8" />
 
       {/* Results Section */}
       <div className="space-y-6">
