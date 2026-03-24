@@ -18,7 +18,6 @@ import {
   useDebateApiSearchDebates,
 } from "@/lib/api/debate";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
   FormDescription,
@@ -164,19 +163,34 @@ export function CreateDebateForm() {
   };
 
   return (
-    <div className="mx-auto grid w-full max-w-5xl gap-6 lg:grid-cols-[1fr_360px]">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-2xl">
-            <SquarePen className="h-5 w-5" />
-            Create a Debate
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Debates are the core of OpenNoesis. Start one with a clear proposition and enough context for people to take a stance.
-          </p>
-        </CardHeader>
+    <div className="mx-auto grid w-full max-w-6xl gap-10 lg:grid-cols-[minmax(0,1fr)_320px] xl:gap-14">
+      <aside className="order-first lg:order-last lg:sticky lg:top-24 lg:h-fit">
+        <section className="space-y-4 rounded-2xl border border-border/55 bg-background/35 p-5">
+          <div className="flex items-center gap-2 text-lg font-semibold">
+            <Lightbulb className="h-5 w-5" />
+            <h2>How to Make It Great</h2>
+          </div>
+          <ul className="space-y-3 text-sm leading-6 text-muted-foreground">
+            {guidanceItems.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </section>
+      </aside>
 
-        <CardContent className="space-y-5">
+      <div className="order-last space-y-8 lg:order-first">
+        <header className="space-y-3">
+          <div className="flex items-center gap-2 text-2xl font-semibold">
+            <SquarePen className="h-5 w-5" />
+            <h1>Create a Debate</h1>
+          </div>
+          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+            Start with a clear proposition and enough context for people to
+            take a stance.
+          </p>
+        </header>
+
+        <div className="space-y-8">
           {submitError && (
             <Alert variant="destructive">
               <AlertCircleIcon />
@@ -185,15 +199,18 @@ export function CreateDebateForm() {
             </Alert>
           )}
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Need inspiration? Use a template:</p>
-            <div className="flex flex-col gap-2 md:flex-row md:flex-wrap">
+          <section className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Lightbulb className="h-4 w-4" />
+              <p className="text-sm font-medium">Quick starts</p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               {templates.map((template, index) => (
                 <Button
                   key={index}
                   type="button"
-                  variant="outline"
-                  className="justify-start"
+                  variant="ghost"
+                  className="justify-start border border-border/60 bg-background/40"
                   onClick={() => applyTemplate(template)}
                   disabled={isSubmitting}
                 >
@@ -201,9 +218,9 @@ export function CreateDebateForm() {
                 </Button>
               ))}
             </div>
-          </div>
+          </section>
 
-          <section className="space-y-2.5">
+          <section className="space-y-3 rounded-2xl border border-border/60 bg-secondary/35 p-5">
             <div className="flex items-center gap-1.5">
               <Search className="h-4 w-4 shrink-0" />
               <p className="text-sm font-medium">Duplicate Check</p>
@@ -221,12 +238,12 @@ export function CreateDebateForm() {
                     <p className="text-sm font-medium text-muted-foreground">
                       Similar existing debates
                     </p>
-                    <ul className="space-y-1.5">
+                    <ul className="space-y-2">
                       {topSimilarDebates.map((debate) => (
-                        <li key={debate.id}>
+                        <li key={debate.id} className="text-sm text-muted-foreground">
                           <Link
                             href={`/d/${debate.slug}`}
-                            className="inline-block text-sm underline text-primary"
+                            className="inline-block text-primary underline underline-offset-4"
                           >
                             {debate.title}
                           </Link>
@@ -256,18 +273,24 @@ export function CreateDebateForm() {
           </section>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <section className="space-y-6">
+                <div className="space-y-1">
+                  <h2 className="text-lg font-semibold">Write the debate</h2>
+                </div>
+
               <FormField
                 control={form.control}
                 name="title"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="gap-3">
                     <FormLabel>Debate Proposition</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="Cities should ban cars from downtown areas"
                         maxLength={100}
                         disabled={isSubmitting}
+                        className="h-11 rounded-xl border-border/60 bg-background/40 shadow-none focus-visible:ring-0"
                         {...field}
                       />
                     </FormControl>
@@ -290,12 +313,12 @@ export function CreateDebateForm() {
                 control={form.control}
                 name="description"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="gap-3">
                     <FormLabel>Context</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Explain why this matters and what tradeoffs people should focus on..."
-                        className="min-h-44"
+                        className="min-h-52 rounded-2xl border-border/60 bg-background/40 px-4 py-3 shadow-none focus-visible:ring-0"
                         maxLength={8000}
                         disabled={isSubmitting}
                         {...field}
@@ -308,11 +331,13 @@ export function CreateDebateForm() {
                   </FormItem>
                 )}
               />
+              </section>
+
               <FormField
                 control={form.control}
                 name="hasSearchedForDuplicates"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="rounded-2xl border border-border/50 bg-background/35 p-4">
                     <div className="flex items-start space-x-3">
                       <FormControl>
                         <Checkbox
@@ -335,39 +360,25 @@ export function CreateDebateForm() {
                 )}
               />
 
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Creating debate...
-                  </>
-                ) : (
-                  <>
-                    <SquarePen className="h-4 w-4" />
-                    Publish Debate
-                  </>
-                )}
-              </Button>
+              <div className="flex justify-end rounded-2xl bg-background/25 px-4 py-4">
+                <Button type="submit" disabled={isSubmitting} className="shrink-0">
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Creating debate...
+                    </>
+                  ) : (
+                    <>
+                      <SquarePen className="h-4 w-4" />
+                      Publish Debate
+                    </>
+                  )}
+                </Button>
+              </div>
             </form>
           </Form>
-        </CardContent>
-      </Card>
-
-      <Card className="h-fit">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Lightbulb className="h-5 w-5" />
-            How to Make It Great
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-2 text-sm text-muted-foreground">
-            {guidanceItems.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
