@@ -20,7 +20,7 @@ const SettingsTabsAndContent = ({ children }: SettingsTabsAndContentProps) => {
 
   return (
     <Tabs value={currentTab} onValueChange={redirectToTab} className="w-full">
-      <TabsList>
+      <TabsList className="w-full">
         <TabsTrigger value="profile">Profile</TabsTrigger>
         <TabsTrigger value="account">Account</TabsTrigger>
         <TabsTrigger value="security">Security</TabsTrigger>
