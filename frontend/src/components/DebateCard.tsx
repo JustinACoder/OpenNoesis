@@ -84,13 +84,13 @@ export const DebateCard = (props: DebateCardProps) => {
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/42 via-black/12 to-black/10" />
           <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3">
-            <span className="rounded-full bg-black/25 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/88 backdrop-blur-sm">
+            <span className="rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/88">
               Debate
             </span>
             <div className="flex items-center gap-2">
               {hasStanceSet(target_user_stance) && (
                 <div
-                  className="flex items-center gap-1 rounded-full bg-black/25 px-2.5 py-1 text-xs font-medium text-white/88 backdrop-blur-sm"
+                  className="flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-xs font-medium text-white/88"
                   title={
                     target_user_name
                       ? `${target_user_name} is ${getStanceText(target_user_stance)}`
@@ -101,7 +101,7 @@ export const DebateCard = (props: DebateCardProps) => {
                   <span>{getStanceText(target_user_stance)}</span>
                 </div>
               )}
-              <div className="flex items-center gap-1 rounded-full bg-black/25 px-2.5 py-1 text-xs font-medium text-white/88 backdrop-blur-sm">
+              <div className="flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-xs font-medium text-white/88">
                 {vote_score > 0 ? (
                   <ArrowUp className="w-3.5 h-3.5" />
                 ) : vote_score < 0 ? (
@@ -116,10 +116,10 @@ export const DebateCard = (props: DebateCardProps) => {
           <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-3">
             {hasStanceSet(user_stance) ? (
               <span
-                className={`rounded-full px-2.5 py-1 text-xs font-medium backdrop-blur-sm ${
+                className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                   user_stance === 1
-                    ? "bg-primary/20 text-primary-foreground"
-                    : "bg-destructive/20 text-white"
+                    ? "bg-primary/70 text-primary-foreground"
+                    : "bg-destructive/70 text-white"
                 }`}
               >
                 You: {getStanceText(user_stance)}
