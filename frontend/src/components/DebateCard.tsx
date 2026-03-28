@@ -119,7 +119,7 @@ export const DebateCard = (props: DebateCardProps) => {
                 You: {getStanceText(user_stance)}
               </span>
             ) : (
-              <span className="text-xs text-white/72">Open discussion</span>
+              <span className="text-xs text-white/72">No stance yet</span>
             )}
             <time dateTime={date} className="text-xs text-white/72">
               {formattedDate}
