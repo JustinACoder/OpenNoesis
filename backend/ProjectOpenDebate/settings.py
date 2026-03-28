@@ -5,6 +5,7 @@ from django.contrib import messages
 import os
 import environ
 from django.urls import reverse
+from urllib.parse import urlparse
 
 env = environ.Env()
 
@@ -48,6 +49,7 @@ INSTALLED_APPS = [
     'django_celery_results',
     'django_celery_beat',
     'post_office',
+    'storages',
     'debate.apps.DebateConfig',
     'users.apps.UsersConfig',
     'discussion.apps.DiscussionConfig',
@@ -201,12 +203,45 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+R2_ACCOUNT_ID = env("R2_ACCOUNT_ID")
+R2_BUCKET_NAME = env("R2_BUCKET_NAME")
+R2_ACCESS_KEY_ID = env("R2_ACCESS_KEY_ID")
+R2_SECRET_ACCESS_KEY = env("R2_SECRET_ACCESS_KEY")
+R2_REGION = env("R2_REGION", default="auto")
+R2_PUBLIC_BASE_URL = env("R2_PUBLIC_BASE_URL").rstrip("/")
+parsed_r2_public_url = urlparse(R2_PUBLIC_BASE_URL)
+
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": R2_BUCKET_NAME,
+            "access_key": R2_ACCESS_KEY_ID,
+            "secret_key": R2_SECRET_ACCESS_KEY,
+            "endpoint_url": f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
+            "querystring_auth": False,
+            "file_overwrite": False,
+            "custom_domain": parsed_r2_public_url.netloc,
+            "url_protocol": f"{parsed_r2_public_url.scheme}:",
+        },
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Image Settings
+DEBATE_IMAGE_MAX_BYTES = env.int("DEBATE_IMAGE_MAX_BYTES", default=10 * 1024 * 1024)
+DEBATE_IMAGE_MAX_PIXELS = env.int("DEBATE_IMAGE_MAX_PIXELS", default=12_000_000)
+DEBATE_IMAGE_MIN_ASPECT_RATIO = env.float("DEBATE_IMAGE_MIN_ASPECT_RATIO", default=0.5)
+DEBATE_IMAGE_MAX_ASPECT_RATIO = env.float("DEBATE_IMAGE_MAX_ASPECT_RATIO", default=3.0)
 
 # AI debate settings
 OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
 OPENAI_MODEL = env("OPENAI_MODEL", default="gpt-5-mini")
+OPENAI_MODERATION_MODEL = env("OPENAI_MODERATION_MODEL", default="omni-moderation-latest")
 OPENAI_TIMEOUT_SECONDS = env.int("OPENAI_TIMEOUT_SECONDS", default=15)
 AI_CONTEXT_COMPACTION_TRIGGER_TOKENS = env.int("AI_CONTEXT_COMPACTION_TRIGGER_TOKENS", default=8192)
 AI_MAX_OUTPUT_TOKENS = env.int("AI_MAX_OUTPUT_TOKENS", default=512)

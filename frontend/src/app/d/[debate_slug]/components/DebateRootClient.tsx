@@ -18,6 +18,7 @@ import {
   useDebateApiGetDebate,
   useDebateApiGetDebateSuggestions,
 } from "@/lib/api/debate";
+import { ImageWithFallback } from "@/components/ImageWithFallback";
 
 interface DebateRootClientProps {
   debateSlug: string;
@@ -100,6 +101,19 @@ const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
                   ) : null}
                 </div>
               </div>
+
+              {debate.image_url ? (
+                <div className="relative aspect-[2/1] overflow-hidden rounded-2xl border border-border/60">
+                  <ImageWithFallback
+                    key={debate.image_url}
+                    src={debate.image_url}
+                    alt={debate.title}
+                    fill
+                    sizes="(max-width: 1023px) 100vw, 66vw"
+                    className="object-cover"
+                  />
+                </div>
+              ) : null}
 
               {/* Description */}
               <p className="text-sm leading-7 text-muted-foreground text-pretty whitespace-pre-line md:text-base">

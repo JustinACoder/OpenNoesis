@@ -3,8 +3,9 @@ from typing import List
 from django.db import IntegrityError
 from django.db.models import Q, F, Subquery, OuterRef
 from django.db.models.functions import Coalesce
-from ninja import Router
+from ninja import Router, File, Form
 from ninja.errors import HttpError
+from ninja.files import UploadedFile
 from ninja.pagination import PageNumberPagination, paginate
 from ninja.security import django_auth
 from django.shortcuts import get_object_or_404
@@ -29,6 +30,7 @@ from .services import (
     StanceService,
     VoteService
 )
+from .image_uploads import DebateImageError
 
 User = get_user_model()
 router = Router(auth=optional_django_auth)
@@ -36,7 +38,11 @@ router = Router(auth=optional_django_auth)
 
 @router.post("", response=DebateFullSchema, auth=django_auth)
 @monitor_api_operation("debate.create")
-def create_debate(request, debate_data: DebateCreateInputSchema):
+def create_debate(
+    request,
+    debate_data: Form[DebateCreateInputSchema],
+    image: File[UploadedFile] = None,
+):
     """Create a new debate."""
     user = request.auth
     try:
@@ -44,9 +50,12 @@ def create_debate(request, debate_data: DebateCreateInputSchema):
             user=user,
             title=debate_data.title,
             description=debate_data.description,
+            image=image,
         )
     except IntegrityError:
         raise HttpError(409, "A debate with this title already exists.")
+    except DebateImageError as exc:
+        raise HttpError(exc.status_code, str(exc))
 
 
 @router.get("/trending", response=List[DebateSchema])

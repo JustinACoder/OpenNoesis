@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowUp, ArrowDown, Minus, User } from "lucide-react";
 import { DebateSchema, type StanceDirectionEnum } from "@/lib/models";
+import { ImageWithFallback } from "@/components/ImageWithFallback";
 
 interface DebateCardProps extends DebateSchema {
   target_user_stance?: StanceDirectionEnum;
@@ -16,6 +17,7 @@ export const DebateCard = (props: DebateCardProps) => {
     num_against = 0,
     vote_score = 0,
     date,
+    image_url,
     user_stance, // Current user's stance
     target_user_stance, // Target user's stance (for profile pages)
     target_user_name,
@@ -56,15 +58,31 @@ export const DebateCard = (props: DebateCardProps) => {
         className="relative flex h-full flex-col gap-3"
       >
         <div
-          className="relative aspect-[2/1] overflow-hidden rounded-2xl border border-border/60 transition-transform duration-300 ease-out group-hover:scale-[1.02]"
-          style={{
-            backgroundImage: `linear-gradient(135deg, color-mix(in oklab, ${stanceAccent} 22%, var(--card)) 0%, color-mix(in oklab, ${stanceAccent} 10%, var(--background)) 100%)`,
-          }}
+          className="relative aspect-[2/1] overflow-hidden rounded-2xl border border-border/60"
         >
-          <div className="absolute inset-0 opacity-70">
-            <div className="absolute -left-10 top-0 h-24 w-24 rounded-full bg-white/8 blur-2xl" />
-            <div className="absolute bottom-0 right-0 h-28 w-28 rounded-full bg-black/12 blur-2xl" />
-          </div>
+          {image_url ? (
+            <ImageWithFallback
+              key={image_url}
+              src={image_url}
+              alt={title}
+              fill
+              sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 33vw"
+              className="absolute inset-0 object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]"
+            />
+          ) : (
+            <div
+              className="absolute inset-0 transition-transform duration-300 ease-out group-hover:scale-[1.03]"
+              style={{
+                backgroundImage: `linear-gradient(135deg, color-mix(in oklab, ${stanceAccent} 22%, var(--card)) 0%, color-mix(in oklab, ${stanceAccent} 10%, var(--background)) 100%)`,
+              }}
+            >
+              <div className="absolute inset-0 opacity-70">
+                <div className="absolute -left-10 top-0 h-24 w-24 rounded-full bg-white/8 blur-2xl" />
+                <div className="absolute bottom-0 right-0 h-28 w-28 rounded-full bg-black/12 blur-2xl" />
+              </div>
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/42 via-black/12 to-black/10" />
           <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3">
             <span className="rounded-full bg-black/25 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/88 backdrop-blur-sm">
               Debate

@@ -31,8 +31,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DebateImageUploadInput } from "./DebateImageUploadInput";
 
 const normalizeWhitespace = (value: string) => value.replace(/\s+/g, " ").trim();
+const maxImageBytes = 10 * 1024 * 1024;
+const acceptedImageTypes = ["image/png", "image/jpeg", "image/webp"];
 
 const createDebateSchema = z.object({
   title: z
@@ -54,6 +57,14 @@ const createDebateSchema = z.object({
   hasSearchedForDuplicates: z.boolean().refine((value) => value, {
     message: "Please search first to avoid creating duplicate debates.",
   }),
+  image: z
+    .instanceof(File)
+    .refine(
+      (file) => acceptedImageTypes.includes(file.type),
+      "Use a PNG, JPEG, or WEBP image.",
+    )
+    .refine((file) => file.size <= maxImageBytes, "Images must be 10MB or smaller.")
+    .nullable(),
 });
 
 type CreateDebateValues = z.infer<typeof createDebateSchema>;
@@ -102,12 +113,17 @@ export function CreateDebateForm() {
       title: "",
       description: "",
       hasSearchedForDuplicates: false,
+      image: null,
     },
   });
 
   const watchedTitle = useWatch({
     control: form.control,
     name: "title",
+  });
+  const watchedImage = useWatch({
+    control: form.control,
+    name: "image",
   });
   const titleValue = normalizeWhitespace(watchedTitle || "");
   const titleEndsWithQuestionMark = titleValue.endsWith("?");
@@ -152,12 +168,22 @@ export function CreateDebateForm() {
     setSubmitError(null);
   };
 
+  const handleImageChange = (file: File | null) => {
+    form.setValue("image", file, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+    setSubmitError(null);
+  };
+
   const onSubmit: SubmitHandler<CreateDebateValues> = async (values) => {
     setSubmitError(null);
     await mutation.mutateAsync({
       data: {
         title: values.title.trim(),
         description: values.description.trim(),
+        ...(values.image ? { image: values.image } : {}),
       },
     });
   };
@@ -327,6 +353,32 @@ export function CreateDebateForm() {
                     <FormDescription>
                       Give enough detail so new participants can jump in without extra research.
                     </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="image"
+                render={() => (
+                  <FormItem className="gap-3">
+                    <div className="space-y-1">
+                      <FormLabel>Optional image</FormLabel>
+                      <FormDescription>
+                        Upload a PNG, JPEG, or WEBP image. We moderate uploads for
+                        sexual content and graphic violence before saving them.
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <DebateImageUploadInput
+                        value={watchedImage}
+                        onChange={handleImageChange}
+                        accept={acceptedImageTypes.join(",")}
+                        disabled={isSubmitting}
+                        maxSize={maxImageBytes}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

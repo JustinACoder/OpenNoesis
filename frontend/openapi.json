@@ -626,9 +626,33 @@
         ],
         "requestBody": {
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/DebateCreateInputSchema"
+                "title": "MultiPartBodyParams",
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "maxLength": 100,
+                    "minLength": 8,
+                    "title": "Title",
+                    "type": "string"
+                  },
+                  "description": {
+                    "maxLength": 8000,
+                    "minLength": 30,
+                    "title": "Description",
+                    "type": "string"
+                  },
+                  "image": {
+                    "format": "binary",
+                    "title": "Image",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "title",
+                  "description"
+                ]
               }
             }
           },
@@ -3237,6 +3261,41 @@
         }
       }
     },
+    "/_allauth/{client}/v1/auth/code/resend": {
+      "post": {
+        "tags": [
+          "Authentication: Login By Code"
+        ],
+        "summary": "Resend login code",
+        "description": "Requests a new login code.\nRequires `ACCOUNT_LOGIN_BY_CODE_SUPPORTS_RESEND = True`.\n",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Client"
+          },
+          {
+            "$ref": "#/components/parameters/SessionToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StatusOK"
+          },
+          "409": {
+            "description": "Conflict. The login verification (by code) flow is not pending.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
     "/_allauth/{client}/v1/account/providers": {
       "get": {
         "tags": [
@@ -4567,6 +4626,17 @@
               }
             ]
           },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
           "vote_score": {
             "default": 0,
             "title": "Vote Score",
@@ -4704,6 +4774,17 @@
                 "type": "null"
               }
             ]
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
           },
           "vote_score": {
             "default": 0,

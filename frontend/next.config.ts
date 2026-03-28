@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
       fullUrl: true,
     },
   },
+  images: {
+    loader: "custom",
+    loaderFile: "./src/lib/imageLoader.js",
+  },
 };
 
 export default nextConfig;

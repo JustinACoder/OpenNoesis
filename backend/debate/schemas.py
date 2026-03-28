@@ -63,6 +63,7 @@ class DebateCreateInputSchema(Schema):
 
 class DebateFullSchema(ModelSchema):
     author: Optional[UserPreviewSchema] = None  # Can be None if the debate was created by the system
+    image_url: Optional[str] = None
 
     # Votes
     vote_score: int = 0
@@ -80,7 +81,13 @@ class DebateFullSchema(ModelSchema):
 
     class Meta:
         model = Debate
-        exclude = ['search_vector', 'vote']
+        exclude = ['search_vector', 'vote', 'image']
+
+    @staticmethod
+    def resolve_image_url(debate: Debate) -> Optional[str]:
+        if not debate.image:
+            return None
+        return debate.image.url
 
 
 class DebateSchema(DebateFullSchema):
