@@ -45,13 +45,6 @@ export const DebateCard = (props: DebateCardProps) => {
     return stance === 1 || stance === -1;
   };
 
-  const stanceAccent =
-    user_stance === 1
-      ? "var(--primary)"
-      : user_stance === -1
-        ? "var(--destructive)"
-        : "rgba(255,255,255,0.12)";
-
   return (
     <Link href={`/d/${slug}`} className="block group">
       <article
@@ -73,7 +66,8 @@ export const DebateCard = (props: DebateCardProps) => {
             <div
               className="absolute inset-0 transition-transform duration-300 ease-out group-hover:scale-[1.03]"
               style={{
-                backgroundImage: `linear-gradient(135deg, color-mix(in oklab, ${stanceAccent} 22%, var(--card)) 0%, color-mix(in oklab, ${stanceAccent} 10%, var(--background)) 100%)`,
+                backgroundImage:
+                  "linear-gradient(135deg, color-mix(in oklab, white 10%, var(--card)) 0%, color-mix(in oklab, white 4%, var(--background)) 100%)",
               }}
             >
               <div className="absolute inset-0 opacity-70">
