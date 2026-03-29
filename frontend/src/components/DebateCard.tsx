@@ -51,7 +51,7 @@ export const DebateCard = (props: DebateCardProps) => {
         className="relative flex h-full flex-col gap-3"
       >
         <div
-          className="relative aspect-[2/1] overflow-hidden rounded-2xl border border-border/60"
+          className="relative aspect-[2/1] overflow-hidden rounded-2xl border-transparent border-2 group-hover:border-primary"
         >
           {image_url ? (
             <ImageWithFallback
@@ -60,11 +60,11 @@ export const DebateCard = (props: DebateCardProps) => {
               alt={title}
               fill
               sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 33vw"
-              className="absolute inset-0 scale-100 object-cover transform-gpu transition-transform duration-300 ease-out group-hover:scale-[1.03]"
+              className="absolute inset-0 object-cover"
             />
           ) : (
             <div
-              className="absolute inset-0 scale-100 transform-gpu transition-transform duration-300 ease-out group-hover:scale-[1.03]"
+              className="absolute inset-0"
               style={{
                 backgroundImage:
                   "linear-gradient(135deg, color-mix(in oklab, white 10%, var(--card)) 0%, color-mix(in oklab, white 4%, var(--background)) 100%)",
