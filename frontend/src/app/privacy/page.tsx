@@ -41,7 +41,7 @@ export default function PrivacyPage() {
             <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
               <li>Account data you provide: email, username, and password.</li>
               <li>Profile data you provide: bio.</li>
-              <li>Public debate content: debates, comments, votes, and stances.</li>
+              <li>Public debate content: debates, debate images, comments, votes, and stances.</li>
               <li>Private discussion data: messages, read states, and discussion metadata.</li>
               <li>
                 AI discussion data: messages and related context needed to generate AI replies.
@@ -55,16 +55,17 @@ export default function PrivacyPage() {
           <section className="space-y-4">
             <h2 className="text-2xl font-semibold">Public Visibility of Content</h2>
             <p className="text-muted-foreground">
-              Debate posts and comments are public by default. They may be accessible to visitors
-              and may be indexed by search engines.
+              Debate posts, debate images, and comments are public by default. They may be
+              accessible to visitors and may be indexed by search engines.
             </p>
           </section>
 
           <section className="space-y-4">
             <h2 className="text-2xl font-semibold">How We Use Information</h2>
             <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-              <li>To run core features (debates, comments, invites, pairing, discussions).</li>
+              <li>To run core features (debates, images, comments, invites, pairing, discussions).</li>
               <li>To generate responses when you use AI discussion features.</li>
+              <li>To validate, moderate, store, and deliver uploaded images.</li>
               <li>To authenticate users and keep accounts secure.</li>
               <li>To send account and security-related emails.</li>
               <li>To deliver notifications and real-time updates.</li>
@@ -85,8 +86,9 @@ export default function PrivacyPage() {
             <p className="text-muted-foreground">
               We do not sell user data. We only share data as needed with infrastructure/service
               providers that run OpenNoesis (including Cloudflare, hosting infrastructure in NYC1,
-              Resend for transactional email delivery, and OpenAI for AI discussion processing), for legal/safety
-              obligations, or during a business transfer.
+              Cloudflare R2-compatible media storage for uploaded images, Resend for transactional
+              email delivery, and OpenAI for AI discussion processing and image moderation), for
+              legal/safety obligations, or during a business transfer.
             </p>
           </section>
 
@@ -129,8 +131,8 @@ export default function PrivacyPage() {
             <h2 className="text-2xl font-semibold">Cross-Border Processing</h2>
             <p className="text-muted-foreground">
               Depending on where you are located, our infrastructure providers (including
-              Cloudflare, hosting providers, Resend, and OpenAI when AI discussions are used) may
-              process data outside your province, state, or country.
+              Cloudflare, hosting providers, Resend, and OpenAI when AI discussions or image
+              moderation are used) may process data outside your province, state, or country.
             </p>
           </section>
 
