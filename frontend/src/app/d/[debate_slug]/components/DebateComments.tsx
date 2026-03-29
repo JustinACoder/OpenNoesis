@@ -4,7 +4,6 @@ import {
   type PagedCommentSchema,
   VoteDirectionEnum,
 } from "@/lib/models";
-import { Box } from "@/components/ui/box";
 import { CommentForm } from "./CommentForm";
 import { VoteIndicator } from "@/components/ui/VoteIndicator";
 import { useAuthState } from "@/providers/authProvider";
@@ -55,15 +54,15 @@ export const DebateComments = ({ debateSlug }: DebateCommentsProps) => {
   };
 
   return (
-    <Box className="p-6 space-y-6">
+    <section className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+        <h2 className="flex items-center gap-2 text-xl font-semibold text-foreground">
           <MessageCircle className="w-5 h-5" />
           Comments
         </h2>
         <div className="flex items-center gap-2">
           {dataUpdatedAt && !isLoading ? (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground">
               Updated at {new Date(dataUpdatedAt).toLocaleTimeString()}
             </span>
           ) : null}
@@ -72,7 +71,7 @@ export const DebateComments = ({ debateSlug }: DebateCommentsProps) => {
             size="sm"
             onClick={handleRefresh}
             disabled={isRefetching || isLoading}
-            className="text-gray-400 hover:text-white"
+            className="text-muted-foreground hover:text-foreground"
           >
             <RefreshCw
               className={`w-4 h-4 ${isRefetching ? "animate-spin" : ""}`}
@@ -85,12 +84,12 @@ export const DebateComments = ({ debateSlug }: DebateCommentsProps) => {
 
       {isLoading && (
         <div className="flex justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
       )}
 
       {isError && (
-        <div className="text-center text-gray-400 py-8">
+        <div className="py-8 text-center text-muted-foreground">
           Failed to load comments. Please try again.
         </div>
       )}
@@ -99,7 +98,7 @@ export const DebateComments = ({ debateSlug }: DebateCommentsProps) => {
         <>
           <div className="space-y-4">
             {comments.length === 0 ? (
-              <div className="text-center text-gray-400 py-8">
+              <div className="py-8 text-center text-muted-foreground">
                 No comments yet. Be the first to share your thoughts!
               </div>
             ) : (
@@ -133,7 +132,7 @@ export const DebateComments = ({ debateSlug }: DebateCommentsProps) => {
           )}
         </>
       )}
-    </Box>
+    </section>
   );
 };
 
@@ -199,15 +198,15 @@ const CommentItem = ({
   };
 
   return (
-    <div className="border border-gray-700 rounded-lg p-4 bg-gray-800/50">
-      <div className="flex justify-between items-start mb-3">
+    <article className="py-4">
+      <div className="mb-3 flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center text-sm text-white font-medium">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/12 text-sm font-medium text-primary">
             {author.username.charAt(0).toUpperCase()}
           </div>
           <div>
-            <span className="text-white font-medium">{author.username}</span>
-            <time className="block text-xs text-gray-400" dateTime={date_added}>
+            <span className="font-medium text-foreground">{author.username}</span>
+            <time className="block text-xs text-muted-foreground" dateTime={date_added}>
               {formattedDate}
             </time>
           </div>
@@ -219,12 +218,13 @@ const CommentItem = ({
           size={"md"}
           onVote={voteHandler}
           disabled={authStatus === "loading"}
+          className="[&_button]:h-7 [&_button]:w-7"
         />
       </div>
 
-      <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+      <p className="leading-7 text-muted-foreground whitespace-pre-wrap break-words">
         {text}
       </p>
-    </div>
+    </article>
   );
 };

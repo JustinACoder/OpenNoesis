@@ -1,5 +1,4 @@
 import { DebateFullSchema } from "@/lib/models";
-import { Box } from "@/components/ui/box";
 import SetStanceDialog from "./SetStanceDialog";
 import DebateNowDialog from "./DebateNowDialog";
 import CreateInviteDialog from "./CreateInviteDialog";
@@ -10,11 +9,11 @@ interface DebateContentProps {
 
 export const JoinTheDebate = ({ debate }: DebateContentProps) => {
   return (
-    <Box className="p-6">
-      <h2 className="text-xl font-semibold text-white mb-4">Join the Debate</h2>
-      <div className="flex flex-col sm:flex-row gap-3">
+    <section className="py-2">
+      <h2 className="mb-4 text-xl font-semibold text-foreground">Join the Debate</h2>
+      <div className="grid gap-3 sm:grid-cols-3">
         {/* Set Your Stance Button */}
-        <div className="flex-1">
+        <div>
           <SetStanceDialog
             initialStance={debate.user_stance}
             debateSlug={debate.slug}
@@ -22,15 +21,15 @@ export const JoinTheDebate = ({ debate }: DebateContentProps) => {
         </div>
 
         {/* Debate Now Button */}
-        <div className="flex-1">
+        <div>
           <DebateNowDialog debate={debate} />
         </div>
 
         {/* Invite to Debate Button */}
-        <div className="flex-1">
+        <div>
           <CreateInviteDialog debate={debate} />
         </div>
       </div>
-    </Box>
+    </section>
   );
 };

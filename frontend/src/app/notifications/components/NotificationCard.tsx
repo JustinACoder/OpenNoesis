@@ -40,11 +40,11 @@ interface NotificationCardProps {
 const getNotificationIcon = (type: string) => {
   switch (type) {
     case "new_discussion":
-      return MessageCircle;
+      return <MessageCircle className="h-5 w-5" />;
     case "accepted_invite":
-      return UserCheck;
+      return <UserCheck className="h-5 w-5" />;
     default:
-      return Bell;
+      return <Bell className="h-5 w-5" />;
   }
 };
 
@@ -101,7 +101,7 @@ export const NotificationCard = ({
   const [isMobile, setIsMobile] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  const Icon = getNotificationIcon(notification.notification_type_name);
+  const icon = getNotificationIcon(notification.notification_type_name);
   const iconColor = getNotificationColor(notification.notification_type_name);
 
   const markAsReadMutation = useNotificationsApiSetNotificationReadStatus();
@@ -198,107 +198,100 @@ export const NotificationCard = ({
       : []),
   ];
 
-  const MoreOptionsMenu = () => {
-    if (isMobile) {
-      return (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-          onTouchEnd={(e) => e.stopPropagation()}
-          onTouchCancel={(e) => e.stopPropagation()}
-        >
-          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-            <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                size="default"
-                className="h-8 w-8 p-0 hover:bg-accent"
-              >
-                <MoreVertical className="size-5" />
-                <span className="sr-only">More options</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="h-auto">
-              <SheetHeader>
-                <SheetTitle>Notification Options</SheetTitle>
-                <VisuallyHidden asChild>
-                  <SheetDescription className="sr-only">
-                    Select an action for this notification
-                  </SheetDescription>
-                </VisuallyHidden>
-              </SheetHeader>
-              <div className="grid gap-2">
-                {menuItems.map((item) => (
-                  <Button
-                    key={item.key}
-                    variant="ghost"
-                    className="justify-start h-12"
-                    onClick={item.onClick}
-                    disabled={item.disabled}
-                  >
-                    <item.icon className="h-5 w-5 mr-3" />
-                    {item.label}
-                  </Button>
-                ))}
-              </div>
-              <SheetFooter>
-                <SheetClose asChild>
-                  <Button variant="outline">Close</Button>
-                </SheetClose>
-              </SheetFooter>
-            </SheetContent>
-          </Sheet>
-        </div>
-      );
-    }
-
-    // Desktop dropdown
-    return (
-      <div onClick={(e) => e.stopPropagation()}>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="default"
-              className="h-8 w-8 p-0 hover:bg-accent"
-            >
-              <MoreVertical className="size-5" />
-              <span className="sr-only">More options</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
+  const moreOptionsMenu = isMobile ? (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
+      onTouchCancel={(e) => e.stopPropagation()}
+    >
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+        <SheetTrigger asChild>
+          <Button
+            variant="ghost"
+            size="default"
+            className="h-8 w-8 p-0 hover:bg-accent"
+          >
+            <MoreVertical className="size-5" />
+            <span className="sr-only">More options</span>
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="bottom" className="h-auto">
+          <SheetHeader>
+            <SheetTitle>Notification Options</SheetTitle>
+            <VisuallyHidden asChild>
+              <SheetDescription className="sr-only">
+                Select an action for this notification
+              </SheetDescription>
+            </VisuallyHidden>
+          </SheetHeader>
+          <div className="grid gap-2">
             {menuItems.map((item) => (
-              <DropdownMenuItem
+              <Button
                 key={item.key}
+                variant="ghost"
+                className="h-12 justify-start"
                 onClick={item.onClick}
                 disabled={item.disabled}
-                className="cursor-pointer"
               >
-                <item.icon className="h-4 w-4 mr-2" />
+                <item.icon className="mr-3 h-5 w-5" />
                 {item.label}
-              </DropdownMenuItem>
+              </Button>
             ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    );
-  };
+          </div>
+          <SheetFooter>
+            <SheetClose asChild>
+              <Button variant="outline">Close</Button>
+            </SheetClose>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+    </div>
+  ) : (
+    <div onClick={(e) => e.stopPropagation()}>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="default"
+            className="h-8 w-8 p-0 hover:bg-accent"
+          >
+            <MoreVertical className="size-5" />
+            <span className="sr-only">More options</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-40">
+          {menuItems.map((item) => (
+            <DropdownMenuItem
+              key={item.key}
+              onClick={item.onClick}
+              disabled={item.disabled}
+              className="cursor-pointer"
+            >
+              <item.icon className="mr-2 h-4 w-4" />
+              {item.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
 
   return (
     <div
-      className={`p-4 transition-all duration-200 border-l-4 rounded-lg border bg-card ${
+      className={`rounded-2xl border border-border/70 p-4 transition-[background-color,border-color] duration-200 ${
         hasUrl ? "cursor-pointer" : ""
       } ${
         !notification.read
-          ? "border-l-blue-500 bg-blue-100/60 hover:bg-blue-50/30 dark:bg-blue-900/40 dark:hover:bg-blue-950/20"
-          : "border-l-gray-200 hover:bg-gray-50/80 dark:border-l-gray-700 dark:hover:bg-gray-800/50"
+          ? "border-primary/25 bg-primary/8 hover:bg-primary/10"
+          : "bg-card/55 hover:bg-card/80"
       }`}
       onClick={hasUrl ? handleClick : undefined}
       {...longPressEventHandlers}
     >
       <div className="flex items-start gap-3">
         <div className={`flex-shrink-0 ${iconColor} mt-0.5`}>
-          <Icon className="h-5 w-5" />
+          {icon}
         </div>
 
         <div className="flex-1 min-w-0">
@@ -307,8 +300,8 @@ export const NotificationCard = ({
               <h3
                 className={`font-medium text-sm leading-relaxed ${
                   !notification.read
-                    ? "font-semibold text-gray-900 dark:text-gray-100"
-                    : "text-gray-700 dark:text-gray-300"
+                    ? "font-semibold text-foreground"
+                    : "text-foreground/90"
                 }`}
               >
                 {notification.title}
@@ -316,7 +309,7 @@ export const NotificationCard = ({
               <p
                 className={`text-sm mt-1 leading-relaxed ${
                   !notification.read
-                    ? "text-gray-600 dark:text-gray-400"
+                    ? "text-muted-foreground"
                     : "text-muted-foreground"
                 }`}
               >
@@ -330,7 +323,7 @@ export const NotificationCard = ({
             </div>
 
             <div className="flex-shrink-0">
-              <MoreOptionsMenu />
+              {moreOptionsMenu}
             </div>
           </div>
 

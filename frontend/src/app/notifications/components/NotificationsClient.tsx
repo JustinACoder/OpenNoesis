@@ -11,7 +11,6 @@ import { NotificationFilter } from "./NotificationFilter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bell, Loader2, RefreshCw, CheckCheck } from "lucide-react";
-import { Box } from "@/components/ui/box";
 import {
   Pagination,
   PaginationContent,
@@ -93,7 +92,7 @@ export default function NotificationsClient() {
 
   if (error || (notifications === undefined && !isPending)) {
     return (
-      <main className="min-h-[calc(100vh-4rem)]">
+      <main>
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">
@@ -109,7 +108,7 @@ export default function NotificationsClient() {
     );
   }
 
-  const NotificationHeader = () => (
+  const notificationHeader = (
     <div className="flex items-center justify-between flex-wrap mb-6 gap-4">
       <div className="flex items-center gap-3">
         <Bell className="h-6 w-6" />
@@ -154,10 +153,10 @@ export default function NotificationsClient() {
   );
 
   return (
-    <main className="min-h-[calc(100vh-4rem)]">
-      <div className="container mx-auto px-4 py-8">
+    <main>
+      <div className="container mx-auto max-w-screen-lg px-4 py-6 sm:px-6 sm:py-8">
         {/* Header */}
-        <NotificationHeader />
+        {notificationHeader}
 
         {/* Loading State */}
         {isPending && (
@@ -169,7 +168,7 @@ export default function NotificationsClient() {
         {/* Empty State */}
         {!isPending &&
           (!notifications?.items || notifications.items.length === 0) && (
-            <Box className="text-center py-12">
+            <div className="py-12 text-center">
               <Bell className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <h2 className="text-lg font-medium mb-2">No notifications</h2>
               <p className="text-muted-foreground">
@@ -177,7 +176,7 @@ export default function NotificationsClient() {
                   ? "You have no unread notifications."
                   : "You don't have any notifications yet."}
               </p>
-            </Box>
+            </div>
           )}
 
         {/* Notifications List */}

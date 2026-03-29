@@ -105,27 +105,36 @@ export const CommentForm = ({ debateSlug }: CommentFormProps) => {
       </AlertDescription>
     </Alert>
   ) : (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="relative">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-3"
+    >
+      <div>
         <Textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="Share your thoughts on this debate..."
-          className="h-32 bg-gray-700/50"
+          className="min-h-28 rounded-2xl border-border/60 bg-transparent px-4 py-3 text-sm leading-7 shadow-none focus-visible:ring-0 focus-visible:border-border"
           maxLength={4500}
           disabled={isPending}
         />
+      </div>
+      <div className="flex items-center justify-end gap-3">
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {content.trim().length}/4500
+        </span>
         <Button
           type="submit"
           disabled={!content.trim() || isPending || authStatus === "loading"}
-          variant="outline"
-          className="absolute bottom-2 right-2"
+          variant="ghost"
+          className="h-9 px-3 text-foreground"
         >
           {isPending || authStatus === "loading" ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
             <Send className="w-4 h-4" />
           )}
+          Post
         </Button>
       </div>
     </form>

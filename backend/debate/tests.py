@@ -1,4 +1,9 @@
+from io import BytesIO
+from unittest.mock import patch
+
 from django.test import Client
+from django.core.files.uploadedfile import SimpleUploadedFile
+from PIL import Image
 from ProjectOpenDebate.common.base_tests import BaseTestCase
 from django.contrib.auth import get_user_model
 
@@ -57,6 +62,29 @@ class DebateApiTestBase(BaseTestCase):
         client = Client()
         client.login(username='testuser2', password='password123')
         return client
+
+    @staticmethod
+    def create_test_image(name="debate.png"):
+        return DebateApiTestBase.create_generated_test_image(name=name)
+
+    @staticmethod
+    def create_generated_test_image(
+        *,
+        width=1200,
+        height=600,
+        name="debate.png",
+        image_format="PNG",
+    ):
+        file_obj = BytesIO()
+        Image.new("RGB", (width, height), color=(24, 40, 72)).save(
+            file_obj,
+            format=image_format,
+        )
+        return SimpleUploadedFile(
+            name,
+            file_obj.getvalue(),
+            content_type=f"image/{image_format.lower()}",
+        )
 
 
 class DebateListingEndpointsTest(DebateApiTestBase):
@@ -134,7 +162,6 @@ class DebateCreationEndpointsTest(DebateApiTestBase):
                 "title": "Should public schools ban mobile phones?",
                 "description": "Smartphones can disrupt focus in class, but they can also support learning in emergencies and research tasks.",
             },
-            content_type='application/json',
         )
 
         self.assertEqual(response.status_code, 200)
@@ -152,7 +179,6 @@ class DebateCreationEndpointsTest(DebateApiTestBase):
                 "title": "Should AI tutors replace homework?",
                 "description": "Homework teaches consistency, but adaptive AI tutors might provide more personalized and actionable feedback to students.",
             },
-            content_type='application/json',
         )
 
         self.assertEqual(response.status_code, 401)
@@ -165,7 +191,6 @@ class DebateCreationEndpointsTest(DebateApiTestBase):
                 "title": self.debate1.title,
                 "description": "Different description but same title should be rejected because titles are unique.",
             },
-            content_type='application/json',
         )
 
         self.assertEqual(response.status_code, 409)
@@ -178,7 +203,6 @@ class DebateCreationEndpointsTest(DebateApiTestBase):
                 "title": "   Are cities safer with more CCTV cameras?   ",
                 "description": "   Surveillance can improve investigations, but it may also reduce privacy and be unevenly deployed across neighborhoods.   ",
             },
-            content_type='application/json',
         )
 
         self.assertEqual(response.status_code, 200)
@@ -194,7 +218,6 @@ class DebateCreationEndpointsTest(DebateApiTestBase):
                 "title": "        ",
                 "description": "                              ",
             },
-            content_type='application/json',
         )
 
         self.assertEqual(response.status_code, 422)
@@ -209,11 +232,146 @@ class DebateCreationEndpointsTest(DebateApiTestBase):
                 "title": "a       b",
                 "description": "This description is intentionally long enough to satisfy minimum requirements.",
             },
-            content_type='application/json',
         )
 
         self.assertEqual(response.status_code, 422)
         self.assertFalse(Debate.objects.filter(title="a       b", author=self.user1).exists())
+
+    @patch("debate.image_uploads.OpenAI")
+    def test_create_debate_with_image(self, openai_cls):
+        openai_cls.return_value.moderations.create.return_value.results = [
+            type(
+                "ModerationResult",
+                (),
+                {
+                    "model_dump": staticmethod(
+                        lambda mode="python": {
+                            "categories": {
+                                "sexual": False,
+                                "sexual/minors": False,
+                                "violence/graphic": False,
+                            }
+                        }
+                    )
+                },
+            )()
+        ]
+
+        client = self.authenticate_user1()
+        response = client.post(
+            reverse_lazy_api("create_debate"),
+            {
+                "title": "Public transport should be free in large cities",
+                "description": "Free transit could improve access and reduce car traffic, but it would require sustained public funding and service planning.",
+                "image": self.create_test_image(),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("debate_images/", payload["image_url"])
+        debate = Debate.objects.get(slug=payload["slug"])
+        self.assertTrue(bool(debate.image))
+
+    @patch("debate.image_uploads.OpenAI")
+    def test_create_debate_rejects_graphic_image(self, openai_cls):
+        openai_cls.return_value.moderations.create.return_value.results = [
+            type(
+                "ModerationResult",
+                (),
+                {
+                    "model_dump": staticmethod(
+                        lambda mode="python": {
+                            "categories": {
+                                "sexual": False,
+                                "sexual/minors": False,
+                                "violence/graphic": True,
+                            }
+                        }
+                    )
+                },
+            )()
+        ]
+
+        client = self.authenticate_user1()
+        response = client.post(
+            reverse_lazy_api("create_debate"),
+            {
+                "title": "Animal testing should be banned worldwide",
+                "description": "Supporters argue for medical progress, but critics argue that the ethical cost is too high and alternatives should replace it.",
+                "image": self.create_test_image(),
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("graphic violence", response.json()["detail"])
+        self.assertFalse(Debate.objects.filter(title="Animal testing should be banned worldwide").exists())
+
+    @patch("debate.image_uploads.OpenAI")
+    def test_create_debate_rejects_extreme_aspect_ratio_image(self, openai_cls):
+        openai_cls.return_value.moderations.create.return_value.results = [
+            type(
+                "ModerationResult",
+                (),
+                {
+                    "model_dump": staticmethod(
+                        lambda mode="python": {
+                            "categories": {
+                                "sexual": False,
+                                "sexual/minors": False,
+                                "violence/graphic": False,
+                            }
+                        }
+                    )
+                },
+            )()
+        ]
+
+        client = self.authenticate_user1()
+        response = client.post(
+            reverse_lazy_api("create_debate"),
+            {
+                "title": "Billboards should be banned from residential districts",
+                "description": "Residents may want quieter neighborhoods, but billboard restrictions also limit commercial visibility and advertising revenue.",
+                "image": self.create_generated_test_image(width=3000, height=400),
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("aspect ratio", response.json()["detail"])
+
+    @patch("debate.image_uploads.OpenAI")
+    def test_create_debate_rejects_oversized_pixel_count_image(self, openai_cls):
+        openai_cls.return_value.moderations.create.return_value.results = [
+            type(
+                "ModerationResult",
+                (),
+                {
+                    "model_dump": staticmethod(
+                        lambda mode="python": {
+                            "categories": {
+                                "sexual": False,
+                                "sexual/minors": False,
+                                "violence/graphic": False,
+                            }
+                        }
+                    )
+                },
+            )()
+        ]
+
+        client = self.authenticate_user1()
+        response = client.post(
+            reverse_lazy_api("create_debate"),
+            {
+                "title": "Cities should replace asphalt with permeable paving",
+                "description": "Permeable materials can reduce flooding, but they may increase upfront maintenance costs and require different infrastructure planning.",
+                "image": self.create_generated_test_image(width=3600, height=3400),
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("megapixels", response.json()["detail"])
 
 
 class DebateDetailEndpointsTest(DebateApiTestBase):

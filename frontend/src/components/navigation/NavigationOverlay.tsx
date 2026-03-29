@@ -2,41 +2,12 @@ import React from "react";
 import BottomNavigation from "@/components/navigation/BottomNavigation";
 import SearchBar from "@/components/navigation/SearchBar";
 import ClickableLogo from "@/components/ClickableLogo";
-import {
-  NavigationMenu,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-} from "@/components/ui/navigation-menu";
-import Link from "next/link";
 import MobileSearchOverlay from "@/components/navigation/MobileSearchOverlay";
 import NavigationProvider from "@/components/navigation/NavigationProvider";
 import NavigationActions from "@/components/navigation/NavigationActions";
-import links from "./links";
 import { Footer } from "@/components/Footer";
 import ActiveSearchBanner from "@/components/ActiveSearchBanner";
 import { ClientAuthGate } from "@/components/ClientAuthGate";
-
-const HeaderLinks = () => {
-  return (
-    <NavigationMenu className="hidden md:flex">
-      <NavigationMenuList>
-        {links.map((link) => (
-          <NavigationMenuItem key={link.href}>
-            <NavigationMenuLink asChild>
-              <Link
-                href={link.href}
-                className="group inline-flex h-9 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50"
-              >
-                {link.label}
-              </Link>
-            </NavigationMenuLink>
-          </NavigationMenuItem>
-        ))}
-      </NavigationMenuList>
-    </NavigationMenu>
-  );
-};
 
 interface NavigationOverlayProps {
   hide_bottom_menu?: boolean;
@@ -71,8 +42,6 @@ export const NavigationOverlay = async ({
             </div>
 
             <SearchBar />
-
-            <HeaderLinks />
 
             {/* Desktop User Actions & Mobile Controls */}
             <NavigationActions />

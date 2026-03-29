@@ -104,7 +104,7 @@ export default function TermsPage() {
             <h2 className="text-2xl font-semibold">User Content: Ownership and License</h2>
             <p className="text-muted-foreground">
               You retain ownership of content you submit to OpenNoesis (such as debate posts,
-              comments, and messages).
+              comments, messages, and images).
             </p>
             <p className="text-muted-foreground">
               By posting or submitting content, you grant OpenNoesis a non-exclusive, worldwide,
@@ -117,7 +117,22 @@ export default function TermsPage() {
               reasonable period needed for backups, legal compliance, and technical operations.
             </p>
             <p className="text-muted-foreground">
-              You are responsible for ensuring you have the rights needed to post your content.
+              You represent and warrant that you own or otherwise have all rights, licenses,
+              consents, and permissions needed to submit, publish, and authorize OpenNoesis to use
+              your content under these Terms, including any uploaded images.
+            </p>
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="text-2xl font-semibold">Image Uploads and Moderation</h2>
+            <p className="text-muted-foreground">
+              If you upload an image to a debate, that image may be validated, safety moderated,
+              stored, displayed with the debate, and removed or rejected if it violates these Terms
+              or our Community Guidelines.
+            </p>
+            <p className="text-muted-foreground">
+              Image uploads may be processed by our service providers as needed to moderate, host,
+              and deliver them.
             </p>
           </section>
 
