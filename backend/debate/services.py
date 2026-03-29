@@ -3,8 +3,10 @@ from django.db.models import QuerySet, F
 from django.db.models.functions import Length, Trim
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import AnonymousUser
+from ninja.files import UploadedFile
 
 from pairing.models import PairingRequest
+from .image_uploads import DebateImageUploadService
 from .models import Debate, Comment, Vote
 from .querysets import DebateQuerySet, CommentQuerySet
 from .schemas import VoteDirectionEnum, StanceDirectionEnum
@@ -41,12 +43,19 @@ class DebateService:
         )
 
     @staticmethod
-    def create_debate(user: User, title: str, description: str) -> Debate:
+    def create_debate(
+        user: User,
+        title: str,
+        description: str,
+        image: UploadedFile | None = None,
+    ) -> Debate:
         """Create a new debate authored by the authenticated user."""
+        prepared_image = DebateImageUploadService.prepare_image(image)
         return Debate.objects.create(
             title=title.strip(),
             description=description.strip(),
             author=user,
+            image=prepared_image,
         )
 
     @staticmethod

@@ -27,7 +27,7 @@ export default async function SettingsLayout({
 
   return (
     <NavigationOverlay show_footer={false}>
-      <div className="container m-auto px-4 py-8 space-y-8">
+      <div className="container m-auto max-w-screen-xl px-4 py-6 sm:px-6 sm:py-8 space-y-8">
         {/* Account Overview Card */}
         <SettingsUserBanner />
 

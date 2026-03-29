@@ -6,7 +6,7 @@ type DebateGridProps = {
 
 export function DebateGrid({ children }: DebateGridProps) {
   return (
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(min(325px,100%),1fr))] gap-6 items-stretch">
+    <div className="grid grid-cols-1 gap-x-8 gap-y-12 items-stretch md:grid-cols-2 xl:grid-cols-3">
       {children}
     </div>
   );

@@ -8,8 +8,6 @@ and then client-side interactions (like voting) can be handled without a full pa
 
 Tl;dr: this is SSR, dont worry about the "use client" directive.
  */
-
-import { Box } from "@/components/ui/box";
 import Link from "next/link";
 import { DebateVote } from "./DebateVote";
 import { StanceDistribution } from "./StanceDistribution";
@@ -20,6 +18,7 @@ import {
   useDebateApiGetDebate,
   useDebateApiGetDebateSuggestions,
 } from "@/lib/api/debate";
+import { ImageWithFallback } from "@/components/ImageWithFallback";
 
 interface DebateRootClientProps {
   debateSlug: string;
@@ -63,14 +62,14 @@ const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
 
   return (
     <div className="min-h-[calc(100vh-4rem)]">
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="container mx-auto max-w-screen-2xl px-4 py-6 sm:px-6 sm:py-8">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 xl:gap-10">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            <Box className="p-6 space-y-5">
+          <div className="space-y-8 lg:col-span-2">
+            <section className="space-y-6">
               {/* Header with category and actions */}
               <div className="flex flex-row justify-between items-start gap-4">
-                <span className="bg-amber-500 text-gray-900 text-xs font-bold px-3 py-1 rounded">
+                <span className="rounded-full bg-foreground/6 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                   Debate
                 </span>
                 <DebateVote
@@ -83,10 +82,10 @@ const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
 
               {/* Title and date*/}
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight flex-1">
+                <h1 className="flex-1 text-2xl font-bold leading-tight text-foreground md:text-3xl">
                   {debate.title}
                 </h1>
-                <div className="text-sm text-gray-400">
+                <div className="text-sm text-muted-foreground">
                   <time dateTime={debate.date}>{formattedDate}</time>
                   {debate.author?.username ? (
                     <>
@@ -94,7 +93,7 @@ const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
                       · by{" "}
                       <Link
                         href={`/u/${encodeURIComponent(debate.author.username)}`}
-                        className="text-gray-300 hover:text-white underline underline-offset-2"
+                        className="text-foreground/80 underline underline-offset-2 transition-colors hover:text-foreground"
                       >
                         {debate.author.username}
                       </Link>
@@ -103,8 +102,21 @@ const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
                 </div>
               </div>
 
+              {debate.image_url ? (
+                <div className="relative aspect-[2/1] overflow-hidden rounded-2xl border border-border/60">
+                  <ImageWithFallback
+                    key={debate.image_url}
+                    src={debate.image_url}
+                    alt={debate.title}
+                    fill
+                    sizes="(max-width: 1023px) 100vw, 66vw"
+                    className="object-cover"
+                  />
+                </div>
+              ) : null}
+
               {/* Description */}
-              <p className="text-gray-300 text-sm md:text-base leading-relaxed text-pretty whitespace-pre-line">
+              <p className="text-sm leading-7 text-muted-foreground text-pretty whitespace-pre-line md:text-base">
                 {debate.description || "No description provided."}
               </p>
 
@@ -113,7 +125,7 @@ const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
                 numFor={debate.num_for || 0}
                 numAgainst={debate.num_against || 0}
               />
-            </Box>
+            </section>
 
             {/* Join the Debate Section */}
             <JoinTheDebate debate={debate} />
@@ -126,7 +138,7 @@ const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
           {suggestions ? (
             <RelatedDebates debates={suggestions.items} />
           ) : (
-            <div className="text-gray-400">
+            <div className="text-muted-foreground">
               A problem occurred while loading related debates.
             </div>
           )}

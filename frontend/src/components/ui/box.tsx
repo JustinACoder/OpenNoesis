@@ -5,20 +5,20 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const containerVariants = cva(
-  "rounded-lg border bg-gradient-to-br transition-colors",
+  "rounded-2xl border border-border/80 bg-card/82 text-card-foreground transition-[border-color,background-color,box-shadow,transform] backdrop-blur-sm",
   {
     variants: {
       variant: {
-        default: "from-gray-800 to-gray-900 border-gray-700",
-        subtle: "from-gray-900 to-gray-800 border-gray-800",
-        contrast: "from-zinc-800 to-zinc-950 border-gray-600",
-        info: "from-cyan-900 to-cyan-950 border-cyan-700",
-        warning: "from-amber-800 to-amber-900 border-amber-700",
-        success: "from-emerald-800 to-emerald-900 border-emerald-700",
-        danger: "from-red-800 to-red-900 border-red-700",
+        default: "shadow-none",
+        subtle: "bg-background/68 border-border/65",
+        contrast: "bg-secondary/58 border-border",
+        info: "bg-primary/8 border-primary/25",
+        warning: "bg-amber-500/10 border-amber-400/25",
+        success: "bg-emerald-500/10 border-emerald-400/25",
+        danger: "bg-destructive/10 border-destructive/25",
       },
       hover: {
-        true: "hover:-translate-y-1 hover:shadow-lg transition-transform duration-300 ease-in-out",
+        true: "hover:-translate-y-0.5 hover:border-border hover:bg-card hover:shadow-[0_14px_40px_-28px_rgba(15,23,42,0.85)]",
         false: "",
       },
     },

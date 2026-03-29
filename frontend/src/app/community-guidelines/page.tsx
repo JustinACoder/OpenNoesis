@@ -53,6 +53,8 @@ export default function CommunityGuidelinesPage() {
             <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
               <li>Harassment, threats, intimidation, or targeted abuse.</li>
               <li>Hate speech or dehumanizing content.</li>
+              <li>Sexual content or graphic violent imagery in uploaded images.</li>
+              <li>Posting content or images you do not have the rights or permission to share.</li>
               <li>Doxxing or sharing private personal information without consent.</li>
               <li>Spam, fake engagement, vote manipulation, or coordinated inauthentic activity.</li>
               <li>Impersonation of people, organizations, or platform representatives.</li>
@@ -64,7 +66,7 @@ export default function CommunityGuidelinesPage() {
           <section className="space-y-4">
             <h2 className="text-2xl font-semibold">Public and Private Spaces</h2>
             <p className="text-muted-foreground">
-              Public debates and comments are visible to others by default.
+              Public debates, their images, and comments are visible to others by default.
             </p>
             <p className="text-muted-foreground">
               Private 1-on-1 discussions are still subject to moderation when abuse, threats,
@@ -75,8 +77,9 @@ export default function CommunityGuidelinesPage() {
           <section className="space-y-4">
             <h2 className="text-2xl font-semibold">Moderation Approach</h2>
             <p className="text-muted-foreground">
-              OpenNoesis does not pre-screen all posts, comments, or messages. Moderation aims to
-              protect constructive debate and platform safety.
+              OpenNoesis does not pre-screen all posts, comments, or messages, but uploaded
+              images are automatically checked for safety before they are accepted. Moderation aims
+              to protect constructive debate and platform safety.
             </p>
             <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
               <li>Content removal</li>

@@ -13,6 +13,7 @@ import { Loader2, SquarePen } from "lucide-react";
 import Link from "next/link";
 import { projectOpenDebateApiGetCurrentUserObject } from "@/lib/api/general";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 export const metadata: Metadata = {
   title: "Explore Debates",
@@ -66,8 +67,8 @@ export default async function HomePage() {
 
   return (
     <NavigationOverlay>
-      <div className="container mx-auto px-4 py-8 space-y-12">
-        <section className="rounded-2xl border bg-card p-6 md:p-8">
+      <div className="container mx-auto max-w-screen-2xl px-4 py-6 sm:px-6 sm:py-8">
+        <section>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="space-y-2">
               <h1 className="text-2xl md:text-3xl font-bold">
@@ -93,16 +94,17 @@ export default async function HomePage() {
             </Button>
           </div>
         </section>
+        <Separator className="mt-8" />
 
         {/* The trending debates are rendered immediately for SEO */}
-        <section>
-          <h2 className="text-2xl font-semibold mb-6">{sections[0].title}</h2>
+        <section className="pt-8">
+          <h2 className="mb-5 text-2xl font-semibold">{sections[0].title}</h2>
           <DebateSection debates={sections[0].items} />
         </section>
 
         {sections.slice(1).map(({ title, items }) => (
-          <section key={title}>
-            <h2 className="text-2xl font-semibold mb-6">{title}</h2>
+          <section key={title} className="mt-8 pt-2">
+            <h2 className="mb-5 text-2xl font-semibold">{title}</h2>
             <Suspense
               fallback={
                 <div className="flex items-center justify-center h-32 w-100">

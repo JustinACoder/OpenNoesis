@@ -16,14 +16,14 @@ const SettingsUserBanner = () => {
 
   return (
     <AuthRequired>
-      <Box className={"p-4"}>
+      <Box className={"p-5 sm:p-6"}>
         <div className="flex items-center space-x-4">
           <UserAvatar user={user} size="xlarge" />
           <div>
-            <h2 className="text-xl font-semibold text-white">
+            <h2 className="text-xl font-semibold text-foreground">
               {user.username}
             </h2>
-            {user.email && <p className="text-gray-400">{user.email}</p>}
+            {user.email && <p className="text-muted-foreground">{user.email}</p>}
             <div className="flex items-center mt-2">
               <Badge
                 variant={
@@ -42,7 +42,7 @@ const SettingsUserBanner = () => {
                     : "Member"}
               </Badge>
               {user.date_joined && (
-                <span className="text-sm text-gray-400">
+                <span className="text-sm text-muted-foreground">
                   Member since {new Date(user.date_joined).toLocaleDateString()}
                 </span>
               )}

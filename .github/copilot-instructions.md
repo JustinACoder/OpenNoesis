@@ -2,7 +2,7 @@
 
 > **⚠️ Self-Updating Document**: If you learn—explicitly or implicitly—that any information in this document is outdated, incorrect, or incomplete, update this document immediately to reflect the current state of the project.
 
-OpenNoesis is a real-time debate platform with a Django + Channels backend and Next.js 15 frontend.
+OpenNoesis is a real-time debate platform with a Django + Channels backend and Next.js 16 frontend.
 
 ---
 
@@ -55,6 +55,7 @@ Read the relevant files based on your task:
 - Service layer in `services.py` for business logic
 - QuerySet annotations for computed fields
 - WebSocket demultiplexer at `/ws/` with stream routing
+- Debate images are uploaded through the backend, moderated with OpenAI, and stored in Cloudflare R2
 - Orval-generated API hooks (DO NOT EDIT `lib/api/` or `lib/models/`)
 
 ---
@@ -207,7 +208,7 @@ docker logs debate-celery-worker
 
 ```bash
 # Regenerate OpenAPI schema file
-./apply_openai
+./myscripts/apply_openapi
 ```
 
 This private script basically builds the docker compose, then runs the containers, 

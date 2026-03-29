@@ -8,6 +8,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 
 export function Footer() {
   const footerLinks = [
@@ -18,17 +19,19 @@ export function Footer() {
   ];
 
   return (
-    <footer className="bg-gray-900 border-t border-gray-800 mt-12">
+    <footer className="mt-12 bg-[color-mix(in_oklab,var(--background)_90%,black)] backdrop-blur-sm">
+      <Separator />
       {/* Brand */}
       <div className="container mx-auto px-4 flex flex-wrap items-baseline gap-x-4 py-6">
         <SiteLogo size="md" />
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-muted-foreground">
           Expanding minds through thoughtful debate
         </p>
       </div>
 
-      <div className="border-t border-gray-800 py-4">
-        <nav className="container mx-auto px-4 flex flex-wrap gap-4 text-sm text-gray-400">
+      <Separator />
+      <div className="py-4">
+        <nav className="container mx-auto px-4 flex flex-wrap gap-4 text-sm text-muted-foreground">
           {footerLinks.map((link) => (
             <Link key={link.label} href={link.href} className="hover:text-primary">
               {link.label}

@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericRelation, GenericForeignKey
@@ -9,6 +11,10 @@ from django.contrib.postgres.indexes import GinIndex, BTreeIndex
 from django.utils.timezone import now
 
 User = get_user_model()
+
+
+def debate_image_upload_to(instance, filename):
+    return f"debate_images/{now():%Y/%m/%d}/{uuid.uuid4().hex}.{filename}"
 
 
 class Stance(models.Model):
@@ -115,6 +121,7 @@ from debate.managers import DebateManager, CommentManager
 class Debate(models.Model):
     title = models.CharField(max_length=100, unique=True)
     description = models.TextField()
+    image = models.FileField(upload_to=debate_image_upload_to, null=True, blank=True)
     date = models.DateTimeField(auto_now_add=True)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     slug = models.SlugField(max_length=100,
