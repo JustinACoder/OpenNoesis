@@ -10,6 +10,18 @@ from debate.models import Debate, Comment, Stance
 from users.schemas import UserPreviewSchema
 
 
+def strip_markdown_to_plain_text(value: str) -> str:
+    value = re.sub(r"!\[([^]]*)]\([^)]+\)", r"\1", value)
+    value = re.sub(r"\[([^]]+)]\([^)]+\)", r"\1", value)
+    value = re.sub(r"\*\*([^*\n]+)\*\*", r"\1", value)
+    value = re.sub(r"__([^_\n]+)__", r"\1", value)
+    value = re.sub(r"(?<!\*)\*([^*\n]+)\*(?!\*)", r"\1", value)
+    value = re.sub(r"(?<!_)_([^_\n]+)_(?!_)", r"\1", value)
+    value = re.sub(r"`([^`\n]+)`", r"\1", value)
+    value = re.sub(r"\s+", " ", value)
+    return value.strip()
+
+
 ## These were previously used but are now replaced by flattened fields in DebateSchema and CommentSchema
 ## However, we keep them here in case we need them as standalone endpoint responses in the future
 # class VotesSchema(Schema):
@@ -102,9 +114,10 @@ class DebateSchema(DebateFullSchema):
         :param debate: The Debate object.
         :return: The preview of the description.
         """
-        if len(debate.description) > 200:
-            return debate.description[:200] + "..."
-        return debate.description
+        description = strip_markdown_to_plain_text(debate.description)
+        if len(description) > 200:
+            return description[:200] + "..."
+        return description
 
 
 class CommentSchema(ModelSchema):

@@ -1,3 +1,5 @@
+import { markdownToPlainText } from "@/lib/markdown";
+
 export const DEFAULT_SITE_URL = "https://opennoesis.com";
 
 export function getSiteUrl(): string {
@@ -18,7 +20,7 @@ export function canonicalPath(path: string): string {
 }
 
 export function sanitizeTextForMeta(value: string, maxLength = 160): string {
-  const compact = value.replace(/\s+/g, " ").trim();
+  const compact = markdownToPlainText(value);
   if (compact.length <= maxLength) {
     return compact;
   }
