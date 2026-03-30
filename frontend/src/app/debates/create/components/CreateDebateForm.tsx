@@ -350,9 +350,7 @@ export function CreateDebateForm() {
                         {...field}
                       />
                     </FormControl>
-                    <FormDescription>
-                      Give enough detail so new participants can jump in without extra research.
-                    </FormDescription>
+                    <FormDescription>Basic markdown is supported.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
