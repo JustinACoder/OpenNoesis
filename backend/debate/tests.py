@@ -135,6 +135,21 @@ class DebateListingEndpointsTest(DebateApiTestBase):
         self.assertIn("items", response.json())
         self.assertEqual(len(response.json()["items"]), 0)
 
+    def test_recent_debates_description_preview_strips_markdown(self):
+        Debate.objects.create(
+            title="Public libraries should lend video game consoles",
+            description="**Libraries** help with access.\n\n- They lower cost barriers.\n- They can link people to [community events](https://example.com).",
+            author=self.user1
+        )
+
+        response = self.client.get(reverse_lazy_api("recent_debates"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["items"][0]["description_preview"],
+            "Libraries help with access. - They lower cost barriers. - They can link people to community events.",
+        )
+
     def test_pagination(self):
         # Create more debates to test pagination
         for i in range(15):

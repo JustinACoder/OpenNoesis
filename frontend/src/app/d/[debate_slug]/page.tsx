@@ -17,6 +17,7 @@ import { cache } from "react";
 import { buildAbsoluteUrl, sanitizeTextForMeta } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import { isApiNotFoundError } from "@/lib/apiError";
+import { markdownToPlainText } from "@/lib/markdown";
 
 interface DebateDetailPageProps {
   params: Promise<{ debate_slug: string }>;
@@ -83,7 +84,7 @@ const DebateDetailPage = async ({ params }: DebateDetailPageProps) => {
     "@context": "https://schema.org",
     "@type": "DiscussionForumPosting",
     headline: debate.title,
-    articleBody: debate.description,
+    articleBody: markdownToPlainText(debate.description),
     datePublished: debate.date,
     dateModified: debate.date,
     mainEntityOfPage: debateUrl,

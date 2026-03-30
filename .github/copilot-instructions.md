@@ -40,7 +40,7 @@ Read the relevant files based on your task:
 
 | Technology | Purpose |
 |------------|---------|
-| Next.js 15 | App Router, React Server Components |
+| Next.js 16 | App Router, React Server Components |
 | React 19 | UI library |
 | TypeScript | Type safety |
 | TanStack Query v5 | Data fetching, caching, hydration |

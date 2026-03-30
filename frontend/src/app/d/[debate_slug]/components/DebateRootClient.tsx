@@ -19,6 +19,7 @@ import {
   useDebateApiGetDebateSuggestions,
 } from "@/lib/api/debate";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
+import { DebateMarkdown } from "@/components/markdown/DebateMarkdown";
 
 interface DebateRootClientProps {
   debateSlug: string;
@@ -116,9 +117,15 @@ const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
               ) : null}
 
               {/* Description */}
-              <p className="text-sm leading-7 text-muted-foreground text-pretty whitespace-pre-line md:text-base">
-                {debate.description || "No description provided."}
-              </p>
+              <div className="space-y-4">
+                {debate.description ? (
+                  <DebateMarkdown>{debate.description}</DebateMarkdown>
+                ) : (
+                  <p className="text-sm leading-7 text-muted-foreground md:text-base">
+                    No description provided.
+                  </p>
+                )}
+              </div>
 
               {/* Stance distribution */}
               <StanceDistribution
