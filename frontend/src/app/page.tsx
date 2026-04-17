@@ -9,11 +9,12 @@ import {
 import { Suspense } from "react";
 import NavigationOverlay from "@/components/navigation/NavigationOverlay";
 import DebateSection from "@/components/DebateSection";
-import { Loader2, SquarePen } from "lucide-react";
+import { ArrowRight, Loader2, SquarePen } from "lucide-react";
 import Link from "next/link";
 import { projectOpenDebateApiGetCurrentUserObject } from "@/lib/api/general";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { getDebateFeedPath } from "@/app/debates/browse-config";
 
 export const metadata: Metadata = {
   title: "Explore Debates",
@@ -39,30 +40,40 @@ export const metadata: Metadata = {
 export default async function HomePage() {
   // Parallel fetching to speed up SSR
   const [trending, popular, controversial, recent, random, user] = await Promise.all([
-    debateApiTrendingDebates(undefined, {
+    debateApiTrendingDebates({
+      page_size: 6,
+    }, {
       next: { revalidate: 60 },
     }),
-    debateApiPopularDebates(undefined, {
+    debateApiPopularDebates({
+      page_size: 6,
+    }, {
       next: { revalidate: 60 },
     }),
-    debateApiControversialDebates(undefined, {
+    debateApiControversialDebates({
+      page_size: 6,
+    }, {
       next: { revalidate: 60 },
     }),
-    debateApiRecentDebates(undefined, {
+    debateApiRecentDebates({
+      page_size: 6,
+    }, {
       next: { revalidate: 60 },
     }),
-    debateApiRandomDebates(undefined, {
+    debateApiRandomDebates({
+      page_size: 6,
+    }, {
       next: { revalidate: 60 },
     }),
     projectOpenDebateApiGetCurrentUserObject(),
   ]);
 
   const sections = [
-    { title: "Trending Debates", items: trending.items },
-    { title: "Popular Debates", items: popular.items },
-    { title: "Controversial Debates", items: controversial.items },
-    { title: "Recent Debates", items: recent.items },
-    { title: "Other Debates", items: random.items },
+    { title: "Trending Debates", slug: "trending", items: trending.items },
+    { title: "Popular Debates", slug: "popular", items: popular.items },
+    { title: "Controversial Debates", slug: "controversial", items: controversial.items },
+    { title: "Recent Debates", slug: "recent", items: recent.items },
+    { title: "Other Debates", slug: "other", items: random.items },
   ];
 
   return (
@@ -98,13 +109,29 @@ export default async function HomePage() {
 
         {/* The trending debates are rendered immediately for SEO */}
         <section className="pt-8">
-          <h2 className="mb-5 text-2xl font-semibold">{sections[0].title}</h2>
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <h2 className="text-2xl font-semibold">{sections[0].title}</h2>
+            <Button asChild variant="ghost" className="shrink-0">
+              <Link href={getDebateFeedPath(sections[0].slug)}>
+                View more
+                <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+          </div>
           <DebateSection debates={sections[0].items} />
         </section>
 
-        {sections.slice(1).map(({ title, items }) => (
+        {sections.slice(1).map(({ title, slug, items }) => (
           <section key={title} className="mt-8 pt-2">
-            <h2 className="mb-5 text-2xl font-semibold">{title}</h2>
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <h2 className="text-2xl font-semibold">{title}</h2>
+              <Button asChild variant="ghost" className="shrink-0">
+                <Link href={getDebateFeedPath(slug)}>
+                  View more
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+            </div>
             <Suspense
               fallback={
                 <div className="flex items-center justify-center h-32 w-100">
