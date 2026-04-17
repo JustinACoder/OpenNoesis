@@ -4,7 +4,7 @@ import Link from "next/link";
 import NavigationOverlay from "@/components/navigation/NavigationOverlay";
 import DebateSection from "@/components/DebateSection";
 import { ArrowLeft } from "lucide-react";
-import { DebateBrowsePagination } from "@/app/debates/components/DebateBrowsePagination";
+import { AppPagination } from "@/components/AppPagination";
 import {
   DEBATE_BROWSE_PAGE_SIZE,
   debateBrowseFeeds,
@@ -79,9 +79,6 @@ export default async function DebateFeedPage({
     1,
     Math.ceil(results.count / DEBATE_BROWSE_PAGE_SIZE),
   );
-  const pageUrl = (pageNumber: number) =>
-    getDebateFeedPath(definition.slug, pageNumber);
-
   return (
     <NavigationOverlay>
       <div className="container mx-auto max-w-screen-2xl px-4 py-6 sm:px-6 sm:py-8">
@@ -113,10 +110,10 @@ export default async function DebateFeedPage({
         </section>
 
         <div className="mt-10 flex flex-col items-center gap-4">
-          <DebateBrowsePagination
+          <AppPagination
             currentPage={currentPage}
             totalPages={totalPages}
-            createPageUrl={pageUrl}
+            hrefConfig={{ basePath: getDebateFeedPath(definition.slug) }}
           />
         </div>
       </div>
