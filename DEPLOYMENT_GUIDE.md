@@ -134,8 +134,8 @@ docker pull ghcr.io/YOUR_USERNAME/debate-backend:latest 2>&1 | grep -q "pull acc
 
 ```bash
 cd /opt/opennoesis
-git clone https://github.com/JustinACoder/ProjectOpenDebate.git .
-# Or use SSH: git clone git@github.com:JustinACoder/ProjectOpenDebate.git .
+git clone https://github.com/JustinACoder/OpenNoesis.git .
+# Or use SSH: git clone git@github.com:JustinACoder/OpenNoesis.git .
 ```
 
 ### 2. Backend Environment
@@ -389,7 +389,7 @@ GitHub Actions will:
 
 ### 4. Monitor Deployment
 
-- Watch GitHub Actions: `https://github.com/YOUR_USERNAME/ProjectOpenDebate/actions`
+- Watch GitHub Actions: `https://github.com/YOUR_USERNAME/OpenNoesis/actions`
 - Check VPS logs: `ssh USER@VPS_IP "cd /opt/opennoesis && docker compose logs -f"`
 
 ---
@@ -636,7 +636,7 @@ docker compose pull
 
 **Check GitHub Actions logs:**
 ```bash
-# Visit: https://github.com/YOUR_USERNAME/ProjectOpenDebate/actions
+# Visit: https://github.com/YOUR_USERNAME/OpenNoesis/actions
 ```
 
 **Check VPS deployment logs:**
