@@ -35,7 +35,7 @@ const InviteSuccessPage = async ({ invite }: InviteSuccessPageProps) => {
               <div className="text-sm">
                 <p className="text-cyan-100 mb-1">
                   You&apos;ve been invited to join a debate on{" "}
-                  <span className="font-semibold">ProjectOpenDebate</span>
+                  <span className="font-semibold">OpenNoesis</span>
                 </p>
                 <p className="text-cyan-200/80 text-xs">
                   A platform where people can engage in 1-on-1 debates on topics

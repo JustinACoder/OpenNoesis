@@ -90,12 +90,12 @@ export default function AboutPage() {
             <p className="text-muted-foreground">
               Repository:{" "}
               <a
-                href="https://github.com/JustinACoder/ProjectOpenDebate"
+                href="https://github.com/JustinACoder/OpenNoesis"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline underline-offset-4 hover:text-foreground"
               >
-                github.com/JustinACoder/ProjectOpenDebate
+                github.com/JustinACoder/OpenNoesis
               </a>.
             </p>
           </section>
