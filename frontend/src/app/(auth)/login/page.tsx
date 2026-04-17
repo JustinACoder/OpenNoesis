@@ -29,6 +29,7 @@ import { AlertCircle } from "lucide-react";
 import { useAuthActions } from "@/providers/authProvider";
 import { GuestOnly } from "@/components/AuthRedirects";
 import { useRouter } from "next/navigation";
+import { hasPendingFlow } from "@/lib/apiError";
 
 const formSchema = z.object({
   email: z.string().email({
@@ -76,8 +77,9 @@ export default function LoginPage() {
             // AuthenticationResponse, this can happen if we have successfully logged in but need another step
             // In this case, it should always be about pending email verification
             // TODO: if we ever implement other flows (like MFA), handle them here as well
-            const doesPendingEmailVerifExists = error.data.flows?.some(
-              (f) => f.id === "verify_email" && f.is_pending === true,
+            const doesPendingEmailVerifExists = hasPendingFlow(
+              error,
+              "verify_email",
             );
             if (doesPendingEmailVerifExists) {
               router.push("/verify-email");
