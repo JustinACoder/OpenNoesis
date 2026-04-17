@@ -122,8 +122,14 @@ class Debate(models.Model):
     title = models.CharField(max_length=100, unique=True)
     description = models.TextField()
     image = models.FileField(upload_to=debate_image_upload_to, null=True, blank=True)
+    hidden = models.BooleanField(default=False)
     date = models.DateTimeField(auto_now_add=True)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    featured_on = models.DateField(
+        null=True,
+        blank=True,
+        help_text="When set, the debate is eligible for the debate-of-the-day section for that date.",
+    )
     slug = models.SlugField(max_length=100,
                             unique=True)  # WARNING: not generated automatically if using bulk operations
     vote = GenericRelation(Vote, related_query_name='debate')
@@ -135,7 +141,9 @@ class Debate(models.Model):
     class Meta:
         indexes = [
             # Gin index for full-text search
-            GinIndex(fields=['search_vector'], name='search_vector_idx')
+            GinIndex(fields=['search_vector'], name='search_vector_idx'),
+            models.Index(fields=["hidden"], name="debate_hidden_idx"),
+            models.Index(fields=["featured_on"], name="debate_featured_on_idx"),
         ]
 
     def get_stance(self, user):
@@ -200,3 +208,59 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"Comment by {self.author} on \"{self.debate.title}\""
+
+
+class GeneratedDebateCandidate(models.Model):
+    class Status(models.TextChoices):
+        DISCOVERED = "discovered", "Discovered"
+        NEEDS_REVIEW = "needs_review", "Needs review"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+        PUBLISHED = "published", "Published"
+        FAILED = "failed", "Failed"
+
+    debate = models.OneToOneField(
+        "Debate",
+        on_delete=models.CASCADE,
+        related_name="generated_candidate",
+    )
+    short_description = models.TextField(
+        help_text="Short review summary sent for human approval.",
+    )
+    cover_image_reasoning = models.TextField(
+        blank=True,
+        help_text="Model-provided rationale for the generated contextual cover image.",
+    )
+    cover_image_generation_error = models.TextField(blank=True)
+    cover_image_generated_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(
+        max_length=24,
+        choices=Status.choices,
+        default=Status.DISCOVERED,
+    )
+    source_payload = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Raw discovery metadata and source links used to generate the candidate.",
+    )
+    similarity_payload = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Stored similarity matches against existing debates for reviewer context.",
+    )
+    reviewer_notes = models.TextField(blank=True)
+    review_requested_at = models.DateTimeField(null=True, blank=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejected_at = models.DateTimeField(null=True, blank=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+    discovered_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-discovered_at"]
+        indexes = [
+            models.Index(fields=["status", "-discovered_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.debate.title} ({self.status})"

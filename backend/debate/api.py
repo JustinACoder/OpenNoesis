@@ -58,6 +58,13 @@ def create_debate(
         raise HttpError(exc.status_code, str(exc))
 
 
+@router.get("/featured", response=List[DebateSchema])
+@paginate(PageNumberPagination, page_size=3)
+def featured_debates(request):
+    """Get the most recently featured debates."""
+    user = request.auth
+    return DebateService.get_debate_queryset(user).get_featured()
+
 @router.get("/trending", response=List[DebateSchema])
 @paginate(PageNumberPagination, page_size=10)
 def trending_debates(request):
@@ -189,8 +196,7 @@ def get_debate_comments(request, debate_slug: str):
 def create_comment(request, debate_slug: str, comment_data: CommentInputSchema):
     """Create a new comment for a debate."""
     user = request.auth
-    # Check that the debate exists
-    debate = get_object_or_404(Debate, slug=debate_slug)
+    debate = get_object_or_404(Debate.objects.get_queryset().public(), slug=debate_slug)
     return CommentService.create_comment(user, debate.id, comment_data.text)
 
 

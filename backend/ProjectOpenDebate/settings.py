@@ -248,6 +248,22 @@ AI_MAX_OUTPUT_TOKENS = env.int("AI_MAX_OUTPUT_TOKENS", default=512)
 AI_BOT_USERNAME = env("AI_BOT_USERNAME", default="opennoesis_ai")
 AI_BOT_EMAIL = env("AI_BOT_EMAIL", default="ai@opennoesis.local")
 
+# AI auto debate generation settings
+AUTO_DEBATE_GENERATION_ENABLED = env.bool("AUTO_DEBATE_GENERATION_ENABLED", default=False)
+AUTO_DEBATE_GENERATION_CANDIDATE_COUNT = env.int("AUTO_DEBATE_GENERATION_CANDIDATE_COUNT", default=3)
+AUTO_DEBATE_WEB_LOOKBACK_HOURS = env.int("AUTO_DEBATE_WEB_LOOKBACK_HOURS", default=24)
+AUTO_DEBATE_DISCORD_WEBHOOK_URL = env("AUTO_DEBATE_DISCORD_WEBHOOK_URL", default="")
+AUTO_DEBATE_IMAGE_GENERATION_ENABLED = env.bool("AUTO_DEBATE_IMAGE_GENERATION_ENABLED", default=False)
+AUTO_DEBATE_IMAGE_GENERATION_MODEL = env(
+    "AUTO_DEBATE_IMAGE_GENERATION_MODEL",
+    default="gemini-3.1-flash-image-preview",
+)
+AUTO_DEBATE_IMAGE_GENERATION_TIMEOUT_SECONDS = env.int(
+    "AUTO_DEBATE_IMAGE_GENERATION_TIMEOUT_SECONDS",
+    default=120,
+)
+GOOGLE_CLOUD_API_KEY = env("GOOGLE_CLOUD_API_KEY", default="")
+
 # Allauth settings
 HEADLESS_ONLY = True
 ACCOUNT_ADAPTER = "ProjectOpenDebate.account_adapter.PostOfficeAccountAdapter"
@@ -328,6 +344,10 @@ CELERY_BEAT_SCHEDULE = {
     "passive_pairing": {
         "task": "pairing.tasks.try_pairing_passive_requests",
         "schedule": crontab(minute="0"),
+    },
+    "generate-debate-candidates": {
+        "task": "debate.tasks.generate_debate_candidates_from_feeds",
+        "schedule": crontab(minute="0", hour="8"),
     },
     "send-queued-mail": {
         "task": "post_office.tasks.send_queued_mail",

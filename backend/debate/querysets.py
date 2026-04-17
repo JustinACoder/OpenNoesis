@@ -38,6 +38,9 @@ def with_votes_score_and_count(qs: models.QuerySet) -> models.QuerySet:
 
 
 class DebateQuerySet(models.QuerySet):
+    def public(self):
+        return self.filter(hidden=False)
+
     def with_votes(self, user: User):
         queryset = with_votes_score_and_count(self)
 
@@ -113,6 +116,9 @@ class DebateQuerySet(models.QuerySet):
                 has_requested_for=Exists(subquery_user_requests.filter(desired_stance=1)),
                 has_requested_against=Exists(subquery_user_requests.filter(desired_stance=-1)),
             )
+
+    def get_featured(self):
+        return self.filter(featured_on__isnull=False).order_by("-featured_on", "-date")
 
     def get_popular(self):
         return self.annotate(_ord_num_votes=Count('vote')).order_by('-_ord_num_votes')

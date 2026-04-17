@@ -19,5 +19,6 @@ django-anymail[resend]==14.0
 django-post-office==3.11.0
 django-prometheus==2.4.1
 openai==2.21.0
+google-genai==1.69.0
 django-storages[s3]==1.14.6
 Pillow==12.1.1

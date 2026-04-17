@@ -665,6 +665,63 @@
         ]
       }
     },
+    "/api/debates/featured": {
+      "get": {
+        "operationId": "debate_api_featured_debates",
+        "summary": "Featured Debates",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedDebateSchema"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get the most recently featured debates.",
+        "tags": [
+          "Debate"
+        ],
+        "security": [
+          {
+            "OptionalDjangoAuth": []
+          }
+        ]
+      }
+    },
     "/api/debates/trending": {
       "get": {
         "operationId": "debate_api_trending_debates",
@@ -4703,10 +4760,28 @@
             "title": "Description",
             "type": "string"
           },
+          "hidden": {
+            "default": false,
+            "title": "Hidden",
+            "type": "boolean"
+          },
           "date": {
             "format": "date-time",
             "title": "Date",
             "type": "string"
+          },
+          "featured_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When set, the debate is eligible for the debate-of-the-day section for that date.",
+            "title": "Featured On"
           },
           "slug": {
             "maxLength": 100,
@@ -4848,10 +4923,28 @@
             "title": "Title",
             "type": "string"
           },
+          "hidden": {
+            "default": false,
+            "title": "Hidden",
+            "type": "boolean"
+          },
           "date": {
             "format": "date-time",
             "title": "Date",
             "type": "string"
+          },
+          "featured_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When set, the debate is eligible for the debate-of-the-day section for that date.",
+            "title": "Featured On"
           },
           "slug": {
             "maxLength": 100,
