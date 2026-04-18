@@ -9,6 +9,8 @@ import { FileUpload, FileUploadTrigger } from "@/components/ui/file-upload";
 type DebateImageUploadInputProps = {
   value: File | null;
   onChange: (file: File | null) => void;
+  existingImageUrl?: string | null;
+  onRemoveExistingImage?: () => void;
   accept?: string;
   disabled?: boolean;
   maxSize?: number;
@@ -17,12 +19,15 @@ type DebateImageUploadInputProps = {
 export function DebateImageUploadInput({
   value,
   onChange,
+  existingImageUrl = null,
+  onRemoveExistingImage,
   accept = "image/png,image/jpeg,image/webp",
   disabled = false,
   maxSize,
 }: DebateImageUploadInputProps) {
   const files = React.useMemo(() => (value ? [value] : []), [value]);
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+  const displayedImageUrl = previewUrl ?? existingImageUrl;
 
   React.useEffect(() => {
     if (!value) {
@@ -50,11 +55,11 @@ export function DebateImageUploadInput({
       >
         <FileUploadTrigger asChild>
           <div className="group relative cursor-pointer overflow-hidden rounded-2xl border border-dashed transition-background-color duration-200 hover:bg-secondary/25">
-            {previewUrl ? (
+            {displayedImageUrl ? (
               <div className="relative aspect-[2/1]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={previewUrl}
+                  src={displayedImageUrl}
                   alt="Selected debate image preview"
                   className="h-full w-full object-cover"
                 />
@@ -83,13 +88,20 @@ export function DebateImageUploadInput({
         </FileUploadTrigger>
       </FileUpload>
 
-      {previewUrl ? (
+      {displayedImageUrl ? (
         <Button
           type="button"
           variant="ghost"
           size="sm"
           className="text-destructive"
-          onClick={() => onChange(null)}
+          onClick={() => {
+            if (previewUrl) {
+              onChange(null);
+              return;
+            }
+
+            onRemoveExistingImage?.();
+          }}
           disabled={disabled}
         >
           <X className="mr-1 size-4" />

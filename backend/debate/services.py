@@ -59,6 +59,58 @@ class DebateService:
         )
 
     @staticmethod
+    def get_user_debates(user: User) -> DebateQuerySet:
+        """Retrieve debates created by the authenticated user."""
+        return DebateService.get_debate_queryset(user).filter(author=user).get_recent()
+
+    @staticmethod
+    def update_debate(
+        *,
+        user: User,
+        debate_slug: str,
+        title: str,
+        description: str,
+        image: UploadedFile | None = None,
+        remove_image: bool = False,
+    ) -> Debate:
+        """Update a debate owned by the authenticated user."""
+        debate = get_object_or_404(
+            Debate,
+            slug=debate_slug,
+            author=user,
+        )
+
+        original_image = debate.image
+        prepared_image = None
+
+        debate.title = title.strip()
+        debate.description = description.strip()
+
+        if remove_image:
+            debate.image = None
+        elif image is not None:
+            prepared_image = DebateImageUploadService.prepare_image(image)
+            debate.image = prepared_image
+
+        debate.save()
+
+        should_delete_original_image = bool(
+            original_image
+            and (
+                remove_image
+                or (
+                    prepared_image is not None
+                    and original_image.name != debate.image.name
+                )
+            )
+        )
+
+        if should_delete_original_image:
+            original_image.delete(save=False)
+
+        return DebateService.get_debate_details(user, debate_id=debate.id)
+
+    @staticmethod
     def get_sitemap_debates(limit: int = 2000):
         """
         Return debates eligible for sitemap indexing.

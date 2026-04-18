@@ -144,6 +144,12 @@ const NavigationActions = () => {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
+                <Link href={`/my-debates`} className="flex items-center">
+                  <SquarePen className="mr-2 h-4 w-4" />
+                  <span>My Debates</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
                 <Link href={`/my-invites`} className="flex items-center">
                   <Send className="mr-2 h-4 w-4" />
                   <span>My Invites</span>
@@ -247,6 +253,14 @@ const NavigationActions = () => {
                     <span>Messages</span>
                   </div>
                   <UnreadMessagesBadgeCount simpleSecondary={true} />
+                </Link>
+                <Link
+                  href="/my-debates"
+                  className="flex items-center space-x-2 p-2 rounded-lg hover:bg-accent transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <SquarePen className="h-5 w-5" />
+                  <span>My Debates</span>
                 </Link>
                 <Link
                   href="/my-invites"
