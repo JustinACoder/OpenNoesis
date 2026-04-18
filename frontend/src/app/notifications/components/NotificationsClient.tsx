@@ -8,18 +8,10 @@ import {
 } from "@/lib/api/notifications";
 import { NotificationCard } from "./NotificationCard";
 import { NotificationFilter } from "./NotificationFilter";
+import { AppPagination } from "@/components/AppPagination";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bell, Loader2, RefreshCw, CheckCheck } from "lucide-react";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
 
 export default function NotificationsClient() {
   const [filter, setFilter] = useState<"all" | "unread">("unread");
@@ -191,65 +183,12 @@ export default function NotificationsClient() {
 
           {/* Pagination */}
           {!isPending && totalPages > 1 && (
-            <div className="flex justify-center pt-8">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => handlePageChange(page - 1)}
-                      className={
-                        page <= 1
-                          ? "pointer-events-none opacity-50 cursor-not-allowed"
-                          : "cursor-pointer"
-                      }
-                    />
-                  </PaginationItem>
-
-                  {/* Page Numbers */}
-                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                    let pageNum;
-                    if (totalPages <= 5) {
-                      pageNum = i + 1;
-                    } else if (page <= 3) {
-                      pageNum = i + 1;
-                    } else if (page >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i;
-                    } else {
-                      pageNum = page - 2 + i;
-                    }
-
-                    return (
-                      <PaginationItem key={pageNum}>
-                        <PaginationLink
-                          onClick={() => handlePageChange(pageNum)}
-                          isActive={page === pageNum}
-                          className="cursor-pointer"
-                        >
-                          {pageNum}
-                        </PaginationLink>
-                      </PaginationItem>
-                    );
-                  })}
-
-                  {totalPages > 5 && page < totalPages - 2 && (
-                    <PaginationItem>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  )}
-
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() => handlePageChange(page + 1)}
-                      className={
-                        page >= totalPages
-                          ? "pointer-events-none opacity-50 cursor-not-allowed"
-                          : "cursor-pointer"
-                      }
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
+            <AppPagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              className="flex justify-center pt-8"
+            />
           )}
 
           {/* Page info */}

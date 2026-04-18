@@ -4,15 +4,7 @@ import { LoaderCircle, Search } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { DebateGrid } from "@/components/DebateGrid";
 import { DebateCard } from "@/components/DebateCard";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
+import { AppPagination } from "@/components/AppPagination";
 import { Separator } from "@/components/ui/separator";
 import { useDebateApiSearchDebates } from "@/lib/api/debate";
 import { PagedDebateSchema } from "@/lib/models";
@@ -136,75 +128,12 @@ const SearchClient = ({
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex justify-center pt-8">
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        href={
-                          currentPage > 1
-                            ? createPageUrl(currentPage - 1)
-                            : "#"
-                        }
-                        className={
-                          currentPage <= 1
-                            ? "pointer-events-none opacity-50"
-                            : ""
-                        }
-                      />
-                    </PaginationItem>
-
-                    {/* Page Numbers */}
-                    {Array.from(
-                      { length: Math.min(totalPages, 5) },
-                      (_, i) => {
-                        let pageNum;
-                        if (totalPages <= 5) {
-                          pageNum = i + 1;
-                        } else if (currentPage <= 3) {
-                          pageNum = i + 1;
-                        } else if (currentPage >= totalPages - 2) {
-                          pageNum = totalPages - 4 + i;
-                        } else {
-                          pageNum = currentPage - 2 + i;
-                        }
-
-                        return (
-                          <PaginationItem key={pageNum}>
-                            <PaginationLink
-                              href={createPageUrl(pageNum)}
-                              isActive={currentPage === pageNum}
-                            >
-                              {pageNum}
-                            </PaginationLink>
-                          </PaginationItem>
-                        );
-                      },
-                    )}
-
-                    {totalPages > 5 && currentPage < totalPages - 2 && (
-                      <PaginationItem>
-                        <PaginationEllipsis />
-                      </PaginationItem>
-                    )}
-
-                    <PaginationItem>
-                      <PaginationNext
-                        href={
-                          currentPage < totalPages
-                            ? createPageUrl(currentPage + 1)
-                            : "#"
-                        }
-                        className={
-                          currentPage >= totalPages
-                            ? "pointer-events-none opacity-50"
-                            : ""
-                        }
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              </div>
+              <AppPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                getPageHref={createPageUrl}
+                className="flex justify-center pt-8"
+              />
             )}
           </>
         )}

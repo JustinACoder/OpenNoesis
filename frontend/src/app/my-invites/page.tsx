@@ -3,15 +3,7 @@
 import { useDebatemeApiListInvites } from "@/lib/api/invites";
 import React, { useState } from "react";
 import { InviteCard } from "@/app/my-invites/components/InviteCard";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
+import { AppPagination } from "@/components/AppPagination";
 import { AlertCircleIcon, Loader2, RefreshCw, Send } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -82,67 +74,13 @@ export default function MyInvitesPage() {
         ))}
       </div>
 
-      {/* Pagination taken from notifications TODO: make into a reusable component */}
       {!isPending && totalPages > 1 && (
-        <div className="flex justify-center pt-8">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => setPage(page - 1)}
-                  className={
-                    page <= 1
-                      ? "pointer-events-none opacity-50 cursor-not-allowed"
-                      : "cursor-pointer"
-                  }
-                />
-              </PaginationItem>
-
-              {/* Page Numbers */}
-              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                let pageNum;
-                if (totalPages <= 5) {
-                  pageNum = i + 1;
-                } else if (page <= 3) {
-                  pageNum = i + 1;
-                } else if (page >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i;
-                } else {
-                  pageNum = page - 2 + i;
-                }
-
-                return (
-                  <PaginationItem key={pageNum}>
-                    <PaginationLink
-                      onClick={() => setPage(pageNum)}
-                      isActive={page === pageNum}
-                      className="cursor-pointer"
-                    >
-                      {pageNum}
-                    </PaginationLink>
-                  </PaginationItem>
-                );
-              })}
-
-              {totalPages > 5 && page < totalPages - 2 && (
-                <PaginationItem>
-                  <PaginationEllipsis />
-                </PaginationItem>
-              )}
-
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => setPage(page + 1)}
-                  className={
-                    page >= totalPages
-                      ? "pointer-events-none opacity-50 cursor-not-allowed"
-                      : "cursor-pointer"
-                  }
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
+        <AppPagination
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          className="flex justify-center pt-8"
+        />
       )}
     </div>
   );
