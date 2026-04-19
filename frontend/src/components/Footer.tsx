@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SiteLogo } from "@/components/SiteLogo";
+import { getDiscordInviteUrl } from "@/lib/social";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +12,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 export function Footer() {
+  const discordInviteUrl = getDiscordInviteUrl();
   const footerLinks = [
     { label: "About", href: "/about" },
     { label: "Privacy", href: "/privacy" },
@@ -37,6 +39,14 @@ export function Footer() {
               {link.label}
             </Link>
           ))}
+          <a
+            href={discordInviteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-primary"
+          >
+            Discord
+          </a>
           <Dialog>
             <DialogTrigger asChild>
               <button
@@ -62,6 +72,15 @@ export function Footer() {
                       className="underline underline-offset-4 hover:text-foreground"
                     >
                       LinkedIn
+                    </a>{" "}
+                    or on{" "}
+                    <a
+                      href={discordInviteUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline underline-offset-4 hover:text-foreground"
+                    >
+                      Discord
                     </a>{" "}
                     or by email at justin [dot] tovich [at] gmail [dot] com.
                   </span>
