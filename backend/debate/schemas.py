@@ -73,6 +73,10 @@ class DebateCreateInputSchema(Schema):
             raise ValueError("description must contain at least 30 characters after whitespace normalization")
         return value
 
+
+class DebateUpdateInputSchema(DebateCreateInputSchema):
+    remove_image: bool = False
+
 class DebateFullSchema(ModelSchema):
     author: Optional[UserPreviewSchema] = None  # Can be None if the debate was created by the system
     image_url: Optional[str] = None

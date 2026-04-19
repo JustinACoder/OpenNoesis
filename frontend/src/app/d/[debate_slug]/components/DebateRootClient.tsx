@@ -9,6 +9,7 @@ and then client-side interactions (like voting) can be handled without a full pa
 Tl;dr: this is SSR, dont worry about the "use client" directive.
  */
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { DebateVote } from "./DebateVote";
 import { StanceDistribution } from "./StanceDistribution";
 import { JoinTheDebate } from "./JoinTheDebate";
@@ -20,12 +21,15 @@ import {
 } from "@/lib/api/debate";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import { DebateMarkdown } from "@/components/markdown/DebateMarkdown";
+import { useAuthState } from "@/providers/authProvider";
+import { SquarePen } from "lucide-react";
 
 interface DebateRootClientProps {
   debateSlug: string;
 }
 
 const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
+  const { authStatus, user } = useAuthState();
   // Retrieve the debate data from the cache
   const { data: debate } = useDebateApiGetDebate(debateSlug);
   const { data: suggestions } = useDebateApiGetDebateSuggestions(
@@ -60,6 +64,10 @@ const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
     month: "long",
     day: "numeric",
   });
+  const canEditDebate =
+    authStatus === "authenticated" &&
+    Boolean(debate.author?.id) &&
+    debate.author?.id === user.id;
 
   return (
     <div className="min-h-[calc(100vh-4rem)]">
@@ -69,16 +77,26 @@ const DebateRootClient = ({ debateSlug }: DebateRootClientProps) => {
           <div className="space-y-8 lg:col-span-2">
             <section className="space-y-6">
               {/* Header with category and actions */}
-              <div className="flex flex-row justify-between items-start gap-4">
+              <div className="flex flex-row items-center justify-between gap-4">
                 <span className="rounded-full bg-foreground/6 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                   Debate
                 </span>
-                <DebateVote
-                  debateSlug={debate.slug}
-                  initialVoteScore={debate.vote_score || 0}
-                  initialUserVote={debate.user_vote || 0}
-                  size="lg"
-                />
+                <div className="flex items-center gap-3">
+                  {canEditDebate ? (
+                    <Button asChild variant="outline" className="bg-transparent">
+                      <Link href={`/d/${debate.slug}/edit`}>
+                        <SquarePen className="size-4" />
+                        Edit debate
+                      </Link>
+                    </Button>
+                  ) : null}
+                  <DebateVote
+                    debateSlug={debate.slug}
+                    initialVoteScore={debate.vote_score || 0}
+                    initialUserVote={debate.user_vote || 0}
+                    size="lg"
+                  />
+                </div>
               </div>
 
               {/* Title and date*/}
