@@ -22,6 +22,7 @@ from .schemas import (
     StanceDirectionEnum, DebateFullSchema,
     CommentInputSchema, VoteInputSchema, StanceInputSchema, DebateWithStanceInputSchema,
     DebateCreateInputSchema,
+    DebateUpdateInputSchema,
     DebateSitemapSchema,
 )
 from .services import (
@@ -51,6 +52,38 @@ def create_debate(
             title=debate_data.title,
             description=debate_data.description,
             image=image,
+        )
+    except IntegrityError:
+        raise HttpError(409, "A debate with this title already exists.")
+    except DebateImageError as exc:
+        raise HttpError(exc.status_code, str(exc))
+
+
+@router.get("/mine", response=List[DebateSchema], auth=django_auth)
+@paginate(PageNumberPagination, page_size=15)
+def list_my_debates(request):
+    """List debates created by the authenticated user."""
+    return DebateService.get_user_debates(request.auth)
+
+
+@router.post("/slug/{slug:debate_slug}/edit", response=DebateFullSchema, auth=django_auth)
+@monitor_api_operation("debate.update")
+def update_debate(
+    request,
+    debate_slug: str,
+    debate_data: Form[DebateUpdateInputSchema],
+    image: File[UploadedFile] = None,
+):
+    """Update a debate owned by the authenticated user."""
+    user = request.auth
+    try:
+        return DebateService.update_debate(
+            user=user,
+            debate_slug=debate_slug,
+            title=debate_data.title,
+            description=debate_data.description,
+            image=image,
+            remove_image=debate_data.remove_image,
         )
     except IntegrityError:
         raise HttpError(409, "A debate with this title already exists.")

@@ -12,6 +12,8 @@ Thumbs.db
 
 # Other
 myscripts/
+.codex
+.playwright-mcp
 
 # Envs
 .env

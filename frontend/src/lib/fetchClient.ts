@@ -1,3 +1,5 @@
+import { createTransportError } from "@/lib/apiError";
+
 const isServer = typeof window === "undefined";
 
 async function getServerCookieStore() {
@@ -120,7 +122,16 @@ export const customFetch = async <T>(
   //   );
   //   console.time("Fetch get-current-user-object " + random);
   // }
-  const res = await fetch(requestUrl, allOptions);
+  let res: Response;
+  try {
+    res = await fetch(requestUrl, allOptions);
+  } catch (error) {
+    const fallbackMessage =
+      error instanceof Error && error.message
+        ? error.message
+        : "Network request failed";
+    throw createTransportError(fallbackMessage, error);
+  }
   // if (
   //   isServer &&
   //   requestUrl === "http://localhost:8000/api/get-current-user-object"

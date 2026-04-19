@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "ProjectOpenDebateAPI",
+    "title": "OpenNoesis API",
     "version": "1.0.0",
     "description": ""
   },
@@ -642,6 +642,140 @@
                     "minLength": 30,
                     "title": "Description",
                     "type": "string"
+                  },
+                  "image": {
+                    "format": "binary",
+                    "title": "Image",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "title",
+                  "description"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ]
+      }
+    },
+    "/api/debates/mine": {
+      "get": {
+        "operationId": "debate_api_list_my_debates",
+        "summary": "List My Debates",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedDebateSchema"
+                }
+              }
+            }
+          }
+        },
+        "description": "List debates created by the authenticated user.",
+        "tags": [
+          "Debate"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ]
+      }
+    },
+    "/api/debates/slug/{debate_slug}/edit": {
+      "post": {
+        "operationId": "debate_api_update_debate",
+        "summary": "Update Debate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "debate_slug",
+            "schema": {
+              "title": "Debate Slug",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DebateFullSchema"
+                }
+              }
+            }
+          }
+        },
+        "description": "Update a debate owned by the authenticated user.",
+        "tags": [
+          "Debate"
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "title": "MultiPartBodyParams",
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "maxLength": 100,
+                    "minLength": 8,
+                    "title": "Title",
+                    "type": "string"
+                  },
+                  "description": {
+                    "maxLength": 8000,
+                    "minLength": 30,
+                    "title": "Description",
+                    "type": "string"
+                  },
+                  "remove_image": {
+                    "default": false,
+                    "title": "Remove Image",
+                    "type": "boolean"
                   },
                   "image": {
                     "format": "binary",
@@ -4899,6 +5033,33 @@
           "count"
         ],
         "title": "PagedDebateSchema",
+        "type": "object"
+      },
+      "DebateUpdateInputSchema": {
+        "properties": {
+          "title": {
+            "maxLength": 100,
+            "minLength": 8,
+            "title": "Title",
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 8000,
+            "minLength": 30,
+            "title": "Description",
+            "type": "string"
+          },
+          "remove_image": {
+            "default": false,
+            "title": "Remove Image",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "title",
+          "description"
+        ],
+        "title": "DebateUpdateInputSchema",
         "type": "object"
       },
       "DebateSitemapSchema": {

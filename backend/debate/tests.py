@@ -389,6 +389,94 @@ class DebateCreationEndpointsTest(DebateApiTestBase):
         self.assertIn("megapixels", response.json()["detail"])
 
 
+class DebateManagementEndpointsTest(DebateApiTestBase):
+    def test_list_my_debates_requires_authentication(self):
+        response = self.client.get(reverse_lazy_api("list_my_debates"))
+        self.assertEqual(response.status_code, 401)
+
+    def test_list_my_debates_returns_only_owned_debates(self):
+        client = self.authenticate_user1()
+        response = client.get(reverse_lazy_api("list_my_debates"))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["count"], 1)
+        self.assertEqual(payload["items"][0]["slug"], self.debate1.slug)
+
+    def test_update_owned_debate(self):
+        client = self.authenticate_user1()
+        response = client.post(
+            reverse_lazy_api("update_debate", debate_slug=self.debate1.slug),
+            {
+                "title": "  Edited debate title for ownership checks  ",
+                "description": "  This updated description is comfortably long enough to satisfy validation after trimming.  ",
+                "remove_image": "false",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["title"], "Edited debate title for ownership checks")
+        self.assertEqual(
+            payload["description"],
+            "This updated description is comfortably long enough to satisfy validation after trimming.",
+        )
+
+        self.debate1.refresh_from_db()
+        self.assertEqual(self.debate1.slug, payload["slug"])
+        self.assertEqual(self.debate1.title, payload["title"])
+
+    def test_update_debate_rejects_non_owner(self):
+        client = self.authenticate_user2()
+        response = client.post(
+            reverse_lazy_api("update_debate", debate_slug=self.debate1.slug),
+            {
+                "title": "This should not be allowed",
+                "description": "This update should fail because the authenticated user is not the debate owner.",
+                "remove_image": "false",
+            },
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    @patch("debate.image_uploads.OpenAI")
+    def test_update_debate_can_remove_existing_image(self, openai_cls):
+        openai_cls.return_value.moderations.create.return_value.results = [
+            type(
+                "ModerationResult",
+                (),
+                {
+                    "model_dump": staticmethod(
+                        lambda mode="python": {
+                            "categories": {
+                                "sexual": False,
+                                "sexual/minors": False,
+                                "violence/graphic": False,
+                            }
+                        }
+                    )
+                },
+            )()
+        ]
+
+        self.debate1.image = self.create_test_image()
+        self.debate1.save()
+
+        client = self.authenticate_user1()
+        response = client.post(
+            reverse_lazy_api("update_debate", debate_slug=self.debate1.slug),
+            {
+                "title": self.debate1.title,
+                "description": "This updated debate description remains valid and explicitly removes the previous image attachment.",
+                "remove_image": "true",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.debate1.refresh_from_db()
+        self.assertFalse(bool(self.debate1.image))
+
+
 class DebateDetailEndpointsTest(DebateApiTestBase):
     def test_get_debate_detail(self):
         response = self.client.get(reverse_lazy_api("get_debate", debate_slug=self.debate1.slug))

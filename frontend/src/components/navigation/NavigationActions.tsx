@@ -37,8 +37,10 @@ import UnreadMessagesBadgeCount from "@/components/navigation/UnreadMessagesBadg
 import UserAvatar from "@/components/UserAvatar";
 import links from "./links";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { getDiscordInviteUrl } from "@/lib/social";
 
 const NavigationActions = () => {
+  const discordInviteUrl = getDiscordInviteUrl();
   const { setMobileSearchOpen, isMobileMenuOpen, setMobileMenuOpen } =
     useNavigation();
   const { authStatus, user } = useAuthState();
@@ -144,6 +146,12 @@ const NavigationActions = () => {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
+                <Link href={`/my-debates`} className="flex items-center">
+                  <SquarePen className="mr-2 h-4 w-4" />
+                  <span>My Debates</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
                 <Link href={`/my-invites`} className="flex items-center">
                   <Send className="mr-2 h-4 w-4" />
                   <span>My Invites</span>
@@ -182,7 +190,10 @@ const NavigationActions = () => {
             <span className="sr-only">Toggle menu</span>
           </Button>
         </SheetTrigger>
-        <SheetContent side="right" className="w-[300px] sm:w-[400px] p-4">
+        <SheetContent
+          side="right"
+          className="flex h-full w-[300px] flex-col p-4 sm:w-[400px]"
+        >
           <VisuallyHidden>
             <SheetHeader>
               <SheetTitle>Navigation Menu</SheetTitle>
@@ -191,7 +202,7 @@ const NavigationActions = () => {
               </SheetDescription>
             </SheetHeader>
           </VisuallyHidden>
-          <div className="flex flex-col space-y-4 mt-4">
+          <div className="mt-4 flex min-h-0 flex-1 flex-col space-y-4">
             {/* Show user info if authenticated */}
             {authStatus == "authenticated" && (
               <div className="flex items-center space-x-3 pb-4 border-b">
@@ -249,6 +260,14 @@ const NavigationActions = () => {
                   <UnreadMessagesBadgeCount simpleSecondary={true} />
                 </Link>
                 <Link
+                  href="/my-debates"
+                  className="flex items-center space-x-2 p-2 rounded-lg hover:bg-accent transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <SquarePen className="h-5 w-5" />
+                  <span>My Debates</span>
+                </Link>
+                <Link
                   href="/my-invites"
                   className="flex items-center justify-between p-2 rounded-lg hover:bg-accent transition-colors"
                   onClick={() => setMobileMenuOpen(false)}
@@ -292,6 +311,15 @@ const NavigationActions = () => {
                 </Button>
               </div>
             )}
+            <a
+              href={discordInviteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-auto text-center border-t pt-4 text-sm font-medium text-foreground underline underline-offset-4 transition-colors hover:text-primary"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Join our Discord
+            </a>
           </div>
         </SheetContent>
       </Sheet>
