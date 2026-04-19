@@ -111,8 +111,6 @@ function getErrorMessage(error: unknown, fallbackMessage: string): string {
   return fallbackMessage;
 }
 
-type DebateEditorMode = "create" | "edit";
-
 type DebateEditorFormProps =
   | {
       mode: "create";
@@ -122,17 +120,16 @@ type DebateEditorFormProps =
       debate: DebateFullSchema;
     };
 
-export function DebateEditorForm({
-  mode,
-  debate,
-}: DebateEditorFormProps) {
+export function DebateEditorForm(props: DebateEditorFormProps) {
+  const { mode } = props;
   const router = useRouter();
   const queryClient = useQueryClient();
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const debateSlug = mode === "edit" ? debate.slug : undefined;
-  const initialTitle = mode === "edit" ? debate.title : "";
-  const initialDescription = mode === "edit" ? debate.description : "";
-  const initialImageUrl = mode === "edit" ? (debate.image_url ?? null) : null;
+  const editingDebate = mode === "edit" ? props.debate : undefined;
+  const debateSlug = editingDebate?.slug;
+  const initialTitle = editingDebate?.title ?? "";
+  const initialDescription = editingDebate?.description ?? "";
+  const initialImageUrl = editingDebate?.image_url ?? null;
 
   const form = useForm<DebateEditorValues>({
     resolver: zodResolver(debateEditorSchema),
@@ -287,6 +284,10 @@ export function DebateEditorForm({
     if (mode === "create") {
       await createMutation.mutateAsync({ data: payload });
       return;
+    }
+
+    if (!debateSlug) {
+      throw new Error("Missing debate slug for edit mode.");
     }
 
     await updateMutation.mutateAsync({
