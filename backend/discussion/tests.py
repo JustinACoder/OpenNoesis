@@ -769,6 +769,15 @@ class ReadCheckpointDetailTest(DiscussionApiTestBase):
         # Should have 1 unread message (message1_3)
         self.assertEqual(response.json(), 1)
 
+    def test_deleting_last_read_message_reassigns_checkpoint_to_previous_message(self):
+        checkpoint = ReadCheckpoint.objects.get(discussion=self.discussion1, user=self.user2)
+        checkpoint.read_until(self.message1_2)
+
+        self.message1_2.delete()
+
+        checkpoint.refresh_from_db()
+        self.assertEqual(checkpoint.last_message_read_id, self.message1_1.id)
+
 
 class UnreadCountEdgeCasesTest(DiscussionApiTestBase):
     def test_unread_count_with_no_messages(self):
