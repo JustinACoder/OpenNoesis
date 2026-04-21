@@ -20,8 +20,12 @@ def get_previous_message(read_checkpoint):
     """
     # Return the latest message that was created before the current last_read_message
     # If this is the first message, this will return None which will indicate that the user has read no messages
+    if read_checkpoint.last_message_read_id is None:
+        return None
+
     return Message.objects.filter(
-        discussion=read_checkpoint.discussion, created_at__lt=read_checkpoint.created_at
+        discussion=read_checkpoint.discussion,
+        created_at__lt=read_checkpoint.last_message_read.created_at,
     ).order_by('-created_at').first()
 
 
