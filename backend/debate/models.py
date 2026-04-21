@@ -1,4 +1,5 @@
 import uuid
+from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -14,7 +15,8 @@ User = get_user_model()
 
 
 def debate_image_upload_to(instance, filename):
-    return f"debate_images/{now():%Y/%m/%d}/{uuid.uuid4().hex}.{filename}"
+    suffix = Path(filename).suffix.lower()
+    return f"debate_images/{now():%Y/%m/%d}/{uuid.uuid4().hex}{suffix}"
 
 
 class Stance(models.Model):
