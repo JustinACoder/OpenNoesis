@@ -3,7 +3,8 @@ from unittest.mock import patch, MagicMock
 from django.contrib.auth import get_user_model
 from channels.db import database_sync_to_async
 from ProjectOpenDebate.common.base_tests import BaseTransactionTestCase
-from notifications.models import Notification, NotificationType
+from notifications.models import Notification
+from notifications.types import NotificationType
 
 User = get_user_model()
 
@@ -22,14 +23,11 @@ class NotificationConsumerTestBase(BaseTransactionTestCase):
         self.user2 = User.objects.create_user(
             username='testuser2', email='user2@example.com', password='password123'
         )
-        
-        # Ensure notification types exist
-        self.notification_type = NotificationType.objects.get(name='new_message')
-        
+
         # Create test notifications for user1
         self.notification1 = Notification.objects.create(
             user=self.user1,
-            notification_type=self.notification_type,
+            notification_type=NotificationType.NEW_MESSAGE,
             data={"participant_username": "testuser2", "debate_title": "Test Debate"},
             info_args={"discussion_id": 1},
             read=False
@@ -37,7 +35,7 @@ class NotificationConsumerTestBase(BaseTransactionTestCase):
         
         self.notification2 = Notification.objects.create(
             user=self.user1,
-            notification_type=self.notification_type,
+            notification_type=NotificationType.NEW_MESSAGE,
             data={"participant_username": "testuser2", "debate_title": "Another Test Debate"},
             info_args={"discussion_id": 2},
             read=True
@@ -46,7 +44,7 @@ class NotificationConsumerTestBase(BaseTransactionTestCase):
         # Create a notification for user2
         self.notification3 = Notification.objects.create(
             user=self.user2,
-            notification_type=self.notification_type,
+            notification_type=NotificationType.NEW_MESSAGE,
             data={"participant_username": "testuser1", "debate_title": "User2's Debate"},
             info_args={"discussion_id": 3},
             read=False
