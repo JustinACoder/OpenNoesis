@@ -6,8 +6,9 @@ from ProjectOpenDebate.common.utils import reverse_lazy_api
 from debate.models import Debate
 from debateme.services import InviteService
 from discussion.models import Discussion, Message
-from notifications.models import Notification, NotificationType
+from notifications.models import Notification
 from notifications.services import NotificationService
+from notifications.types import NotificationType
 
 User = get_user_model()
 
@@ -36,15 +37,10 @@ class NotificationApiTestBase(BaseTestCase):
             participant2=cls.user2
         )
         
-        # Notifications types are already created in BaseTestCase
-        cls.new_message_type = NotificationType.objects.get(name='new_message')
-        cls.new_discussion_type = NotificationType.objects.get(name='new_discussion')
-        cls.accepted_invite_type = NotificationType.objects.get(name='accepted_invite')
-        
         # Create test notifications
         cls.notification1 = Notification.objects.create(
             user=cls.user1,
-            notification_type=cls.new_message_type,
+            notification_type=NotificationType.NEW_MESSAGE,
             data={
                 'debate_title': cls.debate1.title,
                 'participant_username': cls.user2.username
@@ -54,7 +50,7 @@ class NotificationApiTestBase(BaseTestCase):
         
         cls.notification2 = Notification.objects.create(
             user=cls.user1,
-            notification_type=cls.new_message_type,
+            notification_type=NotificationType.NEW_MESSAGE,
             data={
                 'debate_title': cls.debate1.title,
                 'participant_username': cls.user3.username
@@ -65,7 +61,7 @@ class NotificationApiTestBase(BaseTestCase):
         
         cls.notification3 = Notification.objects.create(
             user=cls.user2,
-            notification_type=cls.new_message_type,
+            notification_type=NotificationType.NEW_MESSAGE,
             data={
                 'debate_title': cls.debate1.title,
                 'participant_username': cls.user1.username
@@ -212,7 +208,7 @@ class NotificationReadStatusEndpointsTest(NotificationApiTestBase):
         # Create an additional unread notification for user1
         notification4 = Notification.objects.create(
             user=self.user1,
-            notification_type=self.new_discussion_type,
+            notification_type=NotificationType.NEW_DISCUSSION,
             data={
                 'debate_title': self.debate1.title,
                 'participant_username': self.user3.username
@@ -292,7 +288,7 @@ class NotificationServiceTest(NotificationApiTestBase):
         # Create an additional unread notification for user1
         notification4 = Notification.objects.create(
             user=self.user1,
-            notification_type=self.new_discussion_type,
+            notification_type=NotificationType.NEW_DISCUSSION,
             data={
                 'debate_title': self.debate1.title,
                 'participant_username': self.user3.username
@@ -325,7 +321,7 @@ class NotificationPaginationTest(NotificationApiTestBase):
         for i in range(20):  # Create 20 additional notifications
             Notification.objects.create(
                 user=cls.user1,
-                notification_type=cls.new_message_type,
+                notification_type=NotificationType.NEW_MESSAGE,
                 data={
                     'debate_title': f"Test Debate {i}",
                     'participant_username': cls.user2.username
@@ -366,7 +362,7 @@ class NotificationManagerTest(NotificationApiTestBase):
         
         # Verify notification was created correctly
         self.assertEqual(notification.user.id, self.user3.id)
-        self.assertEqual(notification.notification_type.name, 'new_discussion')
+        self.assertEqual(notification.notification_type, NotificationType.NEW_DISCUSSION)
         self.assertEqual(notification.data['debate_title'], self.debate1.title)
         self.assertEqual(notification.data['participant_username'], self.user1.username)
         self.assertEqual(notification.info_args['discussion_id'], self.discussion1.id)
@@ -388,7 +384,7 @@ class NotificationManagerTest(NotificationApiTestBase):
         
         # Verify notification was created correctly
         self.assertEqual(notification.user, self.user2)
-        self.assertEqual(notification.notification_type.name, 'new_message')
+        self.assertEqual(notification.notification_type, NotificationType.NEW_MESSAGE)
         self.assertEqual(notification.data['debate_title'], self.debate1.title)
         self.assertEqual(notification.data['participant_username'], self.user1.username)
         self.assertEqual(notification.info_args['discussion_id'], self.discussion1.id)
@@ -404,12 +400,12 @@ class NotificationManagerTest(NotificationApiTestBase):
         # Get the latest notification for user1 (should be the accepted invite notification)
         notification = Notification.objects.filter(
             user=self.user1,
-            notification_type__name='accepted_invite'
+            notification_type=NotificationType.ACCEPTED_INVITE
         ).latest('created_at')
 
         # Verify notification was created correctly
         self.assertEqual(notification.user, self.user1)
-        self.assertEqual(notification.notification_type.name, 'accepted_invite')
+        self.assertEqual(notification.notification_type, NotificationType.ACCEPTED_INVITE)
         self.assertEqual(notification.data['debate_title'], self.debate1.title)
         self.assertEqual(notification.data['participant_username'], self.user2.username)
         self.assertEqual(notification.info_args['discussion_id'], invite_use.resulting_discussion.id)

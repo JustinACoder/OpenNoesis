@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db.models import QuerySet, Q, F
+from django.db.models import QuerySet
 
 from notifications.models import Notification
 
@@ -14,11 +14,7 @@ class NotificationService:
         Returns an unevaluated queryset for pagination.
         """
         additional_filter = {"read": False} if only_unread else {}
-        return Notification.objects.filter(
-            user=user, **additional_filter
-        ).annotate(
-            notification_type_name=F('notification_type__name'),
-        ).order_by('-created_at')
+        return Notification.objects.filter(user=user, **additional_filter).order_by('-created_at')
     
     @staticmethod
     def get_unread_count(user: User) -> int:
