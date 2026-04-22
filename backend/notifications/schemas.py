@@ -1,4 +1,4 @@
-from ninja import ModelSchema, Schema, Field
+from ninja import ModelSchema, Schema
 from typing import Dict, Any
 
 from notifications.models import Notification
@@ -15,7 +15,7 @@ class NotificationSchema(ModelSchema):
     title: str
     message: str
     endnote: str
-    notification_type_name: str = Field(..., alias="notification_type.name")
+    notification_type_name: str
     info_args: Dict[str, Any] = {}
 
     class Meta:
